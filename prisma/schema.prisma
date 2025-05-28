@@ -1,0 +1,258 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String?  @unique
+  hashedPassword String? // For traditional email/password auth
+  emailVerified  Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Multi-auth support
+  authStrategies String? // JSON string of auth methods
+  isGuest        Boolean @default(false)
+  walletAddress  String? // Primary wallet address (for SIWE)
+  
+  // Multi-device support
+  devices       DeviceRegistration[]
+  refreshTokens RefreshToken[]
+  
+  // Profiles owned by this user
+  smartProfiles SmartProfile[]
+  linkedAccounts LinkedAccount[]
+  
+  @@map("users")
+}
+
+model DeviceRegistration {
+  id           String   @id @default(cuid())
+  userId       String
+  deviceId     String   @unique
+  deviceName   String
+  deviceType   String // "ios", "android", "web"
+  fingerprint  String?
+  lastActiveAt DateTime @default(now())
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("device_registrations")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("refresh_tokens")
+}
+
+model SmartProfile {
+  id                    String   @id @default(cuid())
+  userId                String
+  name                  String
+  sessionWalletAddress  String   @unique // ERC-7702 proxy address
+  isActive              Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  // Relationships
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  linkedAccounts LinkedAccount[]
+  folders        Folder[]
+  apps           BookmarkedApp[]
+  socialProfiles SocialProfile[]
+  transactions   Transaction[]
+  auditLogs      AuditLog[]
+  
+  @@map("smart_profiles")
+}
+
+model LinkedAccount {
+  id              String   @id @default(cuid())
+  userId          String
+  profileId       String?
+  address         String   @unique
+  authStrategy    String   // "wallet", "social", etc.
+  walletType      String?  // "metamask", "coinbase", "walletconnect", etc.
+  customName      String?
+  isPrimary       Boolean  @default(false)
+  isActive        Boolean  @default(true)
+  chainId         Int?
+  metadata        String?  // JSON metadata
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // Token allowances granted to session wallet
+  allowances TokenAllowance[]
+  
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile SmartProfile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  
+  @@unique([userId, address])
+  @@map("linked_accounts")
+}
+
+model TokenAllowance {
+  id              String   @id @default(cuid())
+  linkedAccountId String
+  tokenAddress    String
+  allowanceAmount String // BigInt as string
+  chainId         Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  linkedAccount LinkedAccount @relation(fields: [linkedAccountId], references: [id], onDelete: Cascade)
+  
+  @@unique([linkedAccountId, tokenAddress, chainId])
+  @@map("token_allowances")
+}
+
+model Folder {
+  id           String   @id @default(cuid())
+  profileId    String
+  name         String
+  position     Int      @default(0)
+  isPublic     Boolean  @default(false)
+  shareableId  String?  @unique // For public sharing
+  color        String?  // Optional folder color
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Relationships
+  profile SmartProfile   @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  apps    BookmarkedApp[]
+  
+  @@map("folders")
+}
+
+model BookmarkedApp {
+  id        String   @id @default(cuid())
+  profileId String
+  folderId  String?
+  name      String
+  url       String
+  iconUrl   String?
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relationships
+  profile SmartProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  folder  Folder?      @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  
+  @@map("bookmarked_apps")
+}
+
+model SocialProfile {
+  id         String   @id @default(cuid())
+  profileId  String
+  provider   String // "farcaster", "telegram", "twitter", etc.
+  providerId String // External provider's user ID
+  username   String?
+  displayName String?
+  avatarUrl  String?
+  accessToken String? // Encrypted
+  refreshToken String? // Encrypted
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  profile SmartProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  @@unique([profileId, provider])
+  @@unique([provider, providerId])
+  @@map("social_profiles")
+}
+
+model Transaction {
+  id                String   @id @default(cuid())
+  profileId         String
+  hash              String   @unique
+  chainId           Int
+  fromAddress       String
+  toAddress         String
+  value             String // BigInt as string
+  gasUsed           String? // BigInt as string
+  gasPrice          String? // BigInt as string
+  status            String // "pending", "confirmed", "failed"
+  blockNumber       Int?
+  blockTimestamp    DateTime?
+  nonce             Int?
+  
+  // Interspace specific fields
+  routingType       String? // "direct", "session_wallet", "batch"
+  sourceAccount     String? // Original EOA that initiated
+  sessionWallet     String? // Session wallet that executed
+  targetApp         String? // dApp that was interacted with
+  
+  // Transaction data
+  input             String? // Transaction data
+  logs              String? // JSON transaction logs
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  
+  profile SmartProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  @@map("transactions")
+}
+
+// System tables for app management
+model AppMetadata {
+  id          String   @id @default(cuid())
+  url         String   @unique
+  name        String
+  description String?
+  iconUrl     String?
+  category    String?
+  isVerified  Boolean  @default(false)
+  tags        String   // JSON array as string
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@map("app_metadata")
+}
+
+model SessionWalletFactory {
+  id              String   @id @default(cuid())
+  chainId         Int
+  factoryAddress  String
+  implementationAddress String
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  
+  @@unique([chainId, factoryAddress])
+  @@map("session_wallet_factories")
+}
+
+// Audit log for security
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  profileId String?
+  action    String
+  resource  String
+  details   String?  // JSON details
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime @default(now())
+  
+  profile SmartProfile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  
+  @@map("audit_logs")
+}
