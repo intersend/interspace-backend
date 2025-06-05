@@ -15,6 +15,8 @@ import profileRoutes from '@/routes/profileRoutes';
 import appsRoutes from '@/routes/appsRoutes';
 import foldersRoutes from '@/routes/foldersRoutes';
 import linkedAccountRoutes from '@/routes/linkedAccountRoutes';
+import userRoutes from '@/routes/userRoutes';
+import orbyRoutes from '@/routes/orbyRoutes';
 
 class Application {
   public app: express.Application;
@@ -135,10 +137,12 @@ class Application {
 
     // Mount routes
     this.app.use(`${apiPath}/auth`, thirdwebAuthRoutes);
+    this.app.use(`${apiPath}/users`, userRoutes); // User routes (social accounts)
     this.app.use(`${apiPath}/profiles`, profileRoutes);
     this.app.use(`${apiPath}`, appsRoutes); // Apps routes include profile paths
     this.app.use(`${apiPath}`, foldersRoutes); // Folders routes include profile paths
     this.app.use(`${apiPath}`, linkedAccountRoutes); // Account routes include profile paths
+    this.app.use(`${apiPath}`, orbyRoutes); // Orby chain abstraction routes
 
     // API info endpoint
     this.app.get(apiPath, (req, res) => {
@@ -151,6 +155,7 @@ class Application {
         cors: config.CORS_ORIGINS,
         endpoints: {
           auth: `${apiPath}/auth`,
+          users: `${apiPath}/users`,
           profiles: `${apiPath}/profiles`,
           apps: `${apiPath}/profiles/:profileId/apps`,
           folders: `${apiPath}/profiles/:profileId/folders`,

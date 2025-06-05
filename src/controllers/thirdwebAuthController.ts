@@ -18,26 +18,42 @@ export class ThirdwebAuthController {
         deviceType,
         walletAddress,
         email,
-        socialData
+        socialData,
+        socialProfile,
+        socialProvider
       } = req.body;
 
-      if (!authToken || !authStrategy || !deviceId || !deviceName || !deviceType) {
+      if (!authToken || !authStrategy) {
         res.status(400).json({
           success: false,
-          error: 'Missing required fields: authToken, authStrategy, deviceId, deviceName, deviceType'
+          error: 'Missing required fields: authToken, authStrategy'
         } as ApiResponse);
         return;
+      }
+
+      // Handle both socialData and socialProfile formats
+      let processedSocialData = socialData;
+      
+      // If socialProfile is provided (Telegram format), convert it to socialData format
+      if (!socialData && socialProfile && socialProvider) {
+        processedSocialData = {
+          provider: socialProvider,
+          providerId: socialProfile.id || walletAddress || `${socialProvider}_${Date.now()}`,
+          username: socialProfile.name,
+          displayName: socialProfile.name,
+          // For Telegram, we may not have all details initially
+        };
       }
 
       const tokens = await thirdwebAuthService.authenticateWithThirdweb({
         authToken,
         authStrategy,
-        deviceId,
-        deviceName,
-        deviceType,
+        deviceId: deviceId || null,
+        deviceName: deviceName || 'Unknown Device',
+        deviceType: deviceType || 'web',
         walletAddress,
         email,
-        socialData
+        socialData: processedSocialData
       });
 
       res.status(200).json({

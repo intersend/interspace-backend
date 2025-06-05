@@ -18,4 +18,6 @@ router.put('/:profileId', smartProfileController.updateProfile);
 router.delete('/:profileId', smartProfileController.deleteProfile);
 router.post('/:profileId/activate', smartProfileController.switchActiveProfile);
 
+// Social profile endpoints have been moved to user level (/users/me/social-accounts)
+
 export default router;

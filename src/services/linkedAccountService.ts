@@ -5,6 +5,7 @@ import {
   LinkedAccountResponse,
   TokenAllowanceRequest,
   TokenAllowanceResponse,
+  AccountSearchResponse,
   NotFoundError,
   ConflictError,
   AuthorizationError 
@@ -33,17 +34,21 @@ export class LinkedAccountService {
         throw new NotFoundError('SmartProfile');
       }
 
-      // Check if account is already linked
-      const existingAccount = await tx.linkedAccount.findUnique({
-        where: { address: data.address.toLowerCase() }
+      // Check if account is already linked to THIS SPECIFIC PROFILE
+      const existingAccount = await tx.linkedAccount.findFirst({
+        where: { 
+          address: data.address.toLowerCase(),
+          profileId: profileId,
+          isActive: true
+        }
       });
 
       if (existingAccount) {
-        throw new ConflictError('Account already linked');
+        throw new ConflictError(`Account ${data.address} is already linked to this profile`);
       }
 
-      // Verify signature (placeholder - in real implementation, verify ownership)
-      if (!this.verifyAccountOwnership(data.address, data.signature, data.message)) {
+      // Verify signature (flexible for development and test wallets)
+      if (!this.verifyAccountOwnership(data.address, data.signature, data.message, data.walletType)) {
         throw new AuthorizationError('Invalid signature - account ownership not verified');
       }
 
@@ -134,6 +139,47 @@ export class LinkedAccountService {
     });
 
     return accounts.map(account => this.formatLinkedAccountResponse(account));
+  }
+
+  /**
+   * Search for a profile that owns a specific EOA address
+   */
+  async searchAccountByAddress(address: string): Promise<AccountSearchResponse | null> {
+    if (!address || !this.isValidEthereumAddress(address)) {
+      throw new Error('Valid Ethereum address required');
+    }
+
+    const account = await prisma.linkedAccount.findFirst({
+      where: {
+        address: address.toLowerCase(),
+        isActive: true
+      },
+      include: {
+        profile: {
+          select: {
+            id: true,
+            name: true,
+            isActive: true
+          }
+        },
+        _count: {
+          select: {
+            allowances: true
+          }
+        }
+      }
+    });
+
+    if (!account || !account.profile) {
+      return null;
+    }
+
+    return {
+      profileId: account.profile.id,
+      profileName: account.profile.name,
+      isActive: account.profile.isActive,
+      linkedAccount: this.formatLinkedAccountResponse(account)
+    };
   }
 
   /**
@@ -236,11 +282,61 @@ export class LinkedAccountService {
         }
       }
 
-      // Soft delete the account
+      // Soft delete the account first
       await tx.linkedAccount.update({
         where: { id: accountId },
         data: { isActive: false }
       });
+
+      // Check if this EOA is linked to any other active profiles for the same user
+      const otherActiveAccounts = await tx.linkedAccount.findMany({
+        where: {
+          userId: account.userId,
+          address: account.address,
+          isActive: true,
+          id: { not: accountId } // Exclude the current account
+        }
+      });
+
+      // If no other active profiles use this EOA, completely remove it
+      if (otherActiveAccounts.length === 0) {
+        console.log(`🗑️ Completely removing EOA ${account.address} from user ${account.userId} as it's not linked to any other profiles`);
+        
+        // Delete the record entirely
+        await tx.linkedAccount.delete({
+          where: { id: accountId }
+        });
+
+        // Log the complete removal
+        await tx.auditLog.create({
+          data: {
+            userId: account.userId,
+            profileId: account.profileId,
+            action: 'ACCOUNT_COMPLETELY_REMOVED',
+            resource: 'LinkedAccount',
+            details: JSON.stringify({
+              address: account.address,
+              reason: 'Not linked to any other profiles'
+            })
+          }
+        });
+      } else {
+        console.log(`🔗 Keeping EOA ${account.address} for user ${account.userId} as it's still linked to ${otherActiveAccounts.length} other profile(s)`);
+        
+        // Log the soft delete
+        await tx.auditLog.create({
+          data: {
+            userId: account.userId,
+            profileId: account.profileId,
+            action: 'ACCOUNT_UNLINKED',
+            resource: 'LinkedAccount',
+            details: JSON.stringify({
+              address: account.address,
+              remainingProfiles: otherActiveAccounts.length
+            })
+          }
+        });
+      }
     });
   }
 
@@ -350,12 +446,41 @@ export class LinkedAccountService {
   }
 
   /**
-   * Verify account ownership (placeholder implementation)
+   * Verify account ownership with flexible validation for development and test wallets
    */
-  private verifyAccountOwnership(address: string, signature: string, message: string): boolean {
-    // In a real implementation, you would verify the signature
+  private verifyAccountOwnership(address: string, signature: string, message: string, walletType?: string): boolean {
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const isTestWallet = walletType === 'test' || (walletType === 'metamask' && isDevelopment);
+    
+    console.log('🔐 Verifying account ownership:', {
+      address: `${address.slice(0, 6)}...${address.slice(-4)}`,
+      walletType,
+      isDevelopment,
+      isTestWallet,
+      hasSignature: !!signature,
+      hasMessage: !!message,
+      signatureLength: signature?.length || 0
+    });
+
+    // For development and test wallets, be more flexible
+    if (isDevelopment || isTestWallet) {
+      console.log('🧪 Development/test mode: Using relaxed signature verification');
+      // Accept any non-empty signature or development bypass
+      return signature === 'dev_bypass' || (typeof signature === 'string' && signature.length > 0);
+    }
+    
+    // Production signature verification
+    if (!signature || !message) {
+      console.log('❌ Missing signature or message for verification');
+      return false;
+    }
+    
+    // TODO: Implement proper signature verification here
     // For now, just check that signature is provided and not empty
-    return typeof signature === 'string' && signature.length > 0;
+    const isValid = typeof signature === 'string' && signature.length > 0;
+    console.log(`${isValid ? '✅' : '❌'} Signature verification result:`, { isValid });
+    
+    return isValid;
   }
 
   /**
@@ -388,6 +513,19 @@ export class LinkedAccountService {
       createdAt: allowance.createdAt.toISOString(),
       updatedAt: allowance.updatedAt.toISOString()
     };
+  }
+
+  /**
+   * Validate Ethereum address format
+   */
+  private isValidEthereumAddress(address: string): boolean {
+    if (!address || typeof address !== 'string') {
+      return false;
+    }
+    
+    // Check if it's a valid Ethereum address format (0x followed by 40 hex characters)
+    const ethereumAddressRegex = /^0x[a-fA-F0-9]{40}$/;
+    return ethereumAddressRegex.test(address);
   }
 }
 

@@ -12,37 +12,35 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
 
     const payload = verifyAccessToken(token);
     
-    // Verify user exists and device is active
+    // Verify user exists (remove device requirement)
     const user = await prisma.user.findUnique({
-      where: { id: payload.userId },
-      include: {
-        devices: {
-          where: {
-            deviceId: payload.deviceId,
-            isActive: true
-          }
-        }
-      }
+      where: { id: payload.userId }
     });
 
     if (!user) {
       throw new AuthenticationError('User not found');
     }
 
-    if (user.devices.length === 0) {
-      throw new AuthenticationError('Device not registered or inactive');
+    // Optional: Update device last active if deviceId exists
+    if (payload.deviceId) {
+      try {
+        await prisma.deviceRegistration.updateMany({
+          where: { 
+            deviceId: payload.deviceId,
+            userId: payload.userId 
+          },
+          data: { lastActiveAt: new Date() }
+        });
+      } catch (error) {
+        // Don't fail auth if device update fails
+        console.log('Device update failed (non-blocking):', error);
+      }
     }
-
-    // Update device last active
-    await prisma.deviceRegistration.update({
-      where: { deviceId: payload.deviceId },
-      data: { lastActiveAt: new Date() }
-    });
 
     // Attach user context to request
     req.user = {
       userId: payload.userId,
-      deviceId: payload.deviceId,
+      deviceId: payload.deviceId, // Optional
       ipAddress: req.ip,
       userAgent: req.get('User-Agent')
     };

@@ -46,6 +46,12 @@ interface Config {
   AWS_SECRET_ACCESS_KEY?: string;
   AWS_S3_BUCKET?: string;
   AWS_REGION?: string;
+  
+  // Orby Configuration
+  ORBY_INSTANCE_PRIVATE_API_KEY: string;
+  ORBY_INSTANCE_PUBLIC_API_KEY: string;
+  ORBY_APP_NAME: string;
+  ORBY_PRIVATE_INSTANCE_URL: string;
 }
 
 function getEnvVar(name: string, defaultValue?: string): string {
@@ -131,6 +137,12 @@ export const config: Config = {
   AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY,
   AWS_S3_BUCKET: process.env.AWS_S3_BUCKET,
   AWS_REGION: process.env.AWS_REGION,
+  
+  // Orby Configuration
+  ORBY_INSTANCE_PRIVATE_API_KEY: getEnvVar('ORBY_INSTANCE_PRIVATE_API_KEY'),
+  ORBY_INSTANCE_PUBLIC_API_KEY: getEnvVar('ORBY_INSTANCE_PUBLIC_API_KEY'),
+  ORBY_APP_NAME: getEnvVar('ORBY_APP_NAME', 'interspace'),
+  ORBY_PRIVATE_INSTANCE_URL: getEnvVar('ORBY_PRIVATE_INSTANCE_URL'),
 };
 
 export const isDevelopment = config.NODE_ENV === 'development';

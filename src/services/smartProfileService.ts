@@ -8,6 +8,7 @@ import {
   AuthorizationError 
 } from '@/types';
 import { sessionWalletService } from '@/blockchain/sessionWalletService';
+import { orbyService } from '@/services/orbyService';
 import { config } from '@/utils/config';
 
 export class SmartProfileService {
@@ -67,6 +68,18 @@ export class SmartProfileService {
             }
           }
         });
+
+        // Create Orby account cluster for the profile
+        try {
+          const clusterId = await orbyService.createOrGetAccountCluster(updatedProfile);
+          await tx.smartProfile.update({
+            where: { id: profile.id },
+            data: { orbyAccountClusterId: clusterId } as any
+          });
+        } catch (orbyError) {
+          console.error('Failed to create Orby cluster (non-blocking):', orbyError);
+          // Don't fail profile creation if Orby fails
+        }
 
         // Log the profile creation
         await tx.auditLog.create({
@@ -425,6 +438,9 @@ export class SmartProfileService {
       chainId
     );
   }
+
+  // Social profile methods have been moved to UserService
+  // Social profiles are now managed at the user level, not profile level
 
   /**
    * Format profile data for API response

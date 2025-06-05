@@ -3,10 +3,10 @@ export interface ApiResponse<T = any> {
   data?: T;
   message?: string;
   error?: string;
-  errors?: ValidationError[];
+  errors?: FieldError[];
 }
 
-export interface ValidationError {
+export interface FieldError {
   field: string;
   message: string;
 }
@@ -55,7 +55,7 @@ export interface AuthTokens {
 
 export interface JwtPayload {
   userId: string;
-  deviceId: string;
+  deviceId?: string;
   type: 'access' | 'refresh';
   iat: number;
   exp: number;
@@ -118,6 +118,13 @@ export interface LinkedAccountResponse {
   allowancesCount: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface AccountSearchResponse {
+  profileId: string;
+  profileName: string;
+  isActive: boolean;
+  linkedAccount: LinkedAccountResponse;
 }
 
 // Token Allowance Types
@@ -201,16 +208,30 @@ export interface ShareFolderResponse {
   shareableUrl: string;
 }
 
-// Social Profile Types
-export interface LinkSocialProfileRequest {
+// User Types
+export interface UserResponse {
+  id: string;
+  email?: string;
+  authStrategies: string[];
+  isGuest: boolean;
+  profilesCount: number;
+  linkedAccountsCount: number;
+  activeDevicesCount: number;
+  socialAccounts: SocialAccountResponse[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Social Account Types (User Level)
+export interface LinkSocialAccountRequest {
   provider: SocialProvider;
   oauthCode: string;
   redirectUri?: string;
 }
 
-export type SocialProvider = 'farcaster' | 'telegram' | 'twitter' | 'discord';
+export type SocialProvider = 'farcaster' | 'telegram' | 'twitter' | 'discord' | 'google';
 
-export interface SocialProfileResponse {
+export interface SocialAccountResponse {
   id: string;
   provider: SocialProvider;
   username?: string;

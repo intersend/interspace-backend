@@ -3,12 +3,16 @@ import { config } from './config';
 import { JwtPayload } from '@/types';
 import { AuthenticationError } from '@/types';
 
-export function generateAccessToken(userId: string, deviceId: string): string {
-  const payload = {
+export function generateAccessToken(userId: string, deviceId?: string): string {
+  const payload: any = {
     userId,
-    deviceId,
     type: 'access' as const
   };
+
+  // Only include deviceId if provided
+  if (deviceId) {
+    payload.deviceId = deviceId;
+  }
 
   return jwt.sign(payload, config.JWT_SECRET, {
     expiresIn: config.JWT_EXPIRES_IN as any,
@@ -17,12 +21,16 @@ export function generateAccessToken(userId: string, deviceId: string): string {
   });
 }
 
-export function generateRefreshToken(userId: string, deviceId: string): string {
-  const payload = {
+export function generateRefreshToken(userId: string, deviceId?: string): string {
+  const payload: any = {
     userId,
-    deviceId,
     type: 'refresh' as const
   };
+
+  // Only include deviceId if provided
+  if (deviceId) {
+    payload.deviceId = deviceId;
+  }
 
   return jwt.sign(payload, config.JWT_REFRESH_SECRET, {
     expiresIn: config.JWT_REFRESH_EXPIRES_IN as any,

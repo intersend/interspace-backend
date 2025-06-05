@@ -30,6 +30,7 @@ model User {
   // Profiles owned by this user
   smartProfiles SmartProfile[]
   linkedAccounts LinkedAccount[]
+  socialProfiles SocialProfile[]
   
   @@map("users")
 }
@@ -68,6 +69,7 @@ model SmartProfile {
   name                  String
   sessionWalletAddress  String   @unique // ERC-7702 proxy address
   isActive              Boolean  @default(false)
+  orbyAccountClusterId  String?  @unique
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
   
@@ -76,9 +78,11 @@ model SmartProfile {
   linkedAccounts LinkedAccount[]
   folders        Folder[]
   apps           BookmarkedApp[]
-  socialProfiles SocialProfile[]
   transactions   Transaction[]
   auditLogs      AuditLog[]
+  preferredGasToken PreferredGasToken?
+  orbyVirtualNodes  OrbyVirtualNode[]
+  orbyOperations    OrbyOperation[]
   
   @@map("smart_profiles")
 }
@@ -87,7 +91,7 @@ model LinkedAccount {
   id              String   @id @default(cuid())
   userId          String
   profileId       String?
-  address         String   @unique
+  address         String   // Removed @unique to allow same EOA in multiple profiles
   authStrategy    String   // "wallet", "social", etc.
   walletType      String?  // "metamask", "coinbase", "walletconnect", etc.
   customName      String?
@@ -104,7 +108,7 @@ model LinkedAccount {
   user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   profile SmartProfile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
   
-  @@unique([userId, address])
+  @@unique([userId, address, profileId]) // Prevent same EOA linked twice to same profile
   @@map("linked_accounts")
 }
 
@@ -161,7 +165,7 @@ model BookmarkedApp {
 
 model SocialProfile {
   id         String   @id @default(cuid())
-  profileId  String
+  userId     String   // Changed from profileId to userId
   provider   String // "farcaster", "telegram", "twitter", etc.
   providerId String // External provider's user ID
   username   String?
@@ -172,9 +176,9 @@ model SocialProfile {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
   
-  profile SmartProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  @@unique([profileId, provider])
+  @@unique([userId, provider])
   @@unique([provider, providerId])
   @@map("social_profiles")
 }
@@ -255,4 +259,68 @@ model AuditLog {
   profile SmartProfile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
   
   @@map("audit_logs")
+}
+
+// Orby Integration Models
+model PreferredGasToken {
+  id                    String   @id @default(cuid())
+  profileId             String   @unique
+  standardizedTokenId   String
+  tokenSymbol           String   // For display
+  chainPreferences      String   // JSON { chainId: tokenAddress }
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  profile SmartProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  @@map("preferred_gas_tokens")
+}
+
+model OrbyVirtualNode {
+  id            String   @id @default(cuid())
+  profileId     String
+  chainId       Int
+  rpcUrl        String
+  address       String   // The injected address for this chain
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  
+  profile SmartProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  @@unique([profileId, chainId])
+  @@map("orby_virtual_nodes")
+}
+
+model OrbyOperation {
+  id                String   @id @default(cuid())
+  profileId         String
+  operationSetId    String   @unique
+  type              String   // "swap", "transfer", "sign"
+  status            String   // "created", "signed", "pending", "successful", "failed"
+  unsignedPayload   String   // JSON - Store the unsigned operations
+  signedPayload     String?  // JSON - Store after signing
+  gasToken          String?  // JSON - Gas token used
+  metadata          String   // JSON - Additional context
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  completedAt       DateTime?
+  
+  profile SmartProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  transactions OrbyTransaction[]
+  
+  @@map("orby_operations")
+}
+
+model OrbyTransaction {
+  id              String   @id @default(cuid())
+  operationId     String
+  chainId         Int
+  hash            String?
+  status          String
+  gasUsed         String?
+  createdAt       DateTime @default(now())
+  
+  operation OrbyOperation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  
+  @@map("orby_transactions")
 }

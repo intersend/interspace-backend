@@ -10,7 +10,7 @@ import {
 export interface ThirdwebAuthRequest {
   authToken: string; // Thirdweb auth token
   authStrategy: string; // "email", "google", "wallet", "guest", etc.
-  deviceId: string;
+  deviceId: string | null;
   deviceName: string;
   deviceType: 'ios' | 'android' | 'web';
   walletAddress?: string; // For wallet auth
@@ -59,12 +59,14 @@ export class ThirdwebAuthService {
             break;
         }
 
-        // Handle device registration
-        await this.handleDeviceRegistration(tx, user.id, data);
+        // Handle device registration (optional)
+        if (data.deviceId) {
+          await this.handleDeviceRegistration(tx, user.id, data);
+        }
 
         // Generate tokens
-        const accessToken = generateAccessToken(user.id, data.deviceId);
-        const refreshToken = generateRefreshToken(user.id, data.deviceId);
+        const accessToken = generateAccessToken(user.id, data.deviceId || undefined);
+        const refreshToken = generateRefreshToken(user.id, data.deviceId || undefined);
 
         // Store refresh token
         await tx.refreshToken.create({
@@ -133,7 +135,7 @@ export class ThirdwebAuthService {
     }
 
     // Find existing linked account
-    const linkedAccount = await tx.linkedAccount.findUnique({
+    const linkedAccount = await tx.linkedAccount.findFirst({
       where: { address: data.walletAddress.toLowerCase() },
       include: { user: true }
     });
@@ -189,23 +191,52 @@ export class ThirdwebAuthService {
   }
 
   /**
-   * Handle social authentication (Google, Discord, etc.)
+   * Handle social authentication (Google, Discord, Telegram, etc.)
    */
   private async handleSocialAuth(tx: any, data: ThirdwebAuthRequest) {
+    // For Telegram and other providers that may have minimal data
+    if (!data.socialData && data.authStrategy === 'telegram' && data.walletAddress) {
+      // Handle Telegram with minimal data - use wallet address as identifier
+      data.socialData = {
+        provider: 'telegram',
+        providerId: data.walletAddress,
+        username: 'telegram',
+        displayName: 'Telegram User'
+      };
+    }
+    
     if (!data.socialData) {
       throw new AuthenticationError('Social data required for social auth strategy');
     }
 
     const { provider, providerId } = data.socialData;
 
-    // Find existing user by social provider
-    let user = await tx.user.findFirst({
-      where: {
-        authStrategies: {
-          contains: provider
-        }
+    // Find existing user by wallet address first (for Telegram)
+    let user;
+    if (data.walletAddress && (provider === 'telegram' || data.authStrategy === 'telegram')) {
+      const linkedAccount = await tx.linkedAccount.findFirst({
+        where: { 
+          address: data.walletAddress.toLowerCase(),
+          authStrategy: 'telegram'
+        },
+        include: { user: true }
+      });
+      
+      if (linkedAccount) {
+        user = linkedAccount.user;
       }
-    });
+    }
+    
+    // If not found by wallet, try finding by auth strategy
+    if (!user) {
+      user = await tx.user.findFirst({
+        where: {
+          authStrategies: {
+            contains: provider
+          }
+        }
+      });
+    }
 
     if (!user) {
       // Create new user
@@ -215,6 +246,19 @@ export class ThirdwebAuthService {
           isGuest: false
         }
       });
+      
+      // For Telegram, also create a linked account with the wallet address
+      if (data.walletAddress && (provider === 'telegram' || data.authStrategy === 'telegram')) {
+        await tx.linkedAccount.create({
+          data: {
+            userId: user.id,
+            address: data.walletAddress.toLowerCase(),
+            authStrategy: 'telegram',
+            walletType: 'external',
+            isActive: true
+          }
+        });
+      }
     } else {
       // Update auth strategies
       const currentStrategies = JSON.parse(user.authStrategies || '[]');
@@ -234,34 +278,29 @@ export class ThirdwebAuthService {
    * Handle device registration
    */
   private async handleDeviceRegistration(tx: any, userId: string, data: ThirdwebAuthRequest) {
-    const existingDevice = await tx.deviceRegistration.findUnique({
-      where: { deviceId: data.deviceId }
-    });
-
-    if (existingDevice) {
-      // Update existing device
-      await tx.deviceRegistration.update({
-        where: { deviceId: data.deviceId },
-        data: {
-          deviceName: data.deviceName,
-          deviceType: data.deviceType,
-          isActive: true,
-          lastActiveAt: new Date()
-        }
-      });
-    } else {
-      // Create new device registration
-      await tx.deviceRegistration.create({
-        data: {
-          userId,
-          deviceId: data.deviceId,
-          deviceName: data.deviceName,
-          deviceType: data.deviceType,
-          isActive: true,
-          lastActiveAt: new Date()
-        }
-      });
+    // Only register device if deviceId is provided
+    if (!data.deviceId) {
+      return; // Skip device registration
     }
+
+    await tx.deviceRegistration.upsert({
+      where: { deviceId: data.deviceId },
+      update: {
+        userId: userId, // Always update userId to current user
+        deviceName: data.deviceName,
+        deviceType: data.deviceType,
+        isActive: true,
+        lastActiveAt: new Date()
+      },
+      create: {
+        userId,
+        deviceId: data.deviceId,
+        deviceName: data.deviceName,
+        deviceType: data.deviceType,
+        isActive: true,
+        lastActiveAt: new Date()
+      }
+    });
   }
 
   /**
@@ -319,8 +358,11 @@ export class ThirdwebAuthService {
 
       // Handle wallet linking if wallet auth
       if (data.authStrategy === 'wallet' && data.walletAddress) {
-        const existingLinkedAccount = await tx.linkedAccount.findUnique({
-          where: { address: data.walletAddress.toLowerCase() }
+        const existingLinkedAccount = await tx.linkedAccount.findFirst({
+          where: { 
+            address: data.walletAddress.toLowerCase(),
+            userId: userId
+          }
         });
 
         if (!existingLinkedAccount) {

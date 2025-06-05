@@ -263,6 +263,9 @@ export class SmartProfileController {
       } as ApiResponse);
     }
   }
+
+  // Social profile methods have been moved to UserController
+  // Use /users/me/social-accounts endpoints instead
 }
 
 export const smartProfileController = new SmartProfileController();
