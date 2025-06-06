@@ -1,4 +1,4 @@
-import { prisma, withTransaction } from '@/utils/database';
+import { prisma, withTransaction, withRetryableTransaction } from '@/utils/database';
 import { 
   CreateSmartProfileRequest,
   UpdateSmartProfileRequest,
@@ -21,7 +21,8 @@ export class SmartProfileService {
     data: CreateSmartProfileRequest,
     primaryWalletAddress?: string
   ): Promise<SmartProfileResponse> {
-    return withTransaction(async (tx) => {
+    // Use retryable transaction with extended timeout
+    return withRetryableTransaction(async (tx) => {
       // Check if user already has a profile with this name
       const existingProfile = await tx.smartProfile.findFirst({
         where: {
@@ -46,6 +47,7 @@ export class SmartProfileService {
 
       try {
         // Create session wallet using the profile ID
+        console.log(`Creating session wallet for profile ${profile.id}...`);
         const sessionWalletAddress = await sessionWalletService.getSessionWalletAddress(
           profile.id,
           config.DEFAULT_CHAIN_ID
@@ -69,19 +71,7 @@ export class SmartProfileService {
           }
         });
 
-        // Create Orby account cluster for the profile
-        try {
-          const clusterId = await orbyService.createOrGetAccountCluster(updatedProfile);
-          await tx.smartProfile.update({
-            where: { id: profile.id },
-            data: { orbyAccountClusterId: clusterId } as any
-          });
-        } catch (orbyError) {
-          console.error('Failed to create Orby cluster (non-blocking):', orbyError);
-          // Don't fail profile creation if Orby fails
-        }
-
-        // Log the profile creation
+        // Log the profile creation early (before Orby)
         await tx.auditLog.create({
           data: {
             userId,
@@ -96,17 +86,54 @@ export class SmartProfileService {
           }
         });
 
+        // Create Orby account cluster for the profile (pass transaction context)
+        try {
+          console.log(`Creating Orby cluster for profile ${profile.id}...`);
+          const clusterId = await orbyService.createOrGetAccountCluster(updatedProfile, tx);
+          
+          // The cluster ID is already saved by orbyService.createOrGetAccountCluster
+          // Just update our local copy
+          updatedProfile.orbyAccountClusterId = clusterId as any;
+          
+          console.log(`Orby cluster created successfully: ${clusterId}`);
+        } catch (orbyError) {
+          // Log detailed error for debugging
+          console.error('Failed to create Orby cluster (non-blocking):', {
+            profileId: profile.id,
+            error: orbyError instanceof Error ? orbyError.message : orbyError,
+            stack: orbyError instanceof Error ? orbyError.stack : undefined
+          });
+          // Don't fail profile creation if Orby fails
+          // Profile can still function without Orby integration
+        }
+
         return this.formatProfileResponse(updatedProfile);
 
       } catch (error) {
-        // If session wallet creation fails, delete the profile
-        await tx.smartProfile.delete({
-          where: { id: profile.id }
+        // Log the error for debugging
+        console.error(`Profile creation failed for user ${userId}:`, {
+          error: error instanceof Error ? error.message : error,
+          stack: error instanceof Error ? error.stack : undefined
         });
+
+        // If session wallet creation fails, delete the profile
+        // Note: This might fail if the transaction has already been rolled back
+        try {
+          await tx.smartProfile.delete({
+            where: { id: profile.id }
+          });
+        } catch (deleteError) {
+          // Profile might already be rolled back, ignore delete error
+          console.warn('Could not delete profile after failure (may already be rolled back):', deleteError);
+        }
         
         const errorMessage = error instanceof Error ? error.message : String(error);
-        throw new Error(`Failed to create session wallet: ${errorMessage}`);
+        throw new Error(`Failed to create profile: ${errorMessage}`);
       }
+    }, {
+      timeout: 45000, // 45 seconds timeout for the entire operation
+      maxRetries: 2, // Retry up to 2 times on retryable errors
+      retryDelay: 2000 // Wait 2 seconds between retries
     });
   }
 

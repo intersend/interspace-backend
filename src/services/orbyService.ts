@@ -92,8 +92,13 @@ export class OrbyService {
 
   /**
    * Create or get an account cluster for a profile
+   * @param profile - The profile with linked accounts
+   * @param tx - Optional transaction context to use instead of global prisma
    */
-  async createOrGetAccountCluster(profile: SmartProfile & { linkedAccounts: LinkedAccount[] }): Promise<string> {
+  async createOrGetAccountCluster(
+    profile: SmartProfile & { linkedAccounts: LinkedAccount[] },
+    tx?: any
+  ): Promise<string> {
     // Cast profile to include orby fields
     const profileWithOrby = profile as SmartProfileWithOrby & { linkedAccounts: LinkedAccount[] };
     
@@ -133,8 +138,11 @@ export class OrbyService {
       throw new AppError('Failed to create Orby account cluster', 500);
     }
 
-    // Update profile with cluster ID
-    await prisma.smartProfile.update({
+    // Use transaction context if provided, otherwise use global prisma
+    const dbContext = tx || prisma;
+
+    // Update profile with cluster ID using the correct database context
+    await dbContext.smartProfile.update({
       where: { id: profile.id },
       data: { orbyAccountClusterId: cluster.accountClusterId } as any
     });
@@ -144,9 +152,13 @@ export class OrbyService {
 
   /**
    * Update account cluster when accounts are linked/unlinked
+   * @param profileId - The profile ID to update
+   * @param tx - Optional transaction context to use instead of global prisma
    */
-  async updateAccountCluster(profileId: string): Promise<void> {
-    const profile = await prisma.smartProfile.findUnique({
+  async updateAccountCluster(profileId: string, tx?: any): Promise<void> {
+    const dbContext = tx || prisma;
+    
+    const profile = await dbContext.smartProfile.findUnique({
       where: { id: profileId },
       include: { linkedAccounts: true }
     });
@@ -158,12 +170,12 @@ export class OrbyService {
     }
 
     // Recreate cluster with updated accounts
-    await prisma.smartProfile.update({
+    await dbContext.smartProfile.update({
       where: { id: profileId },
       data: { orbyAccountClusterId: null } as any
     });
 
-    await this.createOrGetAccountCluster(profileWithOrby);
+    await this.createOrGetAccountCluster(profileWithOrby, tx);
   }
 
   /**
