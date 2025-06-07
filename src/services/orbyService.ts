@@ -403,12 +403,12 @@ export class OrbyService {
 
     // Create sign functions based on the signed operations
     const signTransaction = async (op: OnchainOperation): Promise<string | undefined> => {
-      const signedOp = signedOperations.find(s => s.index === 0); // Adjust index logic as needed
+      const signedOp = signedOperations.find(s => s.index === (op as any).index);
       return signedOp?.signature;
     };
 
     const signTypedData = async (op: OnchainOperation): Promise<string | undefined> => {
-      const signedOp = signedOperations.find(s => s.index === 0); // Adjust index logic as needed
+      const signedOp = signedOperations.find(s => s.index === (op as any).index);
       return signedOp?.signedData || signedOp?.signature;
     };
 

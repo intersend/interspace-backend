@@ -3,9 +3,14 @@ import { orbyController } from '@/controllers/orbyController';
 import { authenticate } from '@/middleware/auth';
 import { asyncHandler } from '@/middleware/errorHandler';
 import { validateRequest } from '@/middleware/validation';
+import { userRateLimit, transactionRateLimit } from '@/middleware/rateLimiter';
 import Joi from 'joi';
 
 const router = Router();
+
+// All routes require authentication and standard rate limiting
+router.use(authenticate);
+router.use(userRateLimit);
 
 // Validation schemas
 const createIntentSchema = Joi.object({
@@ -47,47 +52,30 @@ const setGasTokenPreferenceSchema = Joi.object({
 });
 
 // Routes
-router.get(
-  '/profiles/:id/balance',
-  authenticate,
-  asyncHandler(orbyController.getUnifiedBalance)
-);
+router.get('/profiles/:id/balance', asyncHandler(orbyController.getUnifiedBalance));
 
 router.post(
   '/profiles/:id/intent',
-  authenticate,
+  transactionRateLimit,
   validateRequest(createIntentSchema),
   asyncHandler(orbyController.createIntent)
 );
 
 router.post(
   '/operations/:operationSetId/submit',
-  authenticate,
+  transactionRateLimit,
   validateRequest(submitOperationsSchema),
   asyncHandler(orbyController.submitSignedOperations)
 );
 
-router.get(
-  '/operations/:operationSetId/status',
-  authenticate,
-  asyncHandler(orbyController.getOperationStatus)
-);
+router.get('/operations/:operationSetId/status', asyncHandler(orbyController.getOperationStatus));
 
-router.get(
-  '/profiles/:id/transactions',
-  authenticate,
-  asyncHandler(orbyController.getTransactionHistory)
-);
+router.get('/profiles/:id/transactions', asyncHandler(orbyController.getTransactionHistory));
 
-router.get(
-  '/profiles/:id/gas-tokens',
-  authenticate,
-  asyncHandler(orbyController.getGasTokens)
-);
+router.get('/profiles/:id/gas-tokens', asyncHandler(orbyController.getGasTokens));
 
 router.post(
   '/profiles/:id/gas-tokens/preference',
-  authenticate,
   validateRequest(setGasTokenPreferenceSchema),
   asyncHandler(orbyController.setPreferredGasToken)
 );
