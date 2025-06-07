@@ -1,4 +1,5 @@
 import { prisma, withTransaction } from '@/utils/database';
+import { orbyService } from './orbyService';
 import { 
   LinkAccountRequest,
   UpdateLinkedAccountRequest,
@@ -99,6 +100,13 @@ export class LinkedAccountService {
           })
         }
       });
+
+      // Update Orby account cluster with the newly linked account
+      try {
+        await orbyService.updateAccountCluster(profileId, tx);
+      } catch (err) {
+        console.error('Failed to update Orby cluster after linking account:', err);
+      }
 
       return this.formatLinkedAccountResponse(linkedAccount);
     });
@@ -322,7 +330,7 @@ export class LinkedAccountService {
         });
       } else {
         console.log(`🔗 Keeping EOA ${account.address} for user ${account.userId} as it's still linked to ${otherActiveAccounts.length} other profile(s)`);
-        
+
         // Log the soft delete
         await tx.auditLog.create({
           data: {
@@ -336,6 +344,13 @@ export class LinkedAccountService {
             })
           }
         });
+      }
+
+      // Update Orby cluster to reflect removed account
+      try {
+        await orbyService.updateAccountCluster(account.profileId!, tx);
+      } catch (err) {
+        console.error('Failed to update Orby cluster after unlinking account:', err);
       }
     });
   }

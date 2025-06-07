@@ -1,6 +1,6 @@
-import { prisma } from '@/utils/database';
-import { orbyService } from './orbyService';
-import { SmartProfile } from '@prisma/client';
+import { prisma } from "@/utils/database";
+import { orbyService } from "./orbyService";
+import { SmartProfile } from "@prisma/client";
 
 interface GasTokenScore {
   tokenId: string;
@@ -13,8 +13,7 @@ interface GasTokenScore {
   isNative: boolean;
   factors: {
     balanceScore: number;
-    efficiencyScore: number;
-    availabilityScore: number;
+    nativeBonus: number;
     preferenceScore: number;
   };
 }
@@ -30,82 +29,88 @@ export class GasTokenService {
   }> {
     // Get portfolio from Orby
     const portfolio = await orbyService.getFungibleTokenPortfolio(profile);
-    
+
     const gasTokenScores: GasTokenScore[] = [];
-    const nativeGasAvailable: { chainId: number; amount: string; symbol: string }[] = [];
-    
-    // Analyze each token
+    const nativeGasAvailable: {
+      chainId: number;
+      amount: string;
+      symbol: string;
+    }[] = [];
+
+    // Determine total balance for weighting
+    const totalBalance = portfolio.reduce(
+      (acc, sb) => acc + BigInt(sb.total.toRawAmount()),
+      0n,
+    );
+
+    const preferred = await this.getPreferredGasToken(profile.id);
+
     for (const standardizedBalance of portfolio) {
       const { standardizedTokenId, total, tokenBalances } = standardizedBalance;
-      
-      // Check if it's a native token or stablecoin
-      const isNative = this.isNativeToken(tokenBalances[0]?.token);
-      const isStablecoin = this.isStablecoin(tokenBalances[0]?.token);
-      
-      // Calculate availability across chains
-      const availableChains = tokenBalances.map(tb => Number(tb.token.chainId));
-      
-      // Calculate scores
-      const balanceScore = this.calculateBalanceScore(total.toRawAmount().toString());
-      const efficiencyScore = isNative ? 100 : isStablecoin ? 80 : 60;
-      const availabilityScore = (availableChains.length / 5) * 100; // Assuming 5 supported chains
-      const preferenceScore = await this.getPreferenceScore(profile.id, standardizedTokenId);
-      
-      // Overall score (weighted)
-      const score = 
-        balanceScore * 0.4 +
-        efficiencyScore * 0.3 +
-        availabilityScore * 0.2 +
-        preferenceScore * 0.1;
-      
+
+      const token = tokenBalances[0]?.token;
+      if (!token) continue;
+
+      const balanceRaw = BigInt(total.toRawAmount());
+      if (balanceRaw === 0n) continue;
+
+      const isNative = this.isNativeToken(token);
+      const availableChains = tokenBalances.map((tb) =>
+        Number(tb.token.chainId),
+      );
+
+      const balanceScore =
+        totalBalance === 0n ? 0 : Number((balanceRaw * 100n) / totalBalance);
+      const nativeBonus = isNative ? 50 : 0;
+      const preferenceScore = await this.getPreferenceScore(
+        profile.id,
+        standardizedTokenId,
+      );
+
+      const score = balanceScore * 0.2 + nativeBonus + preferenceScore * 0.3;
+
       gasTokenScores.push({
         tokenId: standardizedTokenId,
-        symbol: tokenBalances[0]?.token.symbol || 'Unknown',
-        name: tokenBalances[0]?.token.name || 'Unknown',
+        symbol: token.symbol || "Unknown",
+        name: token.name || "Unknown",
         score,
         totalBalance: total.toRawAmount().toString(),
-        totalUsdValue: '0', // USD value calculation would need additional API
+        totalUsdValue: "0",
         availableChains,
         isNative,
-        factors: {
-          balanceScore,
-          efficiencyScore,
-          availabilityScore,
-          preferenceScore
-        }
+        factors: { balanceScore, nativeBonus, preferenceScore },
       });
-      
-      // Track native gas availability
+
       if (isNative) {
         for (const tb of tokenBalances) {
           nativeGasAvailable.push({
             chainId: Number(tb.token.chainId),
             amount: tb.toRawAmount().toString(),
-            symbol: tb.token.symbol || 'ETH'
+            symbol: token.symbol || "ETH",
           });
         }
       }
     }
-    
-    // Sort by score
+
     gasTokenScores.sort((a, b) => b.score - a.score);
-    
-    // Get user's preferred token if set
-    const preferredToken = await this.getPreferredGasToken(profile.id);
-    let suggestedToken = gasTokenScores[0] || null;
-    
-    // If user has preference and it's available, use it
-    if (preferredToken && gasTokenScores.find(t => t.tokenId === preferredToken.standardizedTokenId)) {
-      suggestedToken = gasTokenScores.find(t => t.tokenId === preferredToken.standardizedTokenId)!;
+
+    let suggestedToken: GasTokenScore | null = gasTokenScores[0] || null;
+    if (
+      preferred &&
+      gasTokenScores.find((t) => t.tokenId === preferred.standardizedTokenId)
+    ) {
+      suggestedToken = gasTokenScores.find(
+        (t) => t.tokenId === preferred.standardizedTokenId,
+      )!;
     }
-    
+
     return {
       availableTokens: gasTokenScores,
       suggestedToken,
-      nativeGasAvailable
+      nativeGasAvailable,
     };
   }
-  
+
   /**
    * Set preferred gas token for a profile
    */
@@ -113,72 +118,90 @@ export class GasTokenService {
     profileId: string,
     standardizedTokenId: string,
     tokenSymbol: string,
-    chainPreferences?: Record<number, string>
+    chainPreferences?: Record<number, string>,
   ): Promise<void> {
     await prisma.preferredGasToken.upsert({
       where: { profileId },
       update: {
         standardizedTokenId,
         tokenSymbol,
-        chainPreferences: JSON.stringify(chainPreferences || {})
+        chainPreferences: JSON.stringify(chainPreferences || {}),
       },
       create: {
         profileId,
         standardizedTokenId,
         tokenSymbol,
-        chainPreferences: JSON.stringify(chainPreferences || {})
-      }
+        chainPreferences: JSON.stringify(chainPreferences || {}),
+      },
     });
   }
-  
+
   /**
    * Get preferred gas token for a profile
    */
   private async getPreferredGasToken(profileId: string) {
     return prisma.preferredGasToken.findUnique({
-      where: { profileId }
+      where: { profileId },
     });
   }
-  
-  /**
-   * Calculate balance score (0-100)
-   */
-  private calculateBalanceScore(rawAmount: string): number {
-    const amount = parseFloat(rawAmount);
-    if (amount === 0) return 0;
-    if (amount < 10) return 20;
-    if (amount < 100) return 50;
-    if (amount < 1000) return 80;
-    return 100;
-  }
-  
+
   /**
    * Get preference score based on usage history
    */
-  private async getPreferenceScore(profileId: string, tokenId: string): Promise<number> {
+  private async getPreferenceScore(
+    profileId: string,
+    tokenId: string,
+  ): Promise<number> {
     const preferred = await this.getPreferredGasToken(profileId);
     if (preferred?.standardizedTokenId === tokenId) return 100;
-    
-    // TODO: Analyze historical usage
-    return 50;
+
+    // Analyze historical usage based on past Orby operations
+    const [usageCount, totalCount] = await Promise.all([
+      prisma.orbyOperation.count({
+        where: {
+          profileId,
+          gasToken: {
+            contains: tokenId,
+          },
+          status: {
+            in: ["successful", "pending"],
+          },
+        },
+      }),
+      prisma.orbyOperation.count({
+        where: {
+          profileId,
+          status: {
+            in: ["successful", "pending"],
+          },
+        },
+      }),
+    ]);
+
+    if (totalCount === 0) return 0;
+
+    // Score between 0 and 100 based on usage percentage
+    return Math.min(100, Math.round((usageCount / totalCount) * 100));
   }
-  
+
   /**
    * Check if token is native (ETH, MATIC, etc)
    */
   private isNativeToken(token?: any): boolean {
     if (!token) return false;
-    return token.address === '0x0000000000000000000000000000000000000000' ||
-           token.address === '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE';
+    return (
+      token.address === "0x0000000000000000000000000000000000000000" ||
+      token.address === "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+    );
   }
-  
+
   /**
    * Check if token is stablecoin
    */
   private isStablecoin(token?: any): boolean {
     if (!token) return false;
-    const stableSymbols = ['USDC', 'USDT', 'DAI', 'BUSD', 'TUSD'];
-    return stableSymbols.includes(token.symbol?.toUpperCase() || '');
+    const stableSymbols = ["USDC", "USDT", "DAI", "BUSD", "TUSD"];
+    return stableSymbols.includes(token.symbol?.toUpperCase() || "");
   }
 }
 
