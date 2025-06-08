@@ -4,7 +4,7 @@ Backend API for Interspace MVP wallet with SmartProfiles, ERC-7702 session walle
 
 ## 🎯 **Ready for React Native Integration**
 
-**✅ Production-Ready Status**: All 33 tests passing with custom MPC wallet integration.
+**✅ Production-Ready Status**: All tests passing with custom MPC wallet integration.
 
 ## 🚀 Quick Start
 
@@ -179,7 +179,7 @@ socket.on('profile_updated', (data) => {
 - **Database**: Prisma ORM with SQLite (dev) / PostgreSQL (prod)
 - **Authentication**: JWT with MPC wallet shares
 - **Blockchain**: Silence Labs two-party MPC
-- **Testing**: Jest with 33 tests passing (unit + integration)
+- **Testing**: Jest with all tests passing (unit + integration)
 - **Security**: Helmet, rate limiting, input validation
 
 ### MPC Integration ✅
@@ -436,24 +436,24 @@ const deviceInfo = {
 
 ## 🧪 Testing Status
 
-### ✅ All Tests Passing (33/33)
+### ✅ All Tests Passing
 
-**Unit Tests (28)**:
+**Unit Tests**:
 - Service layer business logic
 - Authentication flows  
 - Database operations
 - Error handling
 
-**Integration Tests (5)**:
+**Integration Tests**:
 - **MPC wallet integration**
 - Multi-chain support verification
 - Session account functionality
 
 **Test Commands**:
 ```bash
-npm test                    # All tests (33)
-npm run test:unit          # Unit tests only (28)
-npm run test:integration   # Integration tests (5)
+npm test                    # All tests
+npm run test:unit          # Unit tests only
+npm run test:integration   # Integration tests
 npm run test:coverage      # With coverage report
 ```
 
@@ -474,8 +474,8 @@ npm run test:coverage      # With coverage report
    ```
    Expected output:
    ```
-   Test Suites: 4 passed, 4 total
-   Tests:       33 passed, 33 total
+   Test Suites: all passed
+   Tests:       all passed
    ```
 
 ### MPC Wallet Verification
