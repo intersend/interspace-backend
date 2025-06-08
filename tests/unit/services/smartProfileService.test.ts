@@ -1,3 +1,7 @@
+process.env.ENCRYPTION_SECRET = process.env.ENCRYPTION_SECRET || 'test-encryption-secret';
+process.env.JWT_SECRET = process.env.JWT_SECRET || 'test-jwt-secret';
+process.env.SILENCE_ADMIN_TOKEN = process.env.SILENCE_ADMIN_TOKEN || 'test-silence-token';
+process.env.SILENCE_NODE_URL = process.env.SILENCE_NODE_URL || 'https://silence.node';
 import { smartProfileService } from '../../../src/services/smartProfileService';
 import { UserFactory } from '../../factories/userFactory';
 import { SmartProfileFactory } from '../../factories/smartProfileFactory';
@@ -15,7 +19,7 @@ jest.mock('../../../src/blockchain/sessionWalletService', () => ({
     isSessionWalletDeployed: jest.fn().mockResolvedValue(true),
     createSessionWallet: jest.fn().mockImplementation(() => {
       mockAddressCounter++;
-      return Promise.resolve(`0x${mockAddressCounter.toString().padStart(40, '0')}`);
+      return Promise.resolve({ address: `0x${mockAddressCounter.toString().padStart(40, '0')}` });
     }),
   }
 }));
