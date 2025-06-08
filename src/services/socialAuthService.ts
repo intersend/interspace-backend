@@ -1,7 +1,7 @@
 import { prisma, withTransaction } from '@/utils/database';
 import { generateAccessToken, generateRefreshToken } from '@/utils/jwt';
 import { OAuth2Client } from 'google-auth-library';
-import { verifyAppleToken } from 'apple-signin-auth';
+import verifyAppleToken from 'apple-signin-auth';
 import { passkeyService } from './passkeyService';
 import { config } from '@/utils/config';
 import { 
