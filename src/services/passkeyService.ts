@@ -1,4 +1,5 @@
 import { verifyRegistrationResponse, verifyAuthenticationResponse, GenerateRegistrationOptionsOpts, GenerateAuthenticationOptionsOpts } from '@simplewebauthn/server';
+import { prisma } from '@/utils/database';
 
 interface StoredCredential {
   credentialID: string;
@@ -8,7 +9,6 @@ interface StoredCredential {
 }
 
 class PasskeyService {
-  private creds: Map<string, StoredCredential> = new Map();
 
   async verifyRegistration(responseJSON: string): Promise<StoredCredential> {
     const response = JSON.parse(responseJSON);
@@ -25,13 +25,28 @@ class PasskeyService {
       username: response.username,
       counter: registrationInfo.counter,
     };
-    this.creds.set(cred.credentialID, cred);
+    await prisma.passkeyCredential.upsert({
+      where: { credentialId: cred.credentialID },
+      update: {
+        publicKey: cred.publicKey,
+        username: cred.username,
+        counter: cred.counter,
+      },
+      create: {
+        credentialId: cred.credentialID,
+        publicKey: cred.publicKey,
+        username: cred.username,
+        counter: cred.counter,
+      },
+    });
     return cred;
   }
 
   async verifyAuthentication(assertionJSON: string): Promise<{ credentialId: string; username: string }> {
     const assertion = JSON.parse(assertionJSON);
-    const cred = this.creds.get(assertion.id);
+    const cred = await prisma.passkeyCredential.findUnique({
+      where: { credentialId: assertion.id },
+    });
     if (!cred) throw new Error('Unknown credential');
     const { verified, authenticationInfo } = await verifyAuthenticationResponse({
       response: assertion,
@@ -39,15 +54,18 @@ class PasskeyService {
       expectedOrigin: assertion.origin,
       expectedRPID: assertion.rpId,
       authenticator: {
-        credentialID: Buffer.from(cred.credentialID, 'base64url'),
+        credentialID: Buffer.from(cred.credentialId, 'base64url'),
         credentialPublicKey: Buffer.from(cred.publicKey, 'base64url'),
         counter: cred.counter,
         transports: ['internal'],
       },
     });
     if (!verified || !authenticationInfo) throw new Error('Invalid passkey assertion');
-    cred.counter = authenticationInfo.newCounter;
-    return { credentialId: cred.credentialID, username: cred.username };
+    await prisma.passkeyCredential.update({
+      where: { credentialId: cred.credentialId },
+      data: { counter: authenticationInfo.newCounter },
+    });
+    return { credentialId: cred.credentialId, username: cred.username };
   }
 }
 
