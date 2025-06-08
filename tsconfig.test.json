@@ -4,7 +4,15 @@
     "types": ["jest", "node"],
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "baseUrl": "./src",
+    "rootDir": "./",
+    "paths": {
+      "@com.silencelaboratories/two-party-ecdsa-js": ["../tests/stubs/silence.ts"],
+      "sigpair-admin-v2": ["../tests/stubs/sigpairAdmin.ts"],
+      "@orb-labs/orby-ethers6": ["../tests/stubs/orby-ethers6.ts"],
+      "@orb-labs/orby-core": ["../tests/stubs/orby-core.ts"]
+    }
   },
   "include": [
     "tests/**/*",

@@ -457,6 +457,27 @@ npm run test:integration   # Integration tests (11)
 npm run test:coverage      # With coverage report
 ```
 
+#### Preparing the test environment
+
+1. Copy the provided `.env.test` file:
+   ```bash
+   cp .env.test .env
+   ```
+2. Install dependencies and apply migrations:
+   ```bash
+   npm install
+   npm run prisma:test:migrate
+   ```
+3. Run the tests:
+   ```bash
+   npm test
+   ```
+   Expected output:
+   ```
+   Test Suites: 4 passed, 4 total
+   Tests:       39 passed, 39 total
+   ```
+
 ### MPC Wallet Verification
 
 **Wallets created during testing**:

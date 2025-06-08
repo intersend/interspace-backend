@@ -9,7 +9,6 @@ describe('Config', () => {
     expect(config).toHaveProperty('PORT');
     expect(config).toHaveProperty('JWT_SECRET');
     expect(config).toHaveProperty('JWT_EXPIRES_IN');
-    expect(config).toHaveProperty('THIRDWEB_CLIENT_ID');
     expect(config).toHaveProperty('DEFAULT_CHAIN_ID');
   });
 

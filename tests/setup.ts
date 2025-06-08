@@ -1,13 +1,13 @@
-import { config } from '@/utils/config';
-import { connectDatabase, disconnectDatabase, prisma } from '@/utils/database';
+import { config } from '../src/utils/config';
+import { connectDatabase, disconnectDatabase, prisma } from '../src/utils/database';
 
 // Global test setup
 beforeAll(async () => {
   // Ensure we're in test environment
   process.env.NODE_ENV = 'test';
-  
+
   // Override config for testing
-  process.env.DATABASE_URL = 'file:./test.db';
+  process.env.DATABASE_URL = 'file:./prisma/prisma/test.db';
   process.env.JWT_SECRET = 'test-jwt-secret';
   process.env.JWT_REFRESH_SECRET = 'test-jwt-refresh-secret';
   process.env.ENCRYPTION_SECRET = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
