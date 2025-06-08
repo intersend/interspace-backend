@@ -1,12 +1,15 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
+  setupFiles: ['<rootDir>/tests/setupEnv.ts'],
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   testMatch: [
     '<rootDir>/tests/**/*.test.ts'
   ],
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1'
+    '^@/(.*)$': '<rootDir>/src/$1',
+    '^@com\\.silencelaboratories\/two-party-ecdsa-js$': '<rootDir>/tests/__mocks__/@com.silencelaboratories/two-party-ecdsa-js.ts',
+    '^sigpair-admin-v2$': '<rootDir>/tests/__mocks__/sigpair-admin-v2.ts'
   },
   collectCoverageFrom: [
     'src/**/*.ts',
