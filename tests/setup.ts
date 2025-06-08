@@ -1,5 +1,5 @@
-import { config } from '@/utils/config';
-import { connectDatabase, disconnectDatabase, prisma } from '@/utils/database';
+import { config } from '../src/utils/config';
+import { connectDatabase, disconnectDatabase, prisma } from '../src/utils/database';
 
 // Global test setup
 beforeAll(async () => {
@@ -7,8 +7,16 @@ beforeAll(async () => {
   process.env.NODE_ENV = 'test';
   
   // Override config for testing
-  process.env.DATABASE_URL = 'file:./test.db';
+  process.env.DATABASE_URL = 'file:./prisma/prisma/test.db';
   process.env.JWT_SECRET = 'test-jwt-secret';
+  process.env.JWT_REFRESH_SECRET = 'test-refresh-secret';
+  process.env.ENCRYPTION_SECRET = 'test-encryption-secret';
+  process.env.REDIS_URL = 'redis://localhost:6379';
+  process.env.SILENCE_ADMIN_TOKEN = 'test-silence-token';
+  process.env.SILENCE_NODE_URL = 'https://silence.node';
+  process.env.ORBY_INSTANCE_PRIVATE_API_KEY = 'test-orby-private';
+  process.env.ORBY_INSTANCE_PUBLIC_API_KEY = 'test-orby-public';
+  process.env.ORBY_PRIVATE_INSTANCE_URL = 'https://orby.local';
   process.env.THIRDWEB_CLIENT_ID = '3dcca06b137a0ab48f1da145c27e4636';
   process.env.THIRDWEB_SECRET_KEY = 'HBxHyrdO03XxU0mwT9l4nyIFF_9jxTYpVB5mzfOBJfmhYVBAjzCadE8olXCzGRdx6tVCjizpbNEq2JWCSs8Xww';
   
