@@ -1,5 +1,7 @@
 import { P1Keygen, P2Keygen, P1Signer, P2Signer, generateSessionId } from '@com.silencelaboratories/two-party-ecdsa-js';
 import { SigpairAdmin } from 'sigpair-admin-v2';
+import { ethers, type JsonRpcProvider, Signature, Transaction } from 'ethers';
+import { prisma } from '@/utils/database';
 import { config } from '@/utils/config';
 
 interface KeyShareRecord {
@@ -11,9 +13,31 @@ interface KeyShareRecord {
 export class SessionWalletService {
   private admin: SigpairAdmin;
   private shares: Map<string, KeyShareRecord> = new Map();
+  private providers: Map<number, JsonRpcProvider> = new Map();
 
   constructor() {
     this.admin = new SigpairAdmin(config.SILENCE_ADMIN_TOKEN, config.SILENCE_NODE_URL);
+  }
+
+  private getProvider(chainId: number): JsonRpcProvider {
+    if (this.providers.has(chainId)) {
+      return this.providers.get(chainId)!;
+    }
+
+    const envVar =
+      chainId === 1
+        ? process.env.ETHEREUM_RPC_URL
+        : chainId === 137
+        ? process.env.POLYGON_RPC_URL
+        : undefined;
+
+    if (!envVar) {
+      throw new Error(`RPC URL for chain ${chainId} not configured`);
+    }
+
+    const provider = new ethers.JsonRpcProvider(envVar, chainId);
+    this.providers.set(chainId, provider);
+    return provider;
   }
 
   /**
@@ -60,11 +84,54 @@ export class SessionWalletService {
     targetAddress: string,
     value: string,
     data: string,
-    _chainId: number
+    chainId: number
   ): Promise<string> {
-    const hash = await this.signMessage(profileId, new Uint8Array());
-    // In real implementation, signed tx would be broadcast here
-    return hash;
+    const record = this.shares.get(profileId);
+    if (!record) throw new Error('Session wallet not created');
+
+    const provider = this.getProvider(chainId);
+
+    const nonce = await provider.getTransactionCount(record.address);
+    const feeData = await provider.getFeeData();
+
+    const txParams = {
+      type: 2,
+      chainId,
+      to: targetAddress,
+      value: BigInt(value),
+      data,
+      nonce,
+      gasLimit: await provider.estimateGas({
+        to: targetAddress,
+        from: record.address,
+        data,
+        value: BigInt(value)
+      }),
+      maxFeePerGas: feeData.maxFeePerGas ?? undefined,
+      maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? undefined
+    };
+
+    const tx = Transaction.from(txParams);
+    const messageHash = tx.unsignedHash;
+    const signature = await this.signMessage(profileId, ethers.getBytes(messageHash));
+    tx.signature = Signature.from(signature);
+
+    const serialized = tx.serialized;
+    const response = await provider.broadcastTransaction(serialized);
+
+    await prisma.transaction.create({
+      data: {
+        profileId,
+        hash: response.hash,
+        chainId,
+        fromAddress: record.address,
+        toAddress: targetAddress,
+        value,
+        status: 'pending'
+      }
+    });
+
+    return response.hash;
   }
 
   async signMessage(profileId: string, messageHash: Uint8Array): Promise<string> {
