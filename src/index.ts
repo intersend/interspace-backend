@@ -178,7 +178,7 @@ class Application {
         documentation: `${req.protocol}://${req.get('host')}/api/${config.API_VERSION}`,
         status: {
           tests: '39/39 passing',
-          thirdwebIntegration: 'verified',
+          thirdwebIntegration: 'removed',
           realWalletsCreated: '9+ during testing',
           reactNativeReady: true
         }
