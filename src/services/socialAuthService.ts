@@ -1,5 +1,9 @@
 import { prisma, withTransaction } from '@/utils/database';
 import { generateAccessToken, generateRefreshToken } from '@/utils/jwt';
+import { OAuth2Client } from 'google-auth-library';
+import { verifyAppleToken } from 'apple-signin-auth';
+import { passkeyService } from './passkeyService';
+import { config } from '@/utils/config';
 import { 
   AuthTokens,
   AuthenticationError,
@@ -7,9 +11,9 @@ import {
   NotFoundError 
 } from '@/types';
 
-export interface ThirdwebAuthRequest {
-  authToken: string; // Thirdweb auth token
-  authStrategy: string; // "email", "google", "wallet", "guest", etc.
+export interface SocialAuthRequest {
+  authToken: string; // OAuth or passkey token
+  authStrategy: string; // "google", "apple", "passkey", "wallet", "guest", etc.
   deviceId: string | null;
   deviceName: string;
   deviceType: 'ios' | 'android' | 'web';
@@ -24,19 +28,17 @@ export interface ThirdwebAuthRequest {
   };
 }
 
-export class ThirdwebAuthService {
+export class SocialAuthService {
   
   /**
-   * Verify Thirdweb auth token and create/login user
+   * Verify social auth token and create/login user
    */
-  async authenticateWithThirdweb(data: ThirdwebAuthRequest): Promise<AuthTokens> {
+  async authenticate(data: SocialAuthRequest): Promise<AuthTokens> {
     try {
-      // In a real implementation, you would verify the Thirdweb token here
-      // For now, we'll create a placeholder verification
-      const isValidToken = await this.verifyThirdwebToken(data.authToken);
-      
+      // Verify the provided social token or passkey
+      const isValidToken = await this.verifySocialAuth(data.authToken, data.authStrategy);
       if (!isValidToken) {
-        throw new AuthenticationError('Invalid Thirdweb auth token');
+        throw new AuthenticationError('Invalid social auth token');
       }
 
       return withTransaction(async (tx) => {
@@ -84,7 +86,7 @@ export class ThirdwebAuthService {
         };
       });
     } catch (error) {
-      console.error('Thirdweb authentication error:', error);
+      console.error('Social authentication error:', error);
       throw error;
     }
   }
@@ -92,7 +94,7 @@ export class ThirdwebAuthService {
   /**
    * Handle email-based authentication
    */
-  private async handleEmailAuth(tx: any, data: ThirdwebAuthRequest) {
+  private async handleEmailAuth(tx: any, data: SocialAuthRequest) {
     if (!data.email) {
       throw new AuthenticationError('Email required for email auth strategy');
     }
@@ -129,7 +131,7 @@ export class ThirdwebAuthService {
   /**
    * Handle wallet-based authentication (SIWE)
    */
-  private async handleWalletAuth(tx: any, data: ThirdwebAuthRequest) {
+  private async handleWalletAuth(tx: any, data: SocialAuthRequest) {
     if (!data.walletAddress) {
       throw new AuthenticationError('Wallet address required for wallet auth strategy');
     }
@@ -178,7 +180,7 @@ export class ThirdwebAuthService {
   /**
    * Handle guest authentication
    */
-  private async handleGuestAuth(tx: any, data: ThirdwebAuthRequest) {
+  private async handleGuestAuth(tx: any, data: SocialAuthRequest) {
     // Create guest user
     const user = await tx.user.create({
       data: {
@@ -193,7 +195,7 @@ export class ThirdwebAuthService {
   /**
    * Handle social authentication (Google, Discord, Telegram, etc.)
    */
-  private async handleSocialAuth(tx: any, data: ThirdwebAuthRequest) {
+  private async handleSocialAuth(tx: any, data: SocialAuthRequest) {
     // For Telegram and other providers that may have minimal data
     if (!data.socialData && data.authStrategy === 'telegram' && data.walletAddress) {
       // Handle Telegram with minimal data - use wallet address as identifier
@@ -277,7 +279,7 @@ export class ThirdwebAuthService {
   /**
    * Handle device registration
    */
-  private async handleDeviceRegistration(tx: any, userId: string, data: ThirdwebAuthRequest) {
+  private async handleDeviceRegistration(tx: any, userId: string, data: SocialAuthRequest) {
     // Only register device if deviceId is provided
     if (!data.deviceId) {
       return; // Skip device registration
@@ -304,19 +306,27 @@ export class ThirdwebAuthService {
   }
 
   /**
-   * Verify Thirdweb auth token (placeholder implementation)
+   * Verify social auth token (placeholder implementation)
    */
-  private async verifyThirdwebToken(authToken: string): Promise<boolean> {
+  private async verifySocialAuth(authToken: string, strategy: string): Promise<boolean> {
     try {
-      // In a real implementation, you would:
-      // 1. Validate the token format
-      // 2. Verify the signature
-      // 3. Check expiration
-      // 4. Validate against Thirdweb's verification endpoint
-      
-      // For now, accept any non-empty token
-      //@ts-ignore
-      return authToken && authToken.length > 0;
+      switch (strategy) {
+        case 'google': {
+          const client = new OAuth2Client(config.GOOGLE_CLIENT_ID);
+          await client.verifyIdToken({ idToken: authToken, audience: config.GOOGLE_CLIENT_ID });
+          return true;
+        }
+        case 'apple': {
+          await verifyAppleToken({ idToken: authToken, clientId: config.APPLE_CLIENT_ID! });
+          return true;
+        }
+        case 'passkey': {
+          await passkeyService.verifyAuthentication(authToken);
+          return true;
+        }
+        default:
+          return false;
+      }
     } catch (error) {
       console.error('Token verification error:', error);
       return false;
@@ -326,11 +336,11 @@ export class ThirdwebAuthService {
   /**
    * Link additional auth method to existing user
    */
-  async linkAuthMethod(userId: string, data: Omit<ThirdwebAuthRequest, 'deviceId' | 'deviceName' | 'deviceType'>): Promise<void> {
-    const isValidToken = await this.verifyThirdwebToken(data.authToken);
+  async linkAuthMethod(userId: string, data: Omit<SocialAuthRequest, 'deviceId' | 'deviceName' | 'deviceType'>): Promise<void> {
+    const isValidToken = await this.verifySocialAuth(data.authToken, data.authStrategy);
     
     if (!isValidToken) {
-      throw new AuthenticationError('Invalid Thirdweb auth token');
+      throw new AuthenticationError('Invalid social auth token');
     }
 
     await withTransaction(async (tx) => {
@@ -426,4 +436,4 @@ export class ThirdwebAuthService {
   }
 }
 
-export const thirdwebAuthService = new ThirdwebAuthService();
+export const socialAuthService = new SocialAuthService();

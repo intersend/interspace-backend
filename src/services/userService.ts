@@ -1,4 +1,9 @@
 import { prisma, withTransaction } from '@/utils/database';
+import { OAuth2Client } from 'google-auth-library';
+import { verifyAppleToken } from 'apple-signin-auth';
+import { decrypt, encrypt } from '@/utils/crypto';
+import { config } from '@/utils/config';
+import { passkeyService } from './passkeyService';
 import { 
   UserResponse,
   SocialAccountResponse,
@@ -126,8 +131,8 @@ export class UserService {
           username: socialData.username,
           displayName: socialData.displayName,
           avatarUrl: socialData.avatarUrl,
-          accessToken: socialData.accessToken, // Should be encrypted in production
-          refreshToken: socialData.refreshToken // Should be encrypted in production
+          accessToken: socialData.accessToken ? encrypt(socialData.accessToken) : undefined,
+          refreshToken: socialData.refreshToken ? encrypt(socialData.refreshToken) : undefined
         }
       });
 
@@ -237,7 +242,7 @@ export class UserService {
    */
   private async verifySocialAuth(
     provider: string,
-    oauthCode: string,
+    oauthToken: string,
     redirectUri?: string
   ): Promise<{
     providerId: string;
@@ -247,34 +252,41 @@ export class UserService {
     accessToken?: string;
     refreshToken?: string;
   }> {
-    // TODO: Implement actual OAuth verification for each provider
-    // This is a placeholder implementation
-    
     switch (provider) {
-      case 'telegram':
-        // For Telegram, we might use the auth data differently
+      case 'google': {
+        const client = new OAuth2Client(config.GOOGLE_CLIENT_ID);
+        const ticket = await client.verifyIdToken({
+          idToken: oauthToken,
+          audience: config.GOOGLE_CLIENT_ID
+        });
+        const payload = ticket.getPayload();
+        if (!payload) throw new AuthenticationError('Invalid Google token');
         return {
-          providerId: `telegram_${Date.now()}`,
-          username: 'telegram_user',
-          displayName: 'Telegram User'
+          providerId: payload.sub,
+          username: payload.email ?? undefined,
+          displayName: payload.name ?? undefined,
+          avatarUrl: payload.picture ?? undefined
         };
-      
-      case 'farcaster':
-        // Implement Farcaster OAuth
+      }
+      case 'apple': {
+        const result = await verifyAppleToken({
+          idToken: oauthToken,
+          clientId: config.APPLE_CLIENT_ID!
+        });
         return {
-          providerId: `farcaster_${Date.now()}`,
-          username: 'farcaster_user',
-          displayName: 'Farcaster User'
+          providerId: result.sub,
+          username: result.email ?? undefined,
+          displayName: result.email ?? undefined
         };
-      
-      case 'google':
-        // Implement Google OAuth
+      }
+      case 'passkey': {
+        const data = await passkeyService.verifyAuthentication(oauthToken);
         return {
-          providerId: `google_${Date.now()}`,
-          username: 'google_user',
-          displayName: 'Google User'
+          providerId: data.credentialId,
+          username: data.username,
+          displayName: data.username
         };
-      
+      }
       default:
         throw new AuthenticationError(`Unsupported social provider: ${provider}`);
     }

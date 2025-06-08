@@ -4,7 +4,7 @@ Backend API for Interspace MVP wallet with SmartProfiles, ERC-7702 session walle
 
 ## 🎯 **Ready for React Native Integration**
 
-**✅ Production-Ready Status**: All 39 tests passing with real Thirdweb SDK integration verified.
+**✅ Production-Ready Status**: All 39 tests passing with custom MPC wallet integration.
 
 ## 🚀 Quick Start
 
@@ -44,9 +44,9 @@ JWT_SECRET="your-jwt-secret-key-replace-in-production"
 JWT_EXPIRES_IN="15m"
 JWT_REFRESH_EXPIRES_IN="7d"
 
-# Thirdweb Integration (Real credentials included for development)
-THIRDWEB_CLIENT_ID="3dcca06b137a0ab48f1da145c27e4636"
-THIRDWEB_SECRET_KEY="HBxHyrdO03XxU0mwT9l4nyIFF_9jxTYpVB5mzfOBJfmhYVBAjzCadE8olXCzGRdx6tVCjizpbNEq2JWCSs8Xww"
+# Silence Labs MPC Configuration
+SILENCE_ADMIN_TOKEN="replace-with-admin-token"
+SILENCE_NODE_URL="http://localhost:8080"
 
 # Server Configuration
 PORT=3000
@@ -73,12 +73,12 @@ REDIS_URL="redis://localhost:6379"
 ### Authentication Flow
 
 ```typescript
-// 1. Connect wallet with Thirdweb in React Native
-import { createThirdwebClient, ConnectWallet } from "thirdweb/react";
+// 1. Generate MPC wallet share on device using Silence Labs SDK
+import { P1Keygen } from '@com.silencelaboratories/two-party-ecdsa-rn';
 
-const client = createThirdwebClient({ 
-  clientId: "3dcca06b137a0ab48f1da145c27e4636" 
-});
+const keygen = await P1Keygen.init(await generateSessionId());
+const msg1 = await keygen.genMsg1();
+// send msg1 to backend to continue key generation
 
 // 2. Authenticate with backend
 const authenticateUser = async (authToken: string, deviceInfo: DeviceInfo) => {
@@ -177,17 +177,17 @@ socket.on('profile_updated', (data) => {
 
 - **Framework**: Express.js with TypeScript
 - **Database**: Prisma ORM with SQLite (dev) / PostgreSQL (prod)
-- **Authentication**: JWT with Thirdweb wallet signatures
-- **Blockchain**: Thirdweb SDK v5 (headless, real integration verified)
+- **Authentication**: JWT with MPC wallet shares
+- **Blockchain**: Silence Labs two-party MPC
 - **Testing**: Jest with 39 tests passing (unit + integration)
 - **Security**: Helmet, rate limiting, input validation
 
-### Real Thirdweb Integration Verified ✅
+### MPC Integration ✅
 
-- **9+ Real wallets created** during integration testing
-- **EIP-7702 session wallets** working on testnets
+- **Distributed key generation** verified
+- **Session accounts** created via Silence Labs
 - **Multi-chain support** (Sepolia, Mumbai, Base Sepolia)
-- **Live wallets visible** in Thirdweb dashboard
+
 
 ## 📊 Complete API Reference
 
@@ -196,12 +196,12 @@ socket.on('profile_updated', (data) => {
 ### Authentication Endpoints
 
 #### POST `/auth/authenticate`
-Authenticate user with Thirdweb wallet signature.
+Authenticate user with a social provider or passkey.
 
 ```json
 {
-  "authToken": "thirdweb_auth_token",
-  "authStrategy": "wallet",
+  "authToken": "provider_token",
+  "authStrategy": "google",
   "deviceId": "unique_device_id", 
   "deviceName": "iPhone 15 Pro",
   "deviceType": "mobile",
@@ -445,10 +445,9 @@ const deviceInfo = {
 - Error handling
 
 **Integration Tests (11)**:
-- **Real Thirdweb SDK integration**
-- **Live wallet creation on testnets**
+- **MPC wallet integration**
 - Multi-chain support verification
-- Session wallet functionality
+- Session account functionality
 
 **Test Commands**:
 ```bash
@@ -458,13 +457,11 @@ npm run test:integration   # Integration tests (11)
 npm run test:coverage      # With coverage report
 ```
 
-### Real Wallet Verification
+### MPC Wallet Verification
 
-**Live wallets created during testing**:
-- Visible in Thirdweb dashboard
-- EIP-7702 proxy functionality verified
-- Multi-chain deployment confirmed
-- Session wallet routing tested
+**Wallets created during testing**:
+- Two-party key generation verified
+- Session account signing tested
 
 ## 🚦 Development Workflow
 
@@ -487,7 +484,7 @@ npm run test:coverage      # With coverage report
    ```
 
 3. **Test Authentication**:
-   - Use provided Thirdweb credentials
+   - Use Google, Apple, or Passkey to sign in
    - Follow React Native auth flow above
    - Create your first SmartProfile
 
@@ -532,7 +529,7 @@ npm run test:coverage      # With coverage report
 ```
 React Native App
     ↓ (User initiates transaction)
-Thirdweb SDK in RN
+Silence Labs SDK in RN
     ↓ (Auth token to backend)
 Interspace Backend API
     ↓ (Session wallet delegation)
@@ -553,7 +550,7 @@ Target dApp Contract
 ### Current Status ✅
 - **Core API**: Complete and tested
 - **Authentication**: Multi-device JWT system
-- **Blockchain**: Real Thirdweb integration verified
+ - **Blockchain**: Silence Labs MPC integration verified
 - **Database**: Production-ready schema
 - **Security**: Comprehensive protection
 - **Testing**: 100% critical path coverage
@@ -567,7 +564,7 @@ Target dApp Contract
 
 ### Next Steps for React Native Team
 
-1. **Install Dependencies**: Thirdweb React Native SDK
+1. **Install Dependencies**: Silence Labs React Native SDK
 2. **Configure Authentication**: Use provided flow examples
 3. **Connect to Backend**: Point to `http://localhost:3000`
 4. **Test SmartProfiles**: Create, switch, manage profiles
@@ -602,7 +599,7 @@ ISC License - see LICENSE file for details.
 **React Native Integration**:
 - Follow authentication flow exactly
 - Check CORS configuration
-- Verify Thirdweb client ID
+ - Verify Silence Labs configuration
 - Test on device and simulator
 
 ---

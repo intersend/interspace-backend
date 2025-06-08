@@ -1,14 +1,14 @@
 import { Request, Response } from 'express';
-import { thirdwebAuthService } from '@/services/thirdwebAuthService';
+import { socialAuthService } from '@/services/socialAuthService';
 import { authService } from '@/services/authService';
 import { ApiResponse } from '@/types';
 
-export class ThirdwebAuthController {
+export class AuthController {
   
   /**
    * Authenticate with Thirdweb token
    */
-  async authenticateWithThirdweb(req: Request, res: Response): Promise<void> {
+  async authenticate(req: Request, res: Response): Promise<void> {
     try {
       const { 
         authToken, 
@@ -45,7 +45,7 @@ export class ThirdwebAuthController {
         };
       }
 
-      const tokens = await thirdwebAuthService.authenticateWithThirdweb({
+      const tokens = await socialAuthService.authenticate({
         authToken,
         authStrategy,
         deviceId: deviceId || null,
@@ -62,7 +62,7 @@ export class ThirdwebAuthController {
         message: 'Authentication successful'
       } as ApiResponse);
     } catch (error: any) {
-      console.error('Thirdweb auth error:', error);
+      console.error('Auth error:', error);
       res.status(error.statusCode || 500).json({
         success: false,
         error: error.message || 'Authentication failed'
@@ -94,7 +94,7 @@ export class ThirdwebAuthController {
         return;
       }
 
-      await thirdwebAuthService.linkAuthMethod(userId, {
+      await socialAuthService.linkAuthMethod(userId, {
         authToken,
         authStrategy,
         walletAddress,
@@ -129,7 +129,7 @@ export class ThirdwebAuthController {
         return;
       }
 
-      const user = await thirdwebAuthService.getUserById(userId);
+      const user = await socialAuthService.getUserById(userId);
 
       res.status(200).json({
         success: true,
@@ -258,4 +258,4 @@ export class ThirdwebAuthController {
   }
 }
 
-export const thirdwebAuthController = new ThirdwebAuthController();
+export const authController = new AuthController();

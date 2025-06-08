@@ -48,9 +48,8 @@ export class SmartProfileService {
       try {
         // Create session wallet using the profile ID
         console.log(`Creating session wallet for profile ${profile.id}...`);
-        const sessionWalletAddress = await sessionWalletService.getSessionWalletAddress(
-          profile.id,
-          config.DEFAULT_CHAIN_ID
+        const { address: sessionWalletAddress } = await sessionWalletService.createSessionWallet(
+          profile.id
         );
 
         // Update profile with actual session wallet address
@@ -424,10 +423,7 @@ export class SmartProfileService {
    * Validate session wallet
    */
   async validateSessionWallet(profileId: string, userId: string): Promise<boolean> {
-    return sessionWalletService.isSessionWalletDeployed(
-      profileId, 
-      config.DEFAULT_CHAIN_ID
-    );
+    return sessionWalletService.isSessionWalletDeployed(profileId);
   }
 
   /**
@@ -437,10 +433,7 @@ export class SmartProfileService {
     // Verify ownership
     await this.getProfileById(profileId, userId);
     
-    return sessionWalletService.getSessionWalletAddress(
-      profileId, 
-      config.DEFAULT_CHAIN_ID
-    );
+    return sessionWalletService.getSessionWalletAddress(profileId);
   }
 
   /**
