@@ -38,5 +38,6 @@ describe('Silence Labs Session Wallet', () => {
     expect(sessionWalletService.isSessionWalletDeployed('profile1')).toBe(true);
     const sig = await sessionWalletService.signMessage('profile1', new Uint8Array([1,2]));
     expect(sig).toBe('signature');
+
   });
 });

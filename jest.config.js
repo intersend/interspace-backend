@@ -1,12 +1,20 @@
 module.exports = {
   preset: 'ts-jest',
   testEnvironment: 'node',
+  setupFiles: ['<rootDir>/tests/setupEnv.ts'],
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   testMatch: [
     '<rootDir>/tests/**/*.test.ts'
   ],
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1'
+    '^@/(.*)$': '<rootDir>/src/$1',
+    '^@com\\.silencelaboratories\/two-party-ecdsa-js$': '<rootDir>/tests/__mocks__/@com.silencelaboratories/two-party-ecdsa-js.ts',
+    '^sigpair-admin-v2$': '<rootDir>/tests/__mocks__/sigpair-admin-v2.ts',
+    '^@com\\.silencelaboratories\\/two-party-ecdsa-js$': '<rootDir>/tests/stubs/silence.ts',
+    '^sigpair-admin-v2$': '<rootDir>/tests/stubs/sigpairAdmin.ts',
+    '^@orb-labs\\/orby-ethers6$': '<rootDir>/tests/stubs/orby-ethers6.ts',
+    '^@orb-labs\\/orby-core$': '<rootDir>/tests/stubs/orby-core.ts'
+
   },
   collectCoverageFrom: [
     'src/**/*.ts',
@@ -26,7 +34,9 @@ module.exports = {
   },
   transform: {
     '^.+\\.ts$': ['ts-jest', {
-      tsconfig: '<rootDir>/tsconfig.test.json'
+      tsconfig: '<rootDir>/tsconfig.test.json',
+      diagnostics: false,
+      isolatedModules: true
     }]
   },
   transformIgnorePatterns: [

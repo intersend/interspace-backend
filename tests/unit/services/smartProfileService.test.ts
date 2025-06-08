@@ -36,6 +36,7 @@ import { SmartProfileFactory } from '../../factories/smartProfileFactory';
 import { NotFoundError, ConflictError } from '../../../src/types';
 import { prisma } from '../../../src/utils/database';
 
+
 describe('SmartProfileService', () => {
   let testUser: any;
 

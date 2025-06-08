@@ -1,5 +1,6 @@
 import { prisma, withTransaction } from '@/utils/database';
 import { orbyService } from './orbyService';
+import { ethers } from 'ethers';
 import { 
   LinkAccountRequest,
   UpdateLinkedAccountRequest,
@@ -461,41 +462,36 @@ export class LinkedAccountService {
   }
 
   /**
-   * Verify account ownership with flexible validation for development and test wallets
+   * Verify account ownership using the provided signature and message.
+   * The address recovered from the signature must match the provided address.
    */
-  private verifyAccountOwnership(address: string, signature: string, message: string, walletType?: string): boolean {
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    const isTestWallet = walletType === 'test' || (walletType === 'metamask' && isDevelopment);
-    
-    console.log('🔐 Verifying account ownership:', {
-      address: `${address.slice(0, 6)}...${address.slice(-4)}`,
-      walletType,
-      isDevelopment,
-      isTestWallet,
-      hasSignature: !!signature,
-      hasMessage: !!message,
-      signatureLength: signature?.length || 0
-    });
-
-    // For development and test wallets, be more flexible
-    if (isDevelopment || isTestWallet) {
-      console.log('🧪 Development/test mode: Using relaxed signature verification');
-      // Accept any non-empty signature or development bypass
-      return signature === 'dev_bypass' || (typeof signature === 'string' && signature.length > 0);
-    }
-    
-    // Production signature verification
-    if (!signature || !message) {
-      console.log('❌ Missing signature or message for verification');
+  private verifyAccountOwnership(
+    address: string,
+    signature: string,
+    message: string,
+    _walletType?: string
+  ): boolean {
+    if (!signature || !message || !address) {
+      console.log('❌ Missing signature, message or address for verification');
       return false;
     }
-    
-    // TODO: Implement proper signature verification here
-    // For now, just check that signature is provided and not empty
-    const isValid = typeof signature === 'string' && signature.length > 0;
-    console.log(`${isValid ? '✅' : '❌'} Signature verification result:`, { isValid });
-    
-    return isValid;
+
+    try {
+      const recovered = ethers.verifyMessage(message, signature);
+      const normalizedRecovered = recovered.toLowerCase();
+      const normalizedAddress = address.toLowerCase();
+
+      const isValid = normalizedRecovered === normalizedAddress;
+      console.log(`${isValid ? '✅' : '❌'} Signature verification result:`, {
+        recovered: normalizedRecovered,
+        expected: normalizedAddress
+      });
+
+      return isValid;
+    } catch (error) {
+      console.log('❌ Signature verification error:', error);
+      return false;
+    }
   }
 
   /**
