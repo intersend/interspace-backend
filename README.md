@@ -63,6 +63,7 @@ SUPPORTED_CHAINS="1,137,42161,10,8453,11155111,80001,421614,11155420,84532"
 # Rate Limiting
 RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX_REQUESTS=100
+# Uses in-memory RateLimiterMemory store from rate-limiter-flexible
 
 ```
 
@@ -431,6 +432,7 @@ const deviceInfo = {
 - **100 requests per 15 minutes** per IP
 - **Separate limits** for auth endpoints (more restrictive)
 - **Graceful handling** in React Native with retry logic
+- **In-memory store**: Uses `RateLimiterMemory` from `rate-limiter-flexible`, so no external services are required
 
 ## 🧪 Testing Status
 
