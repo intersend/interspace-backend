@@ -10,7 +10,6 @@
     "test": "NODE_ENV=test jest --config jest.config.js",
     "test:unit": "NODE_ENV=test jest --config jest.config.js --testPathPattern=unit",
     "test:integration": "NODE_ENV=test jest --config jest.integration.config.js",
-    "test:integration:thirdweb": "NODE_ENV=test jest --config jest.integration.config.js --testPathPattern=thirdweb",
     "test:e2e": "NODE_ENV=test jest --config jest.config.js --testPathPattern=e2e",
     "test:watch": "NODE_ENV=test jest --config jest.config.js --watch",
     "test:coverage": "NODE_ENV=test jest --config jest.config.js --coverage",
@@ -26,7 +25,6 @@
     "web3",
     "wallet",
     "crypto",
-    "thirdweb",
     "erc-7702",
     "session-wallet",
     "smartprofiles"
@@ -55,7 +53,9 @@
     "rate-limiter-flexible": "^7.1.1",
     "redis": "^5.1.0",
     "socket.io": "^4.8.1",
-    "thirdweb": "^5.101.1"
+    "google-auth-library": "^9.15.1",
+    "apple-signin-auth": "^2.0.0",
+    "@simplewebauthn/server": "^13.1.1"
   },
   "devDependencies": {
     "@faker-js/faker": "^9.3.0",

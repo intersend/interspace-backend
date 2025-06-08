@@ -10,7 +10,7 @@ import { errorHandler, notFound } from '@/middleware/errorHandler';
 import { apiRateLimit } from '@/middleware/rateLimiter';
 
 // Import routes
-import thirdwebAuthRoutes from '@/routes/thirdwebAuthRoutes';
+import authRoutes from '@/routes/authRoutes';
 import profileRoutes from '@/routes/profileRoutes';
 import appsRoutes from '@/routes/appsRoutes';
 import foldersRoutes from '@/routes/foldersRoutes';
@@ -136,7 +136,7 @@ class Application {
     const apiPath = `/api/${config.API_VERSION}`;
 
     // Mount routes
-    this.app.use(`${apiPath}/auth`, thirdwebAuthRoutes);
+    this.app.use(`${apiPath}/auth`, authRoutes);
     this.app.use(`${apiPath}/users`, userRoutes); // User routes (social accounts)
     this.app.use(`${apiPath}/profiles`, profileRoutes);
     this.app.use(`${apiPath}`, appsRoutes); // Apps routes include profile paths
@@ -256,7 +256,7 @@ class Application {
         console.log(`🌍 Environment: ${config.NODE_ENV}`);
         console.log(`🔐 CORS: ${config.CORS_ORIGINS.join(', ')}`);
         console.log(`💾 Database: Connected`);
-        console.log(`🔗 Thirdweb: Integrated & Verified`);
+        console.log(`🔗 MPC Wallet: Ready`);
         console.log(`🧪 Tests: 39/39 Passing`);
         console.log(`📱 React Native: Ready for Integration`);
         console.log('=====================================');

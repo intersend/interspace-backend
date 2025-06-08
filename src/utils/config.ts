@@ -16,14 +16,20 @@ interface Config {
   JWT_REFRESH_SECRET: string;
   JWT_EXPIRES_IN: string;
   JWT_REFRESH_EXPIRES_IN: string;
+  ENCRYPTION_SECRET: string;
   
   // Redis
   REDIS_URL: string;
   REDIS_PASSWORD?: string;
   
-  // Thirdweb
-  THIRDWEB_CLIENT_ID: string;
-  THIRDWEB_SECRET_KEY: string;
+
+  // Silence Labs MPC
+  SILENCE_ADMIN_TOKEN: string;
+  SILENCE_NODE_URL: string;
+
+  // Social Providers
+  GOOGLE_CLIENT_ID?: string;
+  APPLE_CLIENT_ID?: string;
   
   // Blockchain
   DEFAULT_CHAIN_ID: number;
@@ -107,14 +113,19 @@ export const config: Config = {
   JWT_REFRESH_SECRET: getEnvVar('JWT_REFRESH_SECRET'),
   JWT_EXPIRES_IN: getEnvVar('JWT_EXPIRES_IN', '15m'),
   JWT_REFRESH_EXPIRES_IN: getEnvVar('JWT_REFRESH_EXPIRES_IN', '7d'),
+  ENCRYPTION_SECRET: getEnvVar('ENCRYPTION_SECRET'),
   
   // Redis
   REDIS_URL: getEnvVar('REDIS_URL'),
   REDIS_PASSWORD: process.env.REDIS_PASSWORD,
   
-  // Thirdweb
-  THIRDWEB_CLIENT_ID: getEnvVar('THIRDWEB_CLIENT_ID'),
-  THIRDWEB_SECRET_KEY: getEnvVar('THIRDWEB_SECRET_KEY'),
+
+  // Silence Labs MPC
+  SILENCE_ADMIN_TOKEN: getEnvVar('SILENCE_ADMIN_TOKEN'),
+  SILENCE_NODE_URL: getEnvVar('SILENCE_NODE_URL'),
+
+  GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+  APPLE_CLIENT_ID: process.env.APPLE_CLIENT_ID,
   
   // Blockchain
   DEFAULT_CHAIN_ID: getEnvNumber('DEFAULT_CHAIN_ID', 1),
@@ -155,9 +166,10 @@ export function validateConfig(): void {
     'DATABASE_URL',
     'JWT_SECRET',
     'JWT_REFRESH_SECRET',
+    'ENCRYPTION_SECRET',
     'REDIS_URL',
-    'THIRDWEB_CLIENT_ID',
-    'THIRDWEB_SECRET_KEY'
+    'SILENCE_ADMIN_TOKEN',
+    'SILENCE_NODE_URL'
   ];
 
   const missing = requiredVars.filter(varName => !process.env[varName]);
