@@ -3,6 +3,7 @@ import { SigpairAdmin } from 'sigpair-admin-v2';
 import { ethers, type JsonRpcProvider, Signature, Transaction } from 'ethers';
 import { prisma } from '@/utils/database';
 import { config } from '@/utils/config';
+import { ethers } from 'ethers';
 
 interface KeyShareRecord {
   p1: any;
@@ -149,7 +150,9 @@ export class SessionWalletService {
   }
 
   private publicKeyToAddress(pubKey: string): string {
-    return '0x' + pubKey.slice(-40);
+    const bytes = ethers.getBytes(pubKey.startsWith('0x') ? pubKey : `0x${pubKey}`);
+    const hash = ethers.keccak256(bytes.slice(1));
+    return '0x' + hash.slice(-40);
   }
 }
 
