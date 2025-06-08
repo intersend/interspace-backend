@@ -5,7 +5,7 @@ import { connectDatabase, disconnectDatabase, prisma } from '../src/utils/databa
 beforeAll(async () => {
   // Ensure we're in test environment
   process.env.NODE_ENV = 'test';
-  
+
   // Override config for testing
   process.env.DATABASE_URL = 'file:./prisma/prisma/test.db';
   process.env.JWT_SECRET = 'test-jwt-secret';

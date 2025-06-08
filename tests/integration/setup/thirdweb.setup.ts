@@ -1,4 +1,3 @@
-import { config } from '../../../src/utils/config';
 import { connectDatabase, disconnectDatabase } from '../../../src/utils/database';
 
 // Thirdweb Integration Test Setup
@@ -11,9 +10,9 @@ export const TESTNET_CHAINS = {
 };
 
 export const INTEGRATION_TEST_CONFIG = {
-  // Use real Thirdweb credentials for integration tests
-  THIRDWEB_CLIENT_ID: process.env.THIRDWEB_CLIENT_ID || config.THIRDWEB_CLIENT_ID,
-  THIRDWEB_SECRET_KEY: process.env.THIRDWEB_SECRET_KEY || config.THIRDWEB_SECRET_KEY,
+  // Use environment-provided credentials for integration tests
+  THIRDWEB_CLIENT_ID: process.env.THIRDWEB_CLIENT_ID,
+  THIRDWEB_SECRET_KEY: process.env.THIRDWEB_SECRET_KEY,
   
   // Default to Sepolia testnet for safety
   DEFAULT_TEST_CHAIN: TESTNET_CHAINS.sepolia,
