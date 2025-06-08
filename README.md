@@ -64,8 +64,6 @@ SUPPORTED_CHAINS="1,137,42161,10,8453,11155111,80001,421614,11155420,84532"
 RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX_REQUESTS=100
 
-# Redis (Optional - for production)
-REDIS_URL="redis://localhost:6379"
 ```
 
 ## 📱 React Native Integration
@@ -519,7 +517,6 @@ npm run test:coverage      # With coverage report
 
 **Production Ready**:
 - PostgreSQL support
-- Redis session storage
 - Rate limiting
 - Security headers
 - Audit logging

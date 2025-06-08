@@ -18,9 +18,6 @@ interface Config {
   JWT_REFRESH_EXPIRES_IN: string;
   ENCRYPTION_SECRET: string;
   
-  // Redis
-  REDIS_URL: string;
-  REDIS_PASSWORD?: string;
   
 
   // Silence Labs MPC
@@ -114,11 +111,6 @@ export const config: Config = {
   JWT_EXPIRES_IN: getEnvVar('JWT_EXPIRES_IN', '15m'),
   JWT_REFRESH_EXPIRES_IN: getEnvVar('JWT_REFRESH_EXPIRES_IN', '7d'),
   ENCRYPTION_SECRET: getEnvVar('ENCRYPTION_SECRET'),
-  
-  // Redis
-  REDIS_URL: getEnvVar('REDIS_URL'),
-  REDIS_PASSWORD: process.env.REDIS_PASSWORD,
-  
 
   // Silence Labs MPC
   SILENCE_ADMIN_TOKEN: getEnvVar('SILENCE_ADMIN_TOKEN'),
@@ -167,7 +159,6 @@ export function validateConfig(): void {
     'JWT_SECRET',
     'JWT_REFRESH_SECRET',
     'ENCRYPTION_SECRET',
-    'REDIS_URL',
     'SILENCE_ADMIN_TOKEN',
     'SILENCE_NODE_URL'
   ];

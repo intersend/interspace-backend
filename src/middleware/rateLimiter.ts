@@ -53,6 +53,4 @@ export const userRateLimit = createRateLimitMiddleware(
   (req: Request) => (req as any).user?.userId || req.ip || 'unknown'
 );
 
-export const redisClient = null;
-
 console.log('🛡️  Rate limiting enabled');
