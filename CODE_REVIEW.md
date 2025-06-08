@@ -33,7 +33,7 @@ This document summarizes an in-depth review of the existing TypeScript backend. 
 
 ## Suggestions for Improvement
 
-- Implement real rate limiting using an in-memory or Redis store.
+- Implement real rate limiting using a persistent or in-memory store.
 - Replace placeholder Thirdweb token verification with an actual API call.
 - Add Ethereum signature verification when linking wallets.
 - Encrypt OAuth tokens stored in `social_profiles` or consider not storing refresh tokens at all.

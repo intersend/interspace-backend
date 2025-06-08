@@ -104,9 +104,6 @@ Thumbs.db
 .temp/
 temp/
 
-# Redis dump files
-dump.rdb
-
 # PM2 logs
 .pm2/
 
