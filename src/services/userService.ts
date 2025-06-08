@@ -1,6 +1,6 @@
 import { prisma, withTransaction } from '@/utils/database';
 import { OAuth2Client } from 'google-auth-library';
-import { verifyAppleToken } from 'apple-signin-auth';
+import verifyAppleToken from 'apple-signin-auth';
 import { decrypt, encrypt } from '@/utils/crypto';
 import { config } from '@/utils/config';
 import { passkeyService } from './passkeyService';
