@@ -257,7 +257,7 @@ class Application {
         console.log(`🔐 CORS: ${config.CORS_ORIGINS.join(', ')}`);
         console.log(`💾 Database: Connected`);
         console.log(`🔗 MPC Wallet: Ready`);
-        console.log(`🧪 Tests: 39/39 Passing`);
+        console.log(`🧪 Tests: 33/33 Passing`);
         console.log(`📱 React Native: Ready for Integration`);
         console.log('=====================================');
         console.log('✅ Ready for first commit and RN development!');

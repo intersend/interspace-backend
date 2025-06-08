@@ -7,16 +7,16 @@ beforeAll(async () => {
   process.env.NODE_ENV = 'test';
 
   // Override config for testing
-  process.env.DATABASE_URL = 'file:./prisma/prisma/test.db';
+
+  process.env.DATABASE_URL = 'file:./prisma/test.db';
   process.env.JWT_SECRET = 'test-jwt-secret';
-  process.env.JWT_REFRESH_SECRET = 'test-jwt-refresh-secret';
-  process.env.ENCRYPTION_SECRET = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-  process.env.REDIS_URL = 'redis://localhost:6379';
-  process.env.SILENCE_ADMIN_TOKEN = 'test';
-  process.env.SILENCE_NODE_URL = 'http://localhost';
-  process.env.ORBY_INSTANCE_PRIVATE_API_KEY = 'test';
-  process.env.ORBY_INSTANCE_PUBLIC_API_KEY = 'test';
-  process.env.ORBY_PRIVATE_INSTANCE_URL = 'http://localhost';
+  process.env.ENCRYPTION_SECRET = 'test-encryption-secret';
+  process.env.SILENCE_ADMIN_TOKEN = 'test-silence-token';
+  process.env.SILENCE_NODE_URL = 'http://localhost:8080';
+  process.env.ORBY_INSTANCE_PRIVATE_API_KEY = 'test-private';
+  process.env.ORBY_INSTANCE_PUBLIC_API_KEY = 'test-public';
+  process.env.ORBY_APP_NAME = 'test-app';
+  process.env.ORBY_PRIVATE_INSTANCE_URL = 'http://localhost:8545';
   process.env.THIRDWEB_CLIENT_ID = '3dcca06b137a0ab48f1da145c27e4636';
   process.env.THIRDWEB_SECRET_KEY = 'HBxHyrdO03XxU0mwT9l4nyIFF_9jxTYpVB5mzfOBJfmhYVBAjzCadE8olXCzGRdx6tVCjizpbNEq2JWCSs8Xww';
   // Silence Labs MPC
