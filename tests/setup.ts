@@ -1,4 +1,3 @@
-import { config } from '@/utils/config';
 import { connectDatabase, disconnectDatabase, prisma } from '@/utils/database';
 
 // Global test setup
@@ -6,11 +5,6 @@ beforeAll(async () => {
   // Ensure we're in test environment
   process.env.NODE_ENV = 'test';
   
-  // Override config for testing
-  process.env.DATABASE_URL = 'file:./test.db';
-  process.env.JWT_SECRET = 'test-jwt-secret';
-  process.env.THIRDWEB_CLIENT_ID = '3dcca06b137a0ab48f1da145c27e4636';
-  process.env.THIRDWEB_SECRET_KEY = 'HBxHyrdO03XxU0mwT9l4nyIFF_9jxTYpVB5mzfOBJfmhYVBAjzCadE8olXCzGRdx6tVCjizpbNEq2JWCSs8Xww';
   
   // Connect to test database
   await connectDatabase();
