@@ -1,6 +1,7 @@
 import { P1Keygen, P2Keygen, P1Signer, P2Signer, generateSessionId } from '@com.silencelaboratories/two-party-ecdsa-js';
 import { SigpairAdmin } from 'sigpair-admin-v2';
 import { config } from '@/utils/config';
+import { prisma } from '@/utils/database';
 
 interface KeyShareRecord {
   p1: any;
@@ -19,7 +20,7 @@ export class SessionWalletService {
   /**
    * Create a new MPC session wallet for a profile using Silence Labs SDK
    */
-  async createSessionWallet(profileId: string): Promise<{ address: string }> {
+  async createSessionWallet(profileId: string): Promise<{ address: string; token: string }> {
     const sessionId = await generateSessionId();
     const p1 = await P1Keygen.init(sessionId);
     const p2 = await P2Keygen.init(sessionId);
@@ -30,19 +31,38 @@ export class SessionWalletService {
 
     const address = this.publicKeyToAddress(p1share.publicKey);
 
+    // Persist shares to database
+    await prisma.mpcKeyShare.upsert({
+      where: { profileId },
+      update: {
+        p1Share: JSON.stringify(p1share),
+        p2Share: JSON.stringify(p2share)
+      },
+      create: {
+        profileId,
+        p1Share: JSON.stringify(p1share),
+        p2Share: JSON.stringify(p2share)
+      }
+    });
+
+    // Cache in memory for fast access
     this.shares.set(profileId, { p1: p1share, p2: p2share, address });
 
-    return { address };
+    // Generate user token for Silence Labs node authentication
+    const token = await this.admin.genUserToken(profileId);
+
+    return { address, token };
   }
 
   async getSessionWalletAddress(profileId: string): Promise<string> {
-    const record = this.shares.get(profileId);
-    if (!record) throw new Error('Session wallet not created');
+    const record = await this.loadShares(profileId);
     return record.address;
   }
 
-  isSessionWalletDeployed(profileId: string): boolean {
-    return this.shares.has(profileId);
+  async isSessionWalletDeployed(profileId: string): Promise<boolean> {
+    if (this.shares.has(profileId)) return true;
+    const count = await prisma.mpcKeyShare.count({ where: { profileId } });
+    return count > 0;
   }
 
   getTransactionRouting(sourceEOA: string, sessionWallet: string, targetApp: string) {
@@ -68,17 +88,44 @@ export class SessionWalletService {
   }
 
   async signMessage(profileId: string, messageHash: Uint8Array): Promise<string> {
-    const record = this.shares.get(profileId);
-    if (!record) throw new Error('Session wallet not created');
-    const sessionId = await generateSessionId();
-    const p1Sign = await P1Signer.init(sessionId, record.p1, messageHash, 'm');
-    const p2Sign = await P2Signer.init(sessionId, record.p2, messageHash, 'm');
+    const { p1Sign, p2Sign } = await this.getSigners(profileId, messageHash);
     const signmsg2 = await p2Sign.processMsg1(await p1Sign.genMsg1());
     const signmsg3 = await p1Sign.processMsg2(signmsg2);
     const sign1 = signmsg3.sign;
     const sign2 = await p2Sign.processMsg3(signmsg3);
     if (sign1 !== sign2) throw new Error('Signatures do not match');
     return sign1;
+  }
+
+  private async loadShares(profileId: string): Promise<KeyShareRecord> {
+    if (this.shares.has(profileId)) {
+      return this.shares.get(profileId)!;
+    }
+
+    const record = await prisma.mpcKeyShare.findUnique({ where: { profileId } });
+    if (!record) {
+      throw new Error('Session wallet not created');
+    }
+
+    const p1 = JSON.parse(record.p1Share);
+    const p2 = JSON.parse(record.p2Share);
+    const address = this.publicKeyToAddress(p1.publicKey);
+
+    const loaded = { p1, p2, address };
+    this.shares.set(profileId, loaded);
+    return loaded;
+  }
+
+  private async getSigners(profileId: string, messageHash: Uint8Array): Promise<{ p1Sign: any; p2Sign: any }> {
+    const shares = await this.loadShares(profileId);
+    const sessionId = await generateSessionId();
+    const p1Sign = await P1Signer.init(sessionId, shares.p1, messageHash, 'm');
+    const p2Sign = await P2Signer.init(sessionId, shares.p2, messageHash, 'm');
+    return { p1Sign, p2Sign };
+  }
+
+  async getUserToken(profileId: string): Promise<string> {
+    return this.admin.genUserToken(profileId);
   }
 
   private publicKeyToAddress(pubKey: string): string {

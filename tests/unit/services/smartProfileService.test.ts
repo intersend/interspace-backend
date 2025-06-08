@@ -15,7 +15,10 @@ jest.mock('../../../src/blockchain/sessionWalletService', () => ({
     isSessionWalletDeployed: jest.fn().mockResolvedValue(true),
     createSessionWallet: jest.fn().mockImplementation(() => {
       mockAddressCounter++;
-      return Promise.resolve(`0x${mockAddressCounter.toString().padStart(40, '0')}`);
+      return Promise.resolve({
+        address: `0x${mockAddressCounter.toString().padStart(40, '0')}`,
+        token: 'mock-token'
+      });
     }),
   }
 }));

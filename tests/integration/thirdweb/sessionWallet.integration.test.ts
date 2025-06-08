@@ -31,7 +31,7 @@ describe('SessionWallet Integration Tests (Real Thirdweb SDK)', () => {
       
       // Validate the real wallet
       expect(result).toHaveProperty('address');
-      expect(result).toHaveProperty('wallet');
+      expect(result).toHaveProperty('token');
       expect(isValidWalletAddress(result.address)).toBe(true);
       
       // Track for dashboard verification
