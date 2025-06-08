@@ -30,7 +30,6 @@ jest.mock('../../../src/blockchain/sessionWalletService', () => {
   };
 });
 
-
 import { smartProfileService } from '../../../src/services/smartProfileService';
 import { UserFactory } from '../../factories/userFactory';
 import { SmartProfileFactory } from '../../factories/smartProfileFactory';
@@ -38,14 +37,7 @@ import { NotFoundError, ConflictError } from '../../../src/types';
 import { prisma } from '../../../src/utils/database';
 
 
-// Mock the Orby service to avoid network calls
-jest.mock('../../../src/services/orbyService', () => ({
-  orbyService: {
-    createOrGetAccountCluster: jest.fn().mockResolvedValue('cluster123')
-  }
-}));
-
-describe.skip('SmartProfileService', () => {
+describe('SmartProfileService', () => {
   let testUser: any;
 
   beforeEach(async () => {

@@ -17,7 +17,7 @@ describe('Config', () => {
     expect(config).toHaveProperty('PORT');
     expect(config).toHaveProperty('JWT_SECRET');
     expect(config).toHaveProperty('JWT_EXPIRES_IN');
-    expect(config).toHaveProperty('ORBY_INSTANCE_PRIVATE_API_KEY');
+    expect(config).toHaveProperty('SILENCE_ADMIN_TOKEN');
     expect(config).toHaveProperty('DEFAULT_CHAIN_ID');
   });
 
