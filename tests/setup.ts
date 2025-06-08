@@ -1,5 +1,5 @@
+import { connectDatabase, disconnectDatabase, prisma } from '@/utils/database';
 import { config } from '../src/utils/config';
-import { connectDatabase, disconnectDatabase, prisma } from '../src/utils/database';
 
 // Global test setup
 beforeAll(async () => {
@@ -19,6 +19,18 @@ beforeAll(async () => {
   process.env.ORBY_PRIVATE_INSTANCE_URL = 'http://localhost';
   process.env.THIRDWEB_CLIENT_ID = '3dcca06b137a0ab48f1da145c27e4636';
   process.env.THIRDWEB_SECRET_KEY = 'HBxHyrdO03XxU0mwT9l4nyIFF_9jxTYpVB5mzfOBJfmhYVBAjzCadE8olXCzGRdx6tVCjizpbNEq2JWCSs8Xww';
+  // Silence Labs MPC
+  process.env.SILENCE_ADMIN_TOKEN = 'test-admin-token';
+  process.env.SILENCE_NODE_URL = 'http://localhost:8080';
+
+  // Orby chain abstraction
+  process.env.ORBY_INSTANCE_PRIVATE_API_KEY = 'test-orby-private';
+  process.env.ORBY_INSTANCE_PUBLIC_API_KEY = 'test-orby-public';
+  process.env.ORBY_APP_NAME = 'test-app';
+  process.env.ORBY_PRIVATE_INSTANCE_URL = 'http://localhost:8545';
+
+  // Encryption secret required by config
+  process.env.ENCRYPTION_SECRET = '0123456789abcdef0123456789abcdef';
   
   // Connect to test database
   await connectDatabase();
