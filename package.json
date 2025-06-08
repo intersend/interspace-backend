@@ -1,6 +1,6 @@
 {
   "name": "interspace-backend",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Backend API for Interspace MVP wallet with SmartProfiles, ERC-7702 session wallets, and iPhone-style app management",
   "main": "index.js",
   "scripts": {
@@ -31,6 +31,9 @@
   ],
   "author": "",
   "license": "ISC",
+  "engines": {
+    "node": ">=18"
+  },
   "dependencies": {
     "@orb-labs/orby-core": "^0.0.30",
     "@orb-labs/orby-ethers6": "^0.0.18",
