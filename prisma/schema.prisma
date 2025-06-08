@@ -324,3 +324,15 @@ model OrbyTransaction {
   
   @@map("orby_transactions")
 }
+
+model PasskeyCredential {
+  id           String   @id @default(cuid())
+  credentialId String   @unique
+  publicKey    String
+  username     String
+  counter      Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("passkey_credentials")
+}

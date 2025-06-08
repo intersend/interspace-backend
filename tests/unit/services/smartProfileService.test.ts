@@ -30,11 +30,13 @@ jest.mock('../../../src/blockchain/sessionWalletService', () => {
   };
 });
 
+
 import { smartProfileService } from '../../../src/services/smartProfileService';
 import { UserFactory } from '../../factories/userFactory';
 import { SmartProfileFactory } from '../../factories/smartProfileFactory';
 import { NotFoundError, ConflictError } from '../../../src/types';
 import { prisma } from '../../../src/utils/database';
+
 
 describe('SmartProfileService', () => {
   let testUser: any;
