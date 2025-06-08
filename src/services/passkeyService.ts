@@ -20,10 +20,10 @@ class PasskeyService {
     });
     if (!verified || !registrationInfo) throw new Error('Invalid passkey registration');
     const cred: StoredCredential = {
-      credentialID: registrationInfo.credentialID.toString('base64url'),
-      publicKey: registrationInfo.credentialPublicKey.toString('base64url'),
+      credentialID: registrationInfo.credential.id.toString('base64url'),
+      publicKey: registrationInfo.credential.publicKey.toString('base64url'),
       username: response.username,
-      counter: registrationInfo.counter,
+      counter: registrationInfo.credential.counter,
     };
     await prisma.passkeyCredential.upsert({
       where: { credentialId: cred.credentialID },
@@ -53,9 +53,9 @@ class PasskeyService {
       expectedChallenge: assertion.challenge,
       expectedOrigin: assertion.origin,
       expectedRPID: assertion.rpId,
-      authenticator: {
-        credentialID: Buffer.from(cred.credentialId, 'base64url'),
-        credentialPublicKey: Buffer.from(cred.publicKey, 'base64url'),
+      credential: {
+        id: Buffer.from(cred.credentialId, 'base64url'),
+        publicKey: Buffer.from(cred.publicKey, 'base64url'),
         counter: cred.counter,
         transports: ['internal'],
       },
