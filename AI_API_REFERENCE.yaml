@@ -1,0 +1,679 @@
+base_url: /api/v1
+endpoints:
+  - name: Authenticate
+    method: POST
+    path: /auth/authenticate
+    request_example:
+      authToken: provider_token
+      authStrategy: google
+      deviceId: device_id
+      deviceName: iPhone 15 Pro
+      deviceType: mobile
+      walletAddress: 0x1234...abcd
+    response_example:
+      success: true
+      data:
+        accessToken: jwt_token
+        refreshToken: refresh_token
+        expiresIn: 900
+  - name: Refresh Token
+    method: POST
+    path: /auth/refresh
+    request_example:
+      refreshToken: refresh_token
+    response_example:
+      success: true
+      data:
+        accessToken: new_jwt
+        refreshToken: refresh_token
+        expiresIn: 900
+  - name: Logout
+    method: POST
+    path: /auth/logout
+    request_example:
+      refreshToken: refresh_token
+    response_example:
+      success: true
+      message: Logged out
+  - name: Get Authenticated User
+    method: GET
+    path: /auth/me
+    response_example:
+      success: true
+      data:
+        id: user_123
+        email: user@example.com
+        authStrategies: [google]
+        isGuest: false
+        profilesCount: 3
+        linkedAccountsCount: 2
+        activeDevicesCount: 1
+        socialAccounts: []
+        createdAt: 2024-01-01T00:00:00Z
+        updatedAt: 2024-01-01T00:00:00Z
+  - name: Link New Auth Method
+    method: POST
+    path: /auth/link-auth
+    request_example:
+      provider: farcaster
+      oauthCode: oauth_code_from_provider
+    response_example:
+      success: true
+      message: auth method linked
+  - name: List Devices
+    method: GET
+    path: /auth/devices
+    response_example:
+      success: true
+      data:
+        - id: device_1
+          name: iPhone 15
+          lastActive: 2024-01-01T00:00:00Z
+  - name: Deactivate Device
+    method: DELETE
+    path: /auth/devices/:deviceId
+    response_example:
+      success: true
+      message: device deactivated
+  - name: Get Current User
+    method: GET
+    path: /users/me
+    response_example:
+      success: true
+      data:
+        id: user_123
+        email: user@example.com
+        authStrategies: [telegram, google]
+        isGuest: false
+        profilesCount: 3
+        linkedAccountsCount: 2
+        activeDevicesCount: 1
+        socialAccounts:
+          - id: social_123
+            provider: telegram
+            username: '@username'
+            displayName: User Name
+            avatarUrl: https://...
+            createdAt: 2024-01-01T00:00:00Z
+            updatedAt: 2024-01-01T00:00:00Z
+        createdAt: 2024-01-01T00:00:00Z
+        updatedAt: 2024-01-01T00:00:00Z
+  - name: List Social Accounts
+    method: GET
+    path: /users/me/social-accounts
+    response_example:
+      success: true
+      data:
+        - id: social_123
+          provider: telegram
+          username: '@username'
+          displayName: User Name
+          avatarUrl: https://...
+          createdAt: 2024-01-01T00:00:00Z
+          updatedAt: 2024-01-01T00:00:00Z
+  - name: Link Social Account
+    method: POST
+    path: /users/me/social-accounts
+    request_example:
+      provider: farcaster
+      oauthCode: oauth_code_from_provider
+      redirectUri: https://app.interspace.com/callback
+    response_example:
+      success: true
+      data:
+        id: social_789
+        provider: farcaster
+        username: farcaster_user
+        displayName: Farcaster User
+        createdAt: 2024-01-01T00:00:00Z
+        updatedAt: 2024-01-01T00:00:00Z
+      message: farcaster account linked successfully
+  - name: Unlink Social Account
+    method: DELETE
+    path: /users/me/social-accounts/:id
+    response_example:
+      success: true
+      message: Social account unlinked successfully
+  - name: List SmartProfiles
+    method: GET
+    path: /profiles
+    response_example:
+      success: true
+      data:
+        - id: profile_id
+          name: Gaming Profile
+          isActive: true
+          sessionWalletAddress: 0x5678...efgh
+          linkedAccountsCount: 2
+          appsCount: 5
+          foldersCount: 2
+          createdAt: 2024-01-01T00:00:00Z
+          updatedAt: 2024-01-01T00:00:00Z
+  - name: Create SmartProfile
+    method: POST
+    path: /profiles
+    request_example:
+      name: Trading Profile
+    response_example:
+      success: true
+      data:
+        id: profile_new
+        name: Trading Profile
+        isActive: false
+        sessionWalletAddress: 0x...
+        linkedAccountsCount: 0
+        appsCount: 0
+        foldersCount: 0
+        createdAt: 2024-01-01T00:00:00Z
+        updatedAt: 2024-01-01T00:00:00Z
+  - name: Get Profile
+    method: GET
+    path: /profiles/:profileId
+    response_example:
+      success: true
+      data:
+        id: profile_id
+        name: Gaming Profile
+        isActive: true
+        sessionWalletAddress: 0x...
+        linkedAccountsCount: 2
+        appsCount: 5
+        foldersCount: 2
+        createdAt: 2024-01-01T00:00:00Z
+        updatedAt: 2024-01-01T00:00:00Z
+  - name: Update Profile
+    method: PUT
+    path: /profiles/:profileId
+    request_example:
+      name: Updated Name
+      isActive: true
+    response_example:
+      success: true
+      data:
+        id: profile_id
+        name: Updated Name
+        isActive: true
+        sessionWalletAddress: 0x...
+        linkedAccountsCount: 2
+        appsCount: 5
+        foldersCount: 2
+        createdAt: 2024-01-01T00:00:00Z
+        updatedAt: 2024-01-01T00:00:00Z
+      message: Profile updated successfully
+  - name: Delete Profile
+    method: DELETE
+    path: /profiles/:profileId
+    response_example:
+      success: true
+      message: Profile deleted successfully
+  - name: Activate Profile
+    method: POST
+    path: /profiles/:profileId/activate
+    response_example:
+      success: true
+      data:
+        id: profile_id
+        isActive: true
+      message: Active profile switched successfully
+  - name: Create App Bookmark
+    method: POST
+    path: /profiles/:profileId/apps
+    request_example:
+      name: Uniswap
+      url: https://app.uniswap.org
+      iconUrl: https://app.uniswap.org/favicon.ico
+      folderId: folder_id_or_null
+      position: 1
+    response_example:
+      success: true
+      data:
+        id: app_id
+        name: Uniswap
+        url: https://app.uniswap.org
+        iconUrl: https://app.uniswap.org/favicon.ico
+        folderId: folder_id_or_null
+        position: 1
+        createdAt: 2024-01-01T00:00:00Z
+        updatedAt: 2024-01-01T00:00:00Z
+      message: App created
+  - name: List Apps
+    method: GET
+    path: /profiles/:profileId/apps
+    response_example:
+      success: true
+      data:
+        - id: app_id
+          name: Uniswap
+          url: https://app.uniswap.org
+          position: 1
+          folderId: folder_id_or_null
+          createdAt: 2024-01-01T00:00:00Z
+          updatedAt: 2024-01-01T00:00:00Z
+  - name: Update App
+    method: PUT
+    path: /apps/:appId
+    request_example:
+      name: New Name
+    response_example:
+      success: true
+      data:
+        id: appId
+        name: New Name
+      message: App updated
+  - name: Delete App
+    method: DELETE
+    path: /apps/:appId
+    response_example:
+      success: true
+      message: App removed
+  - name: Reorder Apps
+    method: POST
+    path: /profiles/:profileId/apps/reorder
+    request_example:
+      appIds: [app1, app2, app3]
+      folderId: folder_id_or_null
+    response_example:
+      success: true
+      message: Apps reordered
+  - name: Move App To Folder
+    method: PUT
+    path: /apps/:appId/move
+    request_example:
+      folderId: new_folder_id
+    response_example:
+      success: true
+      message: App moved
+  - name: Create Folder
+    method: POST
+    path: /profiles/:profileId/folders
+    request_example:
+      name: DeFi Apps
+      color: '#FF6B6B'
+      position: 1
+    response_example:
+      success: true
+      data:
+        id: folder_id
+        name: DeFi Apps
+        color: '#FF6B6B'
+        position: 1
+        isPublic: false
+        appsCount: 0
+        createdAt: 2024-01-01T00:00:00Z
+        updatedAt: 2024-01-01T00:00:00Z
+      message: Folder created
+  - name: List Folders
+    method: GET
+    path: /profiles/:profileId/folders
+    response_example:
+      success: true
+      data:
+        - id: folder_id
+          name: DeFi Apps
+          position: 1
+          isPublic: false
+          color: '#FF6B6B'
+          appsCount: 0
+          createdAt: 2024-01-01T00:00:00Z
+          updatedAt: 2024-01-01T00:00:00Z
+  - name: Get Folder
+    method: GET
+    path: /profiles/:profileId/folders/:folderId
+    response_example:
+      success: true
+      data:
+        id: folder_id
+        name: DeFi Apps
+        position: 1
+        isPublic: false
+        color: '#FF6B6B'
+        appsCount: 0
+        createdAt: 2024-01-01T00:00:00Z
+        updatedAt: 2024-01-01T00:00:00Z
+  - name: Update Folder
+    method: PUT
+    path: /folders/:folderId
+    request_example:
+      name: Updated Folder
+      color: '#00FF00'
+    response_example:
+      success: true
+      data:
+        id: folder_id
+        name: Updated Folder
+        color: '#00FF00'
+        position: 1
+        isPublic: false
+        appsCount: 0
+        createdAt: 2024-01-01T00:00:00Z
+        updatedAt: 2024-01-01T00:00:00Z
+      message: Folder updated
+  - name: Delete Folder
+    method: DELETE
+    path: /folders/:folderId
+    response_example:
+      success: true
+      message: Folder deleted
+  - name: Reorder Folders
+    method: POST
+    path: /profiles/:profileId/folders/reorder
+    request_example:
+      folderIds: [folder1, folder2]
+    response_example:
+      success: true
+      message: Folders reordered
+  - name: Share Folder
+    method: POST
+    path: /folders/:folderId/share
+    response_example:
+      success: true
+      data:
+        shareableId: abc123
+        shareableUrl: https://app.interspace.com/shared/folders/abc123
+  - name: Unshare Folder
+    method: DELETE
+    path: /folders/:folderId/share
+    response_example:
+      success: true
+      message: Folder unshared
+  - name: Get Folder Contents
+    method: GET
+    path: /folders/:folderId/contents
+    response_example:
+      success: true
+      data:
+        apps: []
+  - name: Link External Account
+    method: POST
+    path: /profiles/:profileId/accounts
+    request_example:
+      address: 0xabcd...1234
+      walletType: metamask
+      customName: My MetaMask
+      isPrimary: false
+    response_example:
+      success: true
+      data:
+        id: account_id
+        address: 0xabcd...1234
+        walletType: metamask
+        customName: My MetaMask
+        isPrimary: false
+        createdAt: 2024-01-01T00:00:00Z
+        updatedAt: 2024-01-01T00:00:00Z
+      message: Account linked successfully
+  - name: List Linked Accounts
+    method: GET
+    path: /profiles/:profileId/accounts
+    response_example:
+      success: true
+      data:
+        - id: account_id
+          address: 0xabcd...1234
+          walletType: metamask
+          isPrimary: false
+          createdAt: 2024-01-01T00:00:00Z
+          updatedAt: 2024-01-01T00:00:00Z
+  - name: Update Linked Account
+    method: PUT
+    path: /accounts/:accountId
+    request_example:
+      customName: New Name
+      isPrimary: true
+    response_example:
+      success: true
+      data:
+        id: account_id
+        customName: New Name
+        isPrimary: true
+      message: Account updated successfully
+  - name: Unlink Account
+    method: DELETE
+    path: /accounts/:accountId
+    response_example:
+      success: true
+      message: Account unlinked successfully
+  - name: Grant Token Allowance
+    method: POST
+    path: /accounts/:accountId/allowances
+    request_example:
+      tokenAddress: 0x...
+      allowanceAmount: '100000000'
+      chainId: 1
+    response_example:
+      success: true
+      data:
+        id: allowance_id
+        tokenAddress: 0x...
+        allowanceAmount: '100000000'
+        chainId: 1
+        createdAt: 2024-01-01T00:00:00Z
+        updatedAt: 2024-01-01T00:00:00Z
+      message: Token allowance granted successfully
+  - name: List Token Allowances
+    method: GET
+    path: /accounts/:accountId/allowances
+    response_example:
+      success: true
+      data: []
+  - name: Revoke Token Allowance
+    method: DELETE
+    path: /allowances/:allowanceId
+    response_example:
+      success: true
+      message: Token allowance revoked successfully
+  - name: Unified Balance
+    method: GET
+    path: /profiles/:id/balance
+    response_example:
+      success: true
+      data:
+        profileId: clxxx
+        profileName: Gaming
+        unifiedBalance:
+          totalUsdValue: '1250.50'
+          tokens:
+            - standardizedTokenId: usdc
+              symbol: USDC
+              name: USD Coin
+              totalAmount: '1000000000'
+              totalUsdValue: '1000.00'
+              decimals: 6
+              balancesPerChain:
+                - chainId: 1
+                  chainName: Ethereum
+                  amount: '500000000'
+                  tokenAddress: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
+                  isNative: false
+                - chainId: 137
+                  chainName: Polygon
+                  amount: '500000000'
+                  tokenAddress: 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174
+                  isNative: false
+        gasAnalysis:
+          suggestedGasToken:
+            tokenId: usdc
+            symbol: USDC
+            score: 85
+          nativeGasAvailable:
+            - chainId: 1
+              amount: '50000000000000000'
+              symbol: ETH
+          availableGasTokens: []
+  - name: Create Intent
+    method: POST
+    path: /profiles/:id/intent
+    request_example:
+      type: transfer
+      from:
+        token: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
+        chainId: 1
+        amount: '100000000'
+      to:
+        address: 0x742d35Cc6634C0532925a3b844Bc9e7595f8fA5e
+      gasToken:
+        standardizedTokenId: usdc
+        tokenSources:
+          - chainId: 1
+            address: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
+    response_example:
+      success: true
+      data:
+        intentId: int_xxx
+        operationSetId: op_xxx
+        type: transfer
+        status: created
+        estimatedTimeMs: 30000
+        unsignedOperations:
+          status: SUCCESS
+          intents:
+            - type: ONCHAIN_OPERATION
+              format: TRANSACTION
+              from: 0x123...
+              to: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
+              chainId: '1'
+              data: 0x23b872dd...
+              value: '0'
+              nonce: '5'
+              gasLimit: '100000'
+          estimatedTimeInMs: 30000
+        summary:
+          from:
+            token: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
+            chainId: 1
+            amount: '100000000'
+          to:
+            address: 0x742d35Cc6634C0532925a3b844Bc9e7595f8fA5e
+          gasToken: usdc
+  - name: Submit Signed Operations
+    method: POST
+    path: /operations/:operationSetId/submit
+    request_example:
+      signedOperations:
+        - index: 0
+          signature: 0x...
+          signedData: 0x...
+    response_example:
+      success: true
+      data:
+        success: true
+        operationSetId: op_xxx
+        status: submitted
+        message: Operations submitted successfully. Use status endpoint to track progress.
+  - name: Check Operation Status
+    method: GET
+    path: /operations/:operationSetId/status
+    response_example:
+      success: true
+      data:
+        operationSetId: op_xxx
+        status: successful
+        type: transfer
+        createdAt: 2024-06-05T14:00:00Z
+        completedAt: 2024-06-05T14:00:30Z
+        transactions:
+          - chainId: 1
+            hash: 0x...
+            status: confirmed
+            gasUsed: '85000'
+  - name: Transaction History
+    method: GET
+    path: /profiles/:id/transactions
+    response_example:
+      success: true
+      data:
+        transactions:
+          - operationSetId: op_xxx
+            type: transfer
+            status: successful
+            from:
+              token: 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
+              chainId: 1
+              amount: '100000000'
+            to:
+              address: 0x742d35Cc6634C0532925a3b844Bc9e7595f8fA5e
+            gasToken: usdc
+            createdAt: 2024-06-05T14:00:00Z
+            completedAt: 2024-06-05T14:00:30Z
+            transactions:
+              - chainId: 1
+                hash: 0x...
+                status: confirmed
+                gasUsed: '85000'
+        pagination:
+          page: 1
+          limit: 20
+          total: 150
+          totalPages: 8
+          hasNext: true
+          hasPrev: false
+  - name: Available Gas Tokens
+    method: GET
+    path: /profiles/:id/gas-tokens
+    response_example:
+      success: true
+      data:
+        availableTokens:
+          - tokenId: usdc
+            symbol: USDC
+            name: USD Coin
+            score: 85
+            totalBalance: '1000000000'
+            totalUsdValue: '1000.00'
+            availableChains: [1, 137, 42161]
+            isNative: false
+            factors:
+              balanceScore: 80
+              efficiencyScore: 80
+              availabilityScore: 100
+              preferenceScore: 100
+        suggestedToken: {}
+        nativeGasAvailable:
+          - chainId: 1
+            amount: '50000000000000000'
+            symbol: ETH
+  - name: Set Preferred Gas Token
+    method: POST
+    path: /profiles/:id/gas-tokens/preference
+    request_example:
+      standardizedTokenId: usdc
+      tokenSymbol: USDC
+      chainPreferences:
+        '1': 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
+        '137': 0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174
+    response_example:
+      success: true
+      message: Preferred gas token saved
+  - name: Health
+    method: GET
+    path: /health
+    response_example:
+      status: healthy
+      timestamp: 2024-01-01T00:00:00Z
+      version: 1.0.0
+      environment: development
+      database: connected
+      cors: '*'
+      readyForReactNative: true
+  - name: Ping
+    method: GET
+    path: /ping
+    response_example:
+      success: true
+      message: Pong! Backend is reachable from React Native
+      timestamp: 2024-01-01T00:00:00Z
+      origin: http://localhost
+      userAgent: ExampleAgent
+  - name: API Info
+    method: GET
+    path: /
+    response_example:
+      success: true
+      message: Interspace Backend API - Production Ready
+      version: 1.0.0
+      documentation: http://localhost/api/v1
+      status:
+        tests: '39/39 passing'
+        thirdwebIntegration: removed
+        realWalletsCreated: '9+ during testing'
+        reactNativeReady: true
