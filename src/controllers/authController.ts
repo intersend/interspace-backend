@@ -6,7 +6,7 @@ import { ApiResponse } from '@/types';
 export class AuthController {
   
   /**
-   * Authenticate with Thirdweb token
+   * Authenticate using a custom auth token
    */
   async authenticate(req: Request, res: Response): Promise<void> {
     try {
