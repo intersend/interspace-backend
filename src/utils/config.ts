@@ -31,8 +31,6 @@ interface Config {
   // Blockchain
   DEFAULT_CHAIN_ID: number;
   SUPPORTED_CHAINS: number[];
-  SESSION_WALLET_FACTORY_ADDRESS?: string;
-  DEPLOYER_PRIVATE_KEY?: string;
   
   // Security
   CORS_ORIGINS: string[];
@@ -122,8 +120,6 @@ export const config: Config = {
   // Blockchain
   DEFAULT_CHAIN_ID: getEnvNumber('DEFAULT_CHAIN_ID', 1),
   SUPPORTED_CHAINS: getEnvNumberArray('SUPPORTED_CHAINS', [1, 137, 42161, 10, 8453]),
-  SESSION_WALLET_FACTORY_ADDRESS: process.env.SESSION_WALLET_FACTORY_ADDRESS,
-  DEPLOYER_PRIVATE_KEY: process.env.DEPLOYER_PRIVATE_KEY,
   
   // Security
   CORS_ORIGINS: getEnvArray('CORS_ORIGINS', ['http://localhost:3000', 'http://localhost:19006']),

@@ -24,6 +24,7 @@ export class SessionWalletService {
   constructor() {
   }
 
+
   private async ensureShareLoaded(profileId: string): Promise<KeyShareRecord> {
     let record = this.shares.get(profileId);
     if (!record) {
@@ -38,7 +39,6 @@ export class SessionWalletService {
 
   private async getProvider(profileId: string, chainId: number): Promise<OrbyProvider> {
     const key = `${profileId}-${chainId}`;
-
     if (this.providers.has(key)) {
       return this.providers.get(key)!;
     }
@@ -49,7 +49,7 @@ export class SessionWalletService {
     }
 
     const provider = await orbyService.getVirtualNode(profile, chainId);
-
+    
     this.providers.set(key, provider);
     return provider;
   }
