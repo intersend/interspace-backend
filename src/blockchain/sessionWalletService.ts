@@ -90,6 +90,42 @@ export class SessionWalletService {
     return { address };
   }
 
+  /**
+   * Rotate the MPC key shares for a profile using Silence Labs key refresh.
+   * The public key remains the same but both client and server shares are updated.
+   */
+  async rotateSessionWallet(profileId: string): Promise<{ clientShare: any }> {
+    const record = await this.ensureShareLoaded(profileId);
+
+    if (!record.p1) {
+      throw new Error('Client share not loaded for this profile');
+    }
+
+    const sessionId = await this.generateSessionId();
+    const p1 = P1KeyGen.getInstanceForKeyRefresh(sessionId, record.p1);
+    await p1.init();
+    const p2 = P2KeyGen.getInstanceForKeyRefresh(sessionId, record.p2);
+
+    const msg1 = await p1.processMessage(null);
+    const msg2 = await p2.processMessage(msg1.msg_to_send);
+    const msg3 = await p1.processMessage(msg2.msg_to_send);
+    const newP1 = msg3.p1_key_share;
+    const msg4 = await p2.processMessage(msg3.msg_to_send);
+    const newP2 = msg4.p2_key_share;
+
+    if (!newP1 || !newP2) {
+      throw new Error('Failed to refresh key shares');
+    }
+
+    record.p1 = newP1;
+    record.p2 = newP2;
+    this.shares.set(profileId, record);
+
+    await mpcKeyShareService.updateKeyShare(profileId, newP2);
+
+    return { clientShare: newP1 };
+  }
+
   async getSessionWalletAddress(profileId: string): Promise<string> {
     const record = await this.ensureShareLoaded(profileId);
     return record.address;

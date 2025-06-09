@@ -272,6 +272,46 @@ export class SmartProfileController {
     }
   }
 
+  /**
+   * Rotate the session wallet for a profile
+   */
+  async rotateSessionWallet(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          error: 'Authentication required'
+        } as ApiResponse);
+        return;
+      }
+
+      const { profileId } = req.params;
+
+      if (!profileId) {
+        res.status(400).json({
+          success: false,
+          error: 'Profile ID is required'
+        } as ApiResponse);
+        return;
+      }
+
+      const clientShare = await smartProfileService.rotateSessionWallet(profileId, userId);
+
+      res.status(200).json({
+        success: true,
+        data: { clientShare },
+        message: 'Session wallet rotated successfully'
+      } as ApiResponse);
+    } catch (error: any) {
+      console.error('Rotate wallet error:', error);
+      res.status(error.statusCode || 500).json({
+        success: false,
+        error: error.message || 'Failed to rotate session wallet'
+      } as ApiResponse);
+    }
+  }
+
   // Social profile methods have been moved to UserController
   // Use /users/me/social-accounts endpoints instead
 }
