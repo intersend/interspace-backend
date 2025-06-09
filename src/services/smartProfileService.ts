@@ -49,7 +49,8 @@ export class SmartProfileService {
         // Create session wallet using the profile ID
         console.log(`Creating session wallet for profile ${profile.id}...`);
         const { address: sessionWalletAddress } = await sessionWalletService.createSessionWallet(
-          profile.id
+          profile.id,
+          data.clientShare
         );
 
         // Update profile with actual session wallet address

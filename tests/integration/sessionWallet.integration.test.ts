@@ -27,7 +27,7 @@ import { sessionWalletService } from '../../src/blockchain/sessionWalletService'
 
 describe('Silence Labs SessionWalletService', () => {
   test('creates a wallet and retrieves address', async () => {
-    const { address } = await sessionWalletService.createSessionWallet('profile1');
+    const { address } = await sessionWalletService.createSessionWallet('profile1', {} as any);
     expect(address).toMatch(/^0x[a-fA-F0-9]{40}$/);
     const stored = await sessionWalletService.getSessionWalletAddress('profile1');
     expect(stored).toBe(address);

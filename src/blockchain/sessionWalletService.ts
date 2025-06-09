@@ -5,9 +5,10 @@ import {
   P2Signature,
   randBytes
 } from '@silencelaboratories/ecdsa-tss';
-import { ethers, type Signature, Transaction } from 'ethers';
-import { OrbyProvider } from '@orb-labs/orby-ethers6';
+import { ethers, Signature, Transaction } from 'ethers';
+import type { OrbyProvider } from '@orb-labs/orby-ethers6';
 import { prisma } from '@/utils/database';
+import { mpcKeyShareService } from '@/services/mpcKeyShareService';
 import { orbyService } from '@/services/orbyService';
 
 interface KeyShareRecord {
@@ -23,21 +24,32 @@ export class SessionWalletService {
   constructor() {
   }
 
+
+  private async ensureShareLoaded(profileId: string): Promise<KeyShareRecord> {
+    let record = this.shares.get(profileId);
+    if (!record) {
+      const p2 = await mpcKeyShareService.getKeyShare(profileId);
+      if (!p2) throw new Error('Key share not found');
+      const address = this.publicKeyToAddress(p2.public_key);
+      record = { p1: null, p2, address };
+      this.shares.set(profileId, record);
+    }
+    return record;
+  }
+
   private async getProvider(profileId: string, chainId: number): Promise<OrbyProvider> {
     const key = `${profileId}-${chainId}`;
     if (this.providers.has(key)) {
       return this.providers.get(key)!;
     }
 
-    const profile = await prisma.smartProfile.findUnique({
-      where: { id: profileId }
-    });
-
+    const profile = await prisma.smartProfile.findUnique({ where: { id: profileId } });
     if (!profile) {
       throw new Error('Profile not found');
     }
 
     const provider = await orbyService.getVirtualNode(profile, chainId);
+    
     this.providers.set(key, provider);
     return provider;
   }
@@ -50,7 +62,7 @@ export class SessionWalletService {
   /**
    * Create a new MPC session wallet for a profile using Silence Labs SDK
    */
-  async createSessionWallet(profileId: string): Promise<{ address: string }> {
+  async createSessionWallet(profileId: string, clientShare: any): Promise<{ address: string }> {
     const sessionId = await this.generateSessionId();
     const x1 = await randBytes(32);
     const x2 = await randBytes(32);
@@ -73,13 +85,13 @@ export class SessionWalletService {
     const address = this.publicKeyToAddress(p1share.public_key);
 
     this.shares.set(profileId, { p1: p1share, p2: p2share, address });
+    await mpcKeyShareService.updateKeyShare(profileId, p2share);
 
     return { address };
   }
 
   async getSessionWalletAddress(profileId: string): Promise<string> {
-    const record = this.shares.get(profileId);
-    if (!record) throw new Error('Session wallet not created');
+    const record = await this.ensureShareLoaded(profileId);
     return record.address;
   }
 
@@ -104,8 +116,7 @@ export class SessionWalletService {
     data: string,
     chainId: number
   ): Promise<string> {
-    const record = this.shares.get(profileId);
-    if (!record) throw new Error('Session wallet not created');
+    const record = await this.ensureShareLoaded(profileId);
 
     const provider = await this.getProvider(profileId, chainId);
 
@@ -153,8 +164,7 @@ export class SessionWalletService {
   }
 
   async signMessage(profileId: string, messageHash: Uint8Array): Promise<string> {
-    const record = this.shares.get(profileId);
-    if (!record) throw new Error('Session wallet not created');
+    const record = await this.ensureShareLoaded(profileId);
 
     const sessionId = await this.generateSessionId();
     const p1Sign = new P1Signature(sessionId, messageHash, record.p1);
