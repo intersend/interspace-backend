@@ -64,6 +64,7 @@ export interface JwtPayload {
 // Smart Profile Types
 export interface CreateSmartProfileRequest {
   name: string;
+  clientShare: any;
 }
 
 export interface UpdateSmartProfileRequest {
