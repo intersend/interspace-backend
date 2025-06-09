@@ -204,6 +204,7 @@ socket.on('profile_updated', (data) => {
 - **Distributed key generation** verified
 - **Session accounts** created via Silence Labs
 - **Multi-chain support** (Sepolia, Mumbai, Base Sepolia)
+- **MPC design requirements** documented in `MPC_DESIGN_REQUIREMENTS.md`
 
 
 ## 📊 Complete API Reference
