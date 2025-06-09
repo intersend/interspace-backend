@@ -5,9 +5,10 @@ import {
   P2Signature,
   randBytes
 } from '@silencelaboratories/ecdsa-tss';
-import { ethers, type JsonRpcProvider, Signature, Transaction } from 'ethers';
+import { ethers, type Signature, Transaction } from 'ethers';
+import { OrbyProvider } from '@orb-labs/orby-ethers6';
 import { prisma } from '@/utils/database';
-import { config } from '@/utils/config';
+import { orbyService } from '@/services/orbyService';
 
 interface KeyShareRecord {
   p1: any;
@@ -17,29 +18,27 @@ interface KeyShareRecord {
 
 export class SessionWalletService {
   private shares: Map<string, KeyShareRecord> = new Map();
-  private providers: Map<number, JsonRpcProvider> = new Map();
+  private providers: Map<string, OrbyProvider> = new Map();
 
   constructor() {
   }
 
-  private getProvider(chainId: number): JsonRpcProvider {
-    if (this.providers.has(chainId)) {
-      return this.providers.get(chainId)!;
+  private async getProvider(profileId: string, chainId: number): Promise<OrbyProvider> {
+    const key = `${profileId}-${chainId}`;
+    if (this.providers.has(key)) {
+      return this.providers.get(key)!;
     }
 
-    const envVar =
-      chainId === 1
-        ? process.env.ETHEREUM_RPC_URL
-        : chainId === 137
-        ? process.env.POLYGON_RPC_URL
-        : undefined;
+    const profile = await prisma.smartProfile.findUnique({
+      where: { id: profileId }
+    });
 
-    if (!envVar) {
-      throw new Error(`RPC URL for chain ${chainId} not configured`);
+    if (!profile) {
+      throw new Error('Profile not found');
     }
 
-    const provider = new ethers.JsonRpcProvider(envVar, chainId);
-    this.providers.set(chainId, provider);
+    const provider = await orbyService.getVirtualNode(profile, chainId);
+    this.providers.set(key, provider);
     return provider;
   }
 
@@ -108,7 +107,7 @@ export class SessionWalletService {
     const record = this.shares.get(profileId);
     if (!record) throw new Error('Session wallet not created');
 
-    const provider = this.getProvider(chainId);
+    const provider = await this.getProvider(profileId, chainId);
 
     const nonce = await provider.getTransactionCount(record.address);
     const feeData = await provider.getFeeData();
