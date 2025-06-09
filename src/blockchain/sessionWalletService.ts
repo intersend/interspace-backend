@@ -7,7 +7,6 @@ import {
 } from '@silencelaboratories/ecdsa-tss';
 import { ethers, type JsonRpcProvider, Signature, Transaction } from 'ethers';
 import { prisma } from '@/utils/database';
-import { config } from '@/utils/config';
 import { mpcKeyShareService } from '@/services/mpcKeyShareService';
 
 interface KeyShareRecord {
