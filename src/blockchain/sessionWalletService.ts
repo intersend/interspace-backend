@@ -6,7 +6,7 @@ import {
   randBytes
 } from '@silencelaboratories/ecdsa-tss';
 import { ethers, Signature, Transaction } from 'ethers';
-import type { OrbyProvider } from '@orb-labs/orby-ethers6';
+import { OrbyProvider } from '@orb-labs/orby-ethers6';
 import { prisma } from '@/utils/database';
 import { mpcKeyShareService } from '@/services/mpcKeyShareService';
 import { orbyService } from '@/services/orbyService';
@@ -48,7 +48,8 @@ export class SessionWalletService {
       throw new Error('Profile not found');
     }
 
-    const provider = await orbyService.getVirtualNode(profile, chainId);
+    const rpcUrl = await orbyService.getVirtualNodeRpcUrl(profile, chainId);
+    const provider = new OrbyProvider(rpcUrl);
     
     this.providers.set(key, provider);
     return provider;
@@ -155,7 +156,7 @@ export class SessionWalletService {
         chainId,
         fromAddress: record.address,
         toAddress: targetAddress,
-        value,
+        value: BigInt(value),
         status: 'pending'
       }
     });

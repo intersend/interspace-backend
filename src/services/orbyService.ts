@@ -179,6 +179,32 @@ export class OrbyService {
   }
 
   /**
+   * Retrieve the RPC URL for a virtual node on a specific chain
+   */
+  async getVirtualNodeRpcUrl(
+    profile: SmartProfile,
+    chainId: number
+  ): Promise<string> {
+    const profileWithOrby = profile as SmartProfileWithOrby;
+
+    if (!profileWithOrby.orbyAccountClusterId) {
+      throw new AppError('Profile does not have an Orby account cluster', 400);
+    }
+
+    const rpcUrl = await this.orbyProvider.getVirtualNodeRpcUrl(
+      profileWithOrby.orbyAccountClusterId,
+      BigInt(chainId),
+      profile.sessionWalletAddress
+    );
+
+    if (!rpcUrl) {
+      throw new AppError(`Failed to get virtual node for chain ${chainId}`, 500);
+    }
+
+    return rpcUrl;
+  }
+
+  /**
    * Get or create virtual node for a specific chain
    */
   async getVirtualNode(
@@ -191,22 +217,7 @@ export class OrbyService {
       return this.virtualNodes.get(key)!;
     }
 
-    const profileWithOrby = profile as SmartProfileWithOrby;
-    
-    if (!profileWithOrby.orbyAccountClusterId) {
-      throw new AppError('Profile does not have an Orby account cluster', 400);
-    }
-
-    // Get virtual node RPC URL
-    const rpcUrl = await this.orbyProvider.getVirtualNodeRpcUrl(
-      profileWithOrby.orbyAccountClusterId,
-      BigInt(chainId),
-      profile.sessionWalletAddress
-    );
-
-    if (!rpcUrl) {
-      throw new AppError(`Failed to get virtual node for chain ${chainId}`, 500);
-    }
+    const rpcUrl = await this.getVirtualNodeRpcUrl(profile, chainId);
 
     // Create virtual node provider
     const virtualNode = new OrbyProvider(rpcUrl);
