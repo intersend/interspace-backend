@@ -31,6 +31,7 @@ npm run prisma:migrate
 # Start development server
 npm run dev
 ```
+The included `docker-compose.yml` spins up a local PostgreSQL container with persistent storage. Start it with `docker-compose up -d db`.
 
 The server will start on `http://localhost:3000` with full CORS support for React Native development.
 
