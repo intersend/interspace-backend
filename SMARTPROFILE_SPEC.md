@@ -46,7 +46,7 @@ When a SmartProfile is created, the service performs the following steps:
 
 ```ts
 // SmartProfileService.createProfile()
-const { address: sessionWalletAddress } = await sessionWalletService.createSessionWallet(profile.id);
+const { address: sessionWalletAddress } = await sessionWalletService.createSessionWallet(profile.id, clientShare);
 // Save the address then create Orby account cluster
 const clusterId = await orbyService.createOrGetAccountCluster(updatedProfile, tx);
 ```

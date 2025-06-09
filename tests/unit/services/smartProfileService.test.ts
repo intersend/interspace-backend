@@ -49,7 +49,8 @@ describe('SmartProfileService', () => {
   describe.skip('createProfile', () => {
     test('should create a new smart profile with session wallet', async () => {
       const profileData = {
-        name: 'Test Gaming Profile'
+        name: 'Test Gaming Profile',
+        clientShare: {}
       };
 
       const profile = await smartProfileService.createProfile(testUser.id, profileData);
@@ -68,7 +69,7 @@ describe('SmartProfileService', () => {
     });
 
     test('should prevent duplicate profile names for same user', async () => {
-      const profileData = { name: 'Duplicate Name' };
+      const profileData = { name: 'Duplicate Name', clientShare: {} };
       
       await smartProfileService.createProfile(testUser.id, profileData);
       
@@ -79,7 +80,7 @@ describe('SmartProfileService', () => {
 
     test('should allow same profile name for different users', async () => {
       const anotherUser = await UserFactory.create();
-      const profileData = { name: 'Same Name' };
+      const profileData = { name: 'Same Name', clientShare: {} };
       
       const profile1 = await smartProfileService.createProfile(testUser.id, profileData);
       const profile2 = await smartProfileService.createProfile(anotherUser.id, profileData);
@@ -89,7 +90,7 @@ describe('SmartProfileService', () => {
     });
 
     test('should create audit log entry', async () => {
-      const profileData = { name: 'Audit Test Profile' };
+      const profileData = { name: 'Audit Test Profile', clientShare: {} };
       
       const profile = await smartProfileService.createProfile(testUser.id, profileData);
       
