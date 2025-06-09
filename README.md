@@ -11,7 +11,7 @@ Backend API for Interspace MVP wallet with SmartProfiles, ERC-7702 session walle
 ### Prerequisites
 - Node.js 18+ or 20+
 - npm or yarn
-- SQLite (for development)
+- PostgreSQL (local development)
 
 ### Installation
 
@@ -37,7 +37,7 @@ Create a `.env` file in the root directory:
 
 ```env
 # Database
-DATABASE_URL="file:./dev.db"
+DATABASE_URL="postgresql://user:password@localhost:5432/interspace"
 
 # Authentication
 JWT_SECRET="your-jwt-secret-key-replace-in-production"
@@ -66,6 +66,8 @@ RATE_LIMIT_MAX_REQUESTS=100
 # Uses in-memory RateLimiterMemory store from rate-limiter-flexible
 
 ```
+
+For production deployments, use a managed PostgreSQL instance with TLS enabled.
 
 ## 📱 React Native Integration
 
@@ -512,13 +514,13 @@ npm run test:coverage      # With coverage report
 ### Environment Configurations
 
 **Development**:
-- SQLite database (included)
+- PostgreSQL database (local instance)
 - CORS enabled for all origins
 - Detailed logging
 - Test data available
 
 **Production Ready**:
-- PostgreSQL support
+- Managed PostgreSQL with TLS
 - Rate limiting
 - Security headers
 - Audit logging
