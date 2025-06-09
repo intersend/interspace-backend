@@ -77,11 +77,16 @@ For production deployments, use a managed PostgreSQL instance with TLS enabled.
 
 ### Database Setup
 
+Create the database and run the Prisma migrations before starting the API:
+
 ```bash
 # Start PostgreSQL (Docker example)
 docker-compose up -d db
 
-# Run migrations
+# Create the local database
+createdb interspace
+
+# Apply migrations
 npx prisma migrate dev --name init-postgres
 ```
 
