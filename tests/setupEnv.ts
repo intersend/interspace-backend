@@ -8,5 +8,3 @@ process.env.SILENCE_NODE_URL = 'http://localhost';
 process.env.ORBY_INSTANCE_PRIVATE_API_KEY = 'test';
 process.env.ORBY_INSTANCE_PUBLIC_API_KEY = 'test';
 process.env.ORBY_PRIVATE_INSTANCE_URL = 'http://localhost';
-process.env.THIRDWEB_CLIENT_ID = '3dcca06b137a0ab48f1da145c27e4636';
-process.env.THIRDWEB_SECRET_KEY = 'HBxHyrdO03XxU0mwT9l4nyIFF_9jxTYpVB5mzfOBJfmhYVBAjzCadE8olXCzGRdx6tVCjizpbNEq2JWCSs8Xww';
