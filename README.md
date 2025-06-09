@@ -68,8 +68,10 @@ SUPPORTED_CHAINS="1,137,42161,10,8453,11155111,80001,421614,11155420,84532"
 RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX_REQUESTS=100
 # Uses in-memory RateLimiterMemory store from rate-limiter-flexible
-
 ```
+
+Delegated custody is not part of this release. The previous `SESSION_WALLET_FACTORY_*`
+and `DEPLOYER_PRIVATE_KEY` variables have been removed from the environment examples.
 
 For production deployments, use a managed PostgreSQL instance with TLS enabled.
 
