@@ -39,8 +39,5 @@ module.exports = {
       isolatedModules: true
     }]
   },
-  transformIgnorePatterns: [
-    'node_modules/(?!(thirdweb)/)'
-  ],
   testTimeout: 30000
 };
