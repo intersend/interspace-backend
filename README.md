@@ -72,6 +72,16 @@ RATE_LIMIT_MAX_REQUESTS=100
 
 For production deployments, use a managed PostgreSQL instance with TLS enabled.
 
+### Database Setup
+
+```bash
+# Start PostgreSQL (Docker example)
+docker-compose up -d db
+
+# Run migrations
+npx prisma migrate dev --name init-postgres
+```
+
 ## 📱 React Native Integration
 
 ### Authentication Flow
@@ -180,7 +190,7 @@ socket.on('profile_updated', (data) => {
 ### Technology Stack
 
 - **Framework**: Express.js with TypeScript
-- **Database**: Prisma ORM with SQLite (dev) / PostgreSQL (prod)
+- **Database**: Prisma ORM with PostgreSQL
 - **Authentication**: JWT with MPC wallet shares
 - **Blockchain**: Silence Labs two-party MPC
 - **Testing**: Jest with all tests passing (unit + integration)

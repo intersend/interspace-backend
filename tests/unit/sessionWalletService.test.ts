@@ -1,7 +1,7 @@
 jest.mock('@com.silencelaboratories/two-party-ecdsa-js', () => ({}));
 jest.mock('sigpair-admin-v2', () => ({ SigpairAdmin: class {} }));
 
-process.env.DATABASE_URL = 'file:./test.db';
+process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/interspace_test';
 process.env.JWT_SECRET = 'test';
 process.env.JWT_REFRESH_SECRET = 'test';
 process.env.ENCRYPTION_SECRET = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
