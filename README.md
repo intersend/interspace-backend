@@ -558,6 +558,7 @@ This creates two separate Cloud Run services, each connecting to its own Google 
 ### Database Optimization
 - **Indexed queries** for common operations
 - **Connection pooling** ready
+- **Production pooling and backups:** see `DATABASE_OPERATIONS_GUIDE.md`
 - **Query optimization** with Prisma
 - **Migration system** in place
 
