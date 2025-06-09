@@ -1,8 +1,8 @@
 version: '3.8'
 services:
-  db:
+  postgres:
     image: postgres:15
-    container_name: interspace-db
+    container_name: interspace-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
@@ -11,6 +11,6 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - db-data:/var/lib/postgresql/data
+      - postgres-data:/var/lib/postgresql/data
 volumes:
-  db-data:
+  postgres-data:
