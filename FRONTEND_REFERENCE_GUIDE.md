@@ -4,7 +4,7 @@ This guide outlines the main API calls and data shapes used by the React Native 
 
 ## Authentication
 
-1. Connect a wallet with Thirdweb and request an auth token.
+1. Obtain a provider token using our custom auth flow (Google, Apple, passkey, or wallet with Silence Labs).
 2. POST the token to `/api/v1/auth/authenticate` along with device information.
 
 ```javascript

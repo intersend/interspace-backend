@@ -224,7 +224,7 @@ type SocialProvider = 'farcaster' | 'telegram' | 'twitter' | 'discord' | 'google
 
 - **No backwards compatibility** - old endpoints have been removed
 - **No data migration needed** - starting fresh (not in production)
-- **Authentication unchanged** - Still uses Thirdweb auth tokens
+- **Authentication updated** - Now uses custom tokens with Silence Labs MPC wallets
 - **Profile functionality unchanged** - Only social accounts moved
 
 ## 📞 Support
@@ -232,7 +232,7 @@ type SocialProvider = 'farcaster' | 'telegram' | 'twitter' | 'discord' | 'google
 If you encounter any issues or need clarification:
 - Check the updated type definitions in `src/types/index.ts`
 - Review the new user service implementation
-- The authentication flow through Thirdweb remains the same
+- The authentication flow now relies on our custom auth service
 
 ---
 

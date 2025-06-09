@@ -6,7 +6,7 @@ This document provides a concise overview of the Interspace backend for the MVP 
 
 - **Node.js + TypeScript** using Express for the HTTP API.
 - **Prisma ORM** with SQLite (dev) or PostgreSQL (prod).
-- **Thirdweb** for wallet management and EIP‑7702 session wallets.
+- **Silence Labs MPC wallets** with custom authentication for EIP‑7702 session wallets.
 - **Orby** integration for cross‑chain transactions and gas abstraction.
 - **Socket.IO** for real-time updates to the React Native app.
 - **JWT authentication** with multi-device support and refresh tokens.
@@ -33,7 +33,7 @@ The backend integrates Orby (see `src/services/orbyService.ts`) to handle gas ab
 
 Routes are prefixed with `/api/v1` and include:
 
-- `/auth` – wallet authentication via Thirdweb.
+- `/auth` – custom authentication endpoints for Silence Labs MPC wallets and social login.
 - `/profiles` – create, update, and delete SmartProfiles.
 - `/profiles/:profileId/apps` – manage bookmarked apps and folders.
 - `/profiles/:profileId/accounts` – link or remove external accounts.
