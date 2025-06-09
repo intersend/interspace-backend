@@ -8,7 +8,6 @@ import {
 import { ethers, type JsonRpcProvider, Signature, Transaction } from 'ethers';
 import { prisma } from '@/utils/database';
 import { config } from '@/utils/config';
-import { ethers } from 'ethers';
 
 interface KeyShareRecord {
   p1: any;
