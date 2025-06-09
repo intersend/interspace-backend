@@ -587,6 +587,28 @@ This creates two separate Cloud Run services, each connecting to its own Google 
 - **Mobile-friendly error messages**
 - **Comprehensive logging**
 
+
+## Production Database Management
+
+### Connection Pooling
+To avoid exhausting connections, run a `pgbouncer` instance or limit Prisma's own pool.
+
+#### pgbouncer example
+```
+DATABASE_URL="postgresql://user:pass@pgbouncer-host:6432/interspace"
+```
+
+#### Prisma connection_limit
+```
+DATABASE_URL="postgresql://user:pass@db:5432/interspace?connection_limit=10"
+```
+
+### Automated Backups
+- Schedule `pg_dump` daily or enable managed service snapshots.
+
+### Read Replica (optional)
+Use a read-only replica for high availability and scale-out reads. Configure Prisma `readUrls` if needed.
+
 ## 🔄 Session Wallet Flow
 
 ### Complete Transaction Routing
