@@ -426,7 +426,7 @@ POST /api/v1/profiles/:id/rotate-wallet
 Authorization: Bearer <token>
 ```
 
-The response includes the updated client share which should replace the old share on the device.
+The response includes the updated client share which should replace the old share on the device. Mobile clients should call this endpoint periodically (for example once a month) to rotate their session wallet keys and keep compromised shares short-lived.
 
 ## 🔐 Authentication & Security
 
