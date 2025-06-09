@@ -8,7 +8,7 @@ beforeAll(async () => {
 
   // Override config for testing
 
-  process.env.DATABASE_URL = 'file:./prisma/test.db';
+  process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/interspace_test';
   process.env.JWT_SECRET = 'test-jwt-secret';
   process.env.ENCRYPTION_SECRET = 'test-encryption-secret';
   process.env.SILENCE_ADMIN_TOKEN = 'test-silence-token';
@@ -51,12 +51,16 @@ afterAll(async () => {
 
 // Test database utilities
 export async function resetTestDatabase() {
-  const tablenames = await prisma.$queryRaw<Array<{ name: string }>>`
-    SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_prisma_migrations'
+  const tablenames = await prisma.$queryRaw<Array<{ table_name: string }>>`
+    SELECT table_name FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+      AND table_name NOT LIKE '_prisma_migrations'
   `;
 
-  for (const { name } of tablenames) {
-    await prisma.$executeRawUnsafe(`DELETE FROM "${name}"`);
+  for (const { table_name } of tablenames) {
+    await prisma.$executeRawUnsafe(
+      `TRUNCATE TABLE "${table_name}" RESTART IDENTITY CASCADE`
+    );
   }
 }
 
