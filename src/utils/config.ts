@@ -156,7 +156,10 @@ export function validateConfig(): void {
     'JWT_REFRESH_SECRET',
     'ENCRYPTION_SECRET',
     'SILENCE_ADMIN_TOKEN',
-    'SILENCE_NODE_URL'
+    'SILENCE_NODE_URL',
+    'ORBY_INSTANCE_PRIVATE_API_KEY',
+    'ORBY_INSTANCE_PUBLIC_API_KEY',
+    'ORBY_PRIVATE_INSTANCE_URL'
   ];
 
   const missing = requiredVars.filter(varName => !process.env[varName]);
