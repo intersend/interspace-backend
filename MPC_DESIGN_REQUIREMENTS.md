@@ -25,3 +25,7 @@ This document outlines how multi‑party computation (MPC) is used within the In
 - Server storage (database or node volume) must be encrypted at rest.
 
 These requirements ensure that private key material remains split between devices and the backend while still allowing the backend to assist in transaction signing.
+
+## Session Wallet Key Rotation
+
+Session wallet MPC shares can be rotated without changing the public address. Use the API endpoint `POST /api/v1/profiles/:id/rotate-wallet` to request a new client share. Mobile apps should call this periodically—such as once per month—to limit the lifetime of any compromised share.
