@@ -1,7 +1,7 @@
 import { prisma, withTransaction } from '@/utils/database';
 import { generateAccessToken, generateRefreshToken } from '@/utils/jwt';
 import { OAuth2Client } from 'google-auth-library';
-import verifyAppleToken from 'apple-signin-auth';
+import { verifyIdToken } from 'apple-signin-auth';
 import { passkeyService } from './passkeyService';
 import { config } from '@/utils/config';
 import { 
@@ -317,7 +317,7 @@ export class SocialAuthService {
           return true;
         }
         case 'apple': {
-          await verifyAppleToken({ idToken: authToken, clientId: config.APPLE_CLIENT_ID! });
+          await verifyIdToken(authToken, { audience: config.APPLE_CLIENT_ID! });
           return true;
         }
         case 'passkey': {
