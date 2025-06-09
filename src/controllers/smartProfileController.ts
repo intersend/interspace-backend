@@ -18,7 +18,7 @@ export class SmartProfileController {
         return;
       }
 
-      const { name } = req.body;
+      const { name, clientShare } = req.body;
 
       if (!name) {
         res.status(400).json({
@@ -28,7 +28,15 @@ export class SmartProfileController {
         return;
       }
 
-      const profile = await smartProfileService.createProfile(userId, { name });
+      if (!clientShare) {
+        res.status(400).json({
+          success: false,
+          error: 'clientShare is required'
+        } as ApiResponse);
+        return;
+      }
+
+      const profile = await smartProfileService.createProfile(userId, { name, clientShare });
 
       res.status(201).json({
         success: true,

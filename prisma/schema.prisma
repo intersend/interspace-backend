@@ -83,6 +83,7 @@ model SmartProfile {
   preferredGasToken PreferredGasToken?
   orbyVirtualNodes  OrbyVirtualNode[]
   orbyOperations    OrbyOperation[]
+  mpcKeyShare       MpcKeyShare?
 
   @@map("smart_profiles")
 }
@@ -335,4 +336,16 @@ model PasskeyCredential {
   updatedAt    DateTime @updatedAt
 
   @@map("passkey_credentials")
+}
+
+model MpcKeyShare {
+  id          String   @id @default(cuid())
+  profileId   String   @unique
+  serverShare String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  profile SmartProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("mpc_key_shares")
 }
