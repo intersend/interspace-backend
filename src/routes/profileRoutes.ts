@@ -17,6 +17,7 @@ router.get('/:profileId', smartProfileController.getProfileById);
 router.put('/:profileId', smartProfileController.updateProfile);
 router.delete('/:profileId', smartProfileController.deleteProfile);
 router.post('/:profileId/activate', smartProfileController.switchActiveProfile);
+router.post('/:profileId/rotate-wallet', smartProfileController.rotateSessionWallet);
 
 // Social profile endpoints have been moved to user level (/users/me/social-accounts)
 

@@ -460,6 +460,15 @@ export class SmartProfileService {
     );
   }
 
+  /**
+   * Rotate the session wallet key shares for a profile
+   */
+  async rotateSessionWallet(profileId: string, userId: string): Promise<any> {
+    // Verify ownership
+    await this.getProfileById(profileId, userId);
+    return sessionWalletService.rotateSessionWallet(profileId);
+  }
+
   // Social profile methods have been moved to UserService
   // Social profiles are now managed at the user level, not profile level
 

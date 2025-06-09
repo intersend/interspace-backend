@@ -417,6 +417,17 @@ Session wallets are automatically created for each SmartProfile using ERC-7702 p
 - **Proxy Pattern**: ERC-7702 for secure delegation
 - **Batch Transactions**: Execute multiple transactions atomically
 
+#### Rotate Session Wallet
+
+Rotate MPC key shares while keeping the public key the same.
+
+```bash
+POST /api/v1/profiles/:id/rotate-wallet
+Authorization: Bearer <token>
+```
+
+The response includes the updated client share which should replace the old share on the device.
+
 ## 🔐 Authentication & Security
 
 ### JWT Token Management
