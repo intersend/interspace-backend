@@ -1,6 +1,6 @@
 import { prisma, withTransaction } from '@/utils/database';
 import { OAuth2Client } from 'google-auth-library';
-import verifyAppleToken from 'apple-signin-auth';
+import { verifyIdToken } from 'apple-signin-auth';
 import { decrypt, encrypt } from '@/utils/crypto';
 import { config } from '@/utils/config';
 import { passkeyService } from './passkeyService';
@@ -269,10 +269,7 @@ export class UserService {
         };
       }
       case 'apple': {
-        const result = await verifyAppleToken({
-          idToken: oauthToken,
-          clientId: config.APPLE_CLIENT_ID!
-        });
+        const result = await verifyIdToken(oauthToken, { audience: config.APPLE_CLIENT_ID! });
         return {
           providerId: result.sub,
           username: result.email ?? undefined,
