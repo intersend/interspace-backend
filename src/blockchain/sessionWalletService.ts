@@ -75,17 +75,16 @@ export class SessionWalletService {
     const msg1 = await p1.processMessage(null);
     const msg2 = await p2.processMessage(msg1.msg_to_send);
     const msg3 = await p1.processMessage(msg2.msg_to_send);
-    const p1share = msg3.p1_key_share;
     const msg4 = await p2.processMessage(msg3.msg_to_send);
     const p2share = msg4.p2_key_share;
 
-    if (!p1share || !p2share) {
+    if (!clientShare || !clientShare.public_key || !p2share) {
       throw new Error('Failed to generate key shares');
     }
 
-    const address = this.publicKeyToAddress(p1share.public_key);
+    const address = this.publicKeyToAddress(clientShare.public_key);
 
-    this.shares.set(profileId, { p1: p1share, p2: p2share, address });
+    this.shares.set(profileId, { p1: clientShare, p2: p2share, address });
     await mpcKeyShareService.updateKeyShare(profileId, p2share);
 
     return { address };
