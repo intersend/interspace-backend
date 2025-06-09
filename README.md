@@ -19,6 +19,9 @@ Backend API for Interspace MVP wallet with SmartProfiles, ERC-7702 session walle
 # Install dependencies
 npm install
 
+# Start PostgreSQL container
+docker-compose up -d db
+
 # Generate Prisma client
 npm run prisma:generate
 
@@ -33,11 +36,11 @@ The server will start on `http://localhost:3000` with full CORS support for Reac
 
 ### Environment Variables
 
-Create a `.env` file in the root directory:
+Create a `.env` file in the root directory. Use `.env.development.example` for local testing or `.env.production.example` when deploying to production:
 
 ```env
 # Database
-DATABASE_URL="postgresql://user:password@localhost:5432/interspace"
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/interspace"
 
 # Authentication
 JWT_SECRET="your-jwt-secret-key-replace-in-production"
@@ -495,6 +498,7 @@ npm run test:coverage      # With coverage report
    git clone <repo>
    cd interspace-backend
    npm install
+   docker-compose up -d db
    npm run prisma:generate
    npm run prisma:migrate
    npm run dev
@@ -524,6 +528,30 @@ npm run test:coverage      # With coverage report
 - Rate limiting
 - Security headers
 - Audit logging
+
+### Deploying with Docker & Cloud Run
+
+1. **Build the Docker image**:
+   ```bash
+   docker build -t gcr.io/your-project/interspace-backend .
+   ```
+
+2. **Deploy to Cloud Run** using the appropriate environment file:
+   ```bash
+   # For development instance
+   gcloud run deploy interspace-dev \
+     --image gcr.io/your-project/interspace-backend \
+     --region your-region \
+     --set-env-vars="$(cat .env.development.example | xargs)"
+
+   # For production instance
+   gcloud run deploy interspace-prod \
+     --image gcr.io/your-project/interspace-backend \
+     --region your-region \
+     --set-env-vars="$(cat .env.production.example | xargs)"
+   ```
+
+This creates two separate Cloud Run services, each connecting to its own Google Cloud SQL database.
 
 ## 📈 Performance & Monitoring
 
