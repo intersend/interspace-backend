@@ -20,7 +20,7 @@ Backend API for Interspace MVP wallet with SmartProfiles, ERC-7702 session walle
 npm install
 
 # Start PostgreSQL container
-docker-compose up -d db
+docker-compose up -d postgres
 
 # Generate Prisma client
 npm run prisma:generate
@@ -31,7 +31,7 @@ npm run prisma:migrate
 # Start development server
 npm run dev
 ```
-The included `docker-compose.yml` spins up a local PostgreSQL container with persistent storage. Start it with `docker-compose up -d db`.
+The included `docker-compose.yml` spins up a local PostgreSQL container with persistent storage. Start it with `docker-compose up -d postgres`.
 
 The server will start on `http://localhost:3000` with full CORS support for React Native development.
 
@@ -81,7 +81,7 @@ Create the database and run the Prisma migrations before starting the API:
 
 ```bash
 # Start PostgreSQL (Docker example)
-docker-compose up -d db
+docker-compose up -d postgres
 
 # Create the local database
 createdb interspace
@@ -517,7 +517,7 @@ npm run test:coverage      # With coverage report
    git clone <repo>
    cd interspace-backend
    npm install
-   docker-compose up -d db
+   docker-compose up -d postgres
    npm run prisma:generate
    npm run prisma:migrate
    npm run dev
