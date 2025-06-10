@@ -33,6 +33,10 @@ npm run dev
 ```
 The included `docker-compose.yml` spins up a local PostgreSQL container with persistent storage. Start it with `docker-compose up -d postgres`.
 
+To quickly run the API without the Silence Labs MPC node or login, set
+`DISABLE_MPC=true` and `BYPASS_LOGIN=true` in your `.env` file before starting
+the server.
+
 The server will start on `http://localhost:3000` with full CORS support for React Native development.
 
 ### Environment Variables
@@ -72,12 +76,12 @@ RATE_LIMIT_MAX_REQUESTS=100
 # Uses in-memory RateLimiterMemory store from rate-limiter-flexible
 ```
 
-Setting `DISABLE_MPC` to `true` disables the Silence Labs MPC integration and
-skips validation of `SILENCE_ADMIN_TOKEN` and `SILENCE_NODE_URL`.
+Set `DISABLE_MPC=true` to completely skip the Silence Labs MPC node. This also
+disables validation of `SILENCE_ADMIN_TOKEN` and `SILENCE_NODE_URL`.
 
-When `BYPASS_LOGIN` is set to `true`, authentication is skipped and requests
-automatically use a development user account (`dev@example.com`). Use this only
-for local testing.
+Set `BYPASS_LOGIN=true` to automatically authenticate every request as the
+development user (`dev@example.com`). Combine both variables to run the server
+without MPC or login when quickly testing the API.
 
 Delegated custody is not part of this release. The previous `SESSION_WALLET_FACTORY_*`
 and `DEPLOYER_PRIVATE_KEY` variables have been removed from the environment examples.
@@ -542,6 +546,10 @@ npm run test:coverage      # With coverage report
    npm run prisma:migrate
    npm run dev
    ```
+   # Optional: bypass MPC and login during local testing
+   # Set these in your .env file before running the server
+   # DISABLE_MPC=true
+   # BYPASS_LOGIN=true
 
 2. **Verify API**:
    ```bash
