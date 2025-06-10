@@ -22,6 +22,7 @@ interface Config {
 
   // Silence Labs MPC
   DISABLE_MPC: boolean;
+  BYPASS_LOGIN: boolean;
   SILENCE_ADMIN_TOKEN: string;
   SILENCE_NODE_URL: string;
 
@@ -118,6 +119,7 @@ export const config: Config = {
   ENCRYPTION_SECRET: getEnvVar('ENCRYPTION_SECRET'),
 
   DISABLE_MPC: getEnvBoolean('DISABLE_MPC', false),
+  BYPASS_LOGIN: getEnvBoolean('BYPASS_LOGIN', false),
 
   // Silence Labs MPC
   SILENCE_ADMIN_TOKEN: getEnvVar('SILENCE_ADMIN_TOKEN'),

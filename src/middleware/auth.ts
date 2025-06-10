@@ -1,10 +1,22 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken, extractTokenFromHeader } from '@/utils/jwt';
 import { prisma } from '@/utils/database';
+import { config } from '@/utils/config';
+import { getDevUser } from '@/utils/devUser';
 import { AuthenticationError, AuthorizationError } from '@/types';
 
 export async function authenticate(req: Request, res: Response, next: NextFunction) {
   try {
+    if (config.BYPASS_LOGIN) {
+      const user = await getDevUser();
+      req.user = {
+        userId: user.id,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      };
+      return next();
+    }
+
     const token = extractTokenFromHeader(req.headers.authorization);
     if (!token) {
       throw new AuthenticationError('Access token required');
