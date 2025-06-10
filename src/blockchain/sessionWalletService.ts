@@ -10,6 +10,8 @@ import { OrbyProvider } from '@orb-labs/orby-ethers6';
 import { prisma } from '@/utils/database';
 import { mpcKeyShareService } from '@/services/mpcKeyShareService';
 import { orbyService } from '@/services/orbyService';
+import { config } from '@/utils/config';
+import { MockSessionWalletService } from './mockSessionWalletService';
 
 interface KeyShareRecord {
   p1: any;
@@ -229,4 +231,6 @@ export class SessionWalletService {
   }
 }
 
-export const sessionWalletService = new SessionWalletService();
+export const sessionWalletService = config.DISABLE_MPC
+  ? new MockSessionWalletService()
+  : new SessionWalletService();
