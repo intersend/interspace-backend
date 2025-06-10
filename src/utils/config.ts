@@ -21,6 +21,7 @@ interface Config {
   
 
   // Silence Labs MPC
+  DISABLE_MPC: boolean;
   SILENCE_ADMIN_TOKEN: string;
   SILENCE_NODE_URL: string;
 
@@ -94,6 +95,12 @@ function getEnvNumberArray(name: string, defaultValue: number[] = []): number[] 
   });
 }
 
+function getEnvBoolean(name: string, defaultValue = false): boolean {
+  const value = process.env[name];
+  if (value === undefined) return defaultValue;
+  return value.toLowerCase() === 'true' || value === '1';
+}
+
 export const config: Config = {
   // Server
   NODE_ENV: getEnvVar('NODE_ENV', 'development'),
@@ -109,6 +116,8 @@ export const config: Config = {
   JWT_EXPIRES_IN: getEnvVar('JWT_EXPIRES_IN', '15m'),
   JWT_REFRESH_EXPIRES_IN: getEnvVar('JWT_REFRESH_EXPIRES_IN', '7d'),
   ENCRYPTION_SECRET: getEnvVar('ENCRYPTION_SECRET'),
+
+  DISABLE_MPC: getEnvBoolean('DISABLE_MPC', false),
 
   // Silence Labs MPC
   SILENCE_ADMIN_TOKEN: getEnvVar('SILENCE_ADMIN_TOKEN'),
@@ -155,12 +164,14 @@ export function validateConfig(): void {
     'JWT_SECRET',
     'JWT_REFRESH_SECRET',
     'ENCRYPTION_SECRET',
-    'SILENCE_ADMIN_TOKEN',
-    'SILENCE_NODE_URL',
     'ORBY_INSTANCE_PRIVATE_API_KEY',
     'ORBY_INSTANCE_PUBLIC_API_KEY',
     'ORBY_PRIVATE_INSTANCE_URL'
   ];
+
+  if (!config.DISABLE_MPC) {
+    requiredVars.push('SILENCE_ADMIN_TOKEN', 'SILENCE_NODE_URL');
+  }
 
   const missing = requiredVars.filter(varName => !process.env[varName]);
   

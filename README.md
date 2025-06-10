@@ -49,6 +49,7 @@ JWT_EXPIRES_IN="15m"
 JWT_REFRESH_EXPIRES_IN="7d"
 
 # Silence Labs MPC Configuration
+DISABLE_MPC="false"
 SILENCE_ADMIN_TOKEN="replace-with-admin-token"
 SILENCE_NODE_URL="http://localhost:8080"
 
@@ -69,6 +70,9 @@ RATE_LIMIT_WINDOW_MS=900000
 RATE_LIMIT_MAX_REQUESTS=100
 # Uses in-memory RateLimiterMemory store from rate-limiter-flexible
 ```
+
+Setting `DISABLE_MPC` to `true` disables the Silence Labs MPC integration and
+skips validation of `SILENCE_ADMIN_TOKEN` and `SILENCE_NODE_URL`.
 
 Delegated custody is not part of this release. The previous `SESSION_WALLET_FACTORY_*`
 and `DEPLOYER_PRIVATE_KEY` variables have been removed from the environment examples.
