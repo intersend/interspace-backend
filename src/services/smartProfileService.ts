@@ -9,9 +9,14 @@ import {
 } from '@/types';
 import { sessionWalletService } from '@/blockchain/sessionWalletService';
 import { orbyService } from '@/services/orbyService';
-import { config } from '@/utils/config';
+import { config as defaultConfig } from '@/utils/config';
 
 export class SmartProfileService {
+  private config = defaultConfig;
+
+  constructor(config = defaultConfig) {
+    this.config = config;
+  }
   
   /**
    * Create a new SmartProfile with session wallet
@@ -46,14 +51,21 @@ export class SmartProfileService {
       });
 
       try {
-        // Create session wallet using the profile ID
-        console.log(`Creating session wallet for profile ${profile.id}...`);
-        const { address: sessionWalletAddress } = await sessionWalletService.createSessionWallet(
-          profile.id,
-          data.clientShare
-        );
+        let sessionWalletAddress: string;
+        if (this.config.DISABLE_MPC) {
+          console.log('MPC disabled; skipping session wallet creation');
+          sessionWalletAddress = '0x0000000000000000000000000000000000000000';
+        } else {
+          // Create session wallet using the profile ID
+          console.log(`Creating session wallet for profile ${profile.id}...`);
+          const result = await sessionWalletService.createSessionWallet(
+            profile.id,
+            data.clientShare
+          );
+          sessionWalletAddress = result.address;
+        }
 
-        // Update profile with actual session wallet address
+        // Update profile with actual or placeholder session wallet address
         const updatedProfile = await tx.smartProfile.update({
           where: { id: profile.id },
           data: { sessionWalletAddress },
@@ -81,7 +93,7 @@ export class SmartProfileService {
             details: JSON.stringify({
               profileName: data.name,
               sessionWalletAddress,
-              chainId: config.DEFAULT_CHAIN_ID
+              chainId: this.config.DEFAULT_CHAIN_ID
             })
           }
         });
@@ -446,7 +458,7 @@ export class SmartProfileService {
     targetAddress: string,
     value: string,
     data: string,
-    chainId: number = config.DEFAULT_CHAIN_ID
+    chainId: number = this.config.DEFAULT_CHAIN_ID
   ): Promise<string> {
     // Verify ownership
     await this.getProfileById(profileId, userId);
@@ -490,4 +502,4 @@ export class SmartProfileService {
   }
 }
 
-export const smartProfileService = new SmartProfileService();
+export const smartProfileService = new SmartProfileService(defaultConfig);
