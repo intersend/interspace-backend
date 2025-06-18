@@ -1,0 +1,102 @@
+# Local development configuration with profile support
+# Usage: docker-compose -f docker-compose.local.yml --profile local up --build
+
+services:
+  # PostgreSQL for local development
+  postgres:
+    profiles: ["local"]
+    image: postgres:15-alpine
+    container_name: interspace-postgres-local
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: interspace_local
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-local-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - interspace-local-network
+
+  # Redis for distributed features
+  redis:
+    profiles: ["local"]
+    image: redis:7-alpine
+    container_name: interspace-redis-local
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass localpassword
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-local-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "-a", "localpassword", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - interspace-local-network
+
+  # Application service for local development
+  app:
+    profiles: ["local"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: interspace-backend-local
+    restart: unless-stopped
+    entrypoint: ["/usr/src/app/scripts/docker-entrypoint.sh"]
+    command: npm run dev
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/interspace_local
+      - REDIS_ENABLED=true
+      - REDIS_URL=redis://:localpassword@redis:6379/0
+      - JWT_SECRET=local-jwt-secret-change-in-production
+      - JWT_EXPIRES_IN=15m
+      - JWT_REFRESH_SECRET=local-refresh-secret-change-in-production
+      - JWT_REFRESH_EXPIRES_IN=7d
+      - ENCRYPTION_SECRET=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      - DISABLE_MPC=true
+      - BYPASS_LOGIN=true
+      - CORS_ORIGINS=http://localhost:3000,http://localhost:19006,http://localhost:3001
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+      - /usr/src/app/dist
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - interspace-local-network
+    stdin_open: true
+    tty: true
+
+volumes:
+  postgres-local-data:
+    driver: local
+  redis-local-data:
+    driver: local
+
+networks:
+  interspace-local-network:
+    driver: bridge
+    name: interspace-local-network

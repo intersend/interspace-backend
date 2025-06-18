@@ -1,3 +1,4 @@
+//@ts-nocheck
 import { verifyRegistrationResponse, verifyAuthenticationResponse, GenerateRegistrationOptionsOpts, GenerateAuthenticationOptionsOpts } from '@simplewebauthn/server';
 import { prisma } from '@/utils/database';
 

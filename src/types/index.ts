@@ -4,6 +4,7 @@ export interface ApiResponse<T = any> {
   message?: string;
   error?: string;
   errors?: FieldError[];
+  requestId?: string;
 }
 
 export interface FieldError {
@@ -37,6 +38,8 @@ export interface LoginRequest {
   deviceId: string;
   deviceName: string;
   deviceType: 'ios' | 'android' | 'web';
+  ipAddress?: string;
+  userAgent?: string;
 }
 
 export interface RegisterRequest {
@@ -65,6 +68,7 @@ export interface JwtPayload {
 export interface CreateSmartProfileRequest {
   name: string;
   clientShare: any;
+  developmentMode?: boolean; // Flag to use mock wallet for development
 }
 
 export interface UpdateSmartProfileRequest {
@@ -80,6 +84,8 @@ export interface SmartProfileResponse {
   linkedAccountsCount: number;
   appsCount: number;
   foldersCount: number;
+  isDevelopmentWallet?: boolean; // Indicates if this profile uses a development wallet
+  clientShare?: any; // Returned only for development wallets
   createdAt: string;
   updatedAt: string;
 }
@@ -92,6 +98,8 @@ export interface LinkAccountRequest {
   chainId?: number;
   signature: string; // Signature proving ownership
   message: string; // Message that was signed
+  ipAddress?: string;
+  userAgent?: string;
 }
 
 export interface UpdateLinkedAccountRequest {

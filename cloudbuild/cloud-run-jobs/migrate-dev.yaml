@@ -1,0 +1,34 @@
+apiVersion: run.googleapis.com/v1
+kind: Job
+metadata:
+  name: interspace-db-migrate-dev
+  annotations:
+    run.googleapis.com/launch-stage: BETA
+spec:
+  template:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          timeoutSeconds: 600
+          containers:
+          - name: migrate
+            image: gcr.io/PROJECT_ID/interspace-migrate:latest
+            env:
+            - name: NODE_ENV
+              value: "development"
+            resources:
+              limits:
+                cpu: 1000m
+                memory: 512Mi
+            volumeMounts:
+            - name: cloudsql
+              mountPath: /cloudsql
+              readOnly: true
+          volumes:
+          - name: cloudsql
+            secret:
+              secretName: cloudsql-instance-credentials
+          serviceAccountName: interspace-migration-sa@PROJECT_ID.iam.gserviceaccount.com
+      parallelism: 1
+      completions: 1

@@ -8,7 +8,7 @@ beforeAll(async () => {
 
   // Override config for testing
 
-  process.env.DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/interspace_test';
+  process.env.DATABASE_URL = 'postgresql://ardaerturk@localhost:5432/interspace_test';
   process.env.JWT_SECRET = 'test-jwt-secret';
   process.env.ENCRYPTION_SECRET = 'test-encryption-secret';
   process.env.SILENCE_ADMIN_TOKEN = 'test-silence-token';
@@ -31,10 +31,16 @@ beforeAll(async () => {
   process.env.ENCRYPTION_SECRET = '0123456789abcdef0123456789abcdef';
   
   // Connect to test database
-  await connectDatabase();
-  
-  // Reset database for clean slate
-  await resetTestDatabase();
+  try {
+    await connectDatabase();
+    
+    // Reset database for clean slate
+    await resetTestDatabase();
+  } catch (error) {
+    console.error('Failed to connect to test database:', error);
+    console.error('Make sure PostgreSQL is running and the test database exists');
+    throw error;
+  }
 });
 
 // Clean up after each test

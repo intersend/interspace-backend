@@ -35,8 +35,7 @@ module.exports = {
   transform: {
     '^.+\\.ts$': ['ts-jest', {
       tsconfig: '<rootDir>/tsconfig.test.json',
-      diagnostics: false,
-      isolatedModules: true
+      diagnostics: false
     }]
   },
   testTimeout: 30000

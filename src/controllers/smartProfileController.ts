@@ -18,7 +18,18 @@ export class SmartProfileController {
         return;
       }
 
-      const { name, clientShare } = req.body;
+      console.log('Raw request body:', JSON.stringify(req.body));
+      
+      const { name, clientShare, developmentMode } = req.body;
+      
+      console.log('Profile creation request parsing:', {
+        name,
+        hasClientShare: !!clientShare,
+        developmentMode,
+        developmentModeType: typeof developmentMode,
+        developmentModeValue: developmentMode,
+        developmentModeStringified: JSON.stringify(developmentMode)
+      });
 
       if (!name) {
         res.status(400).json({
@@ -28,7 +39,27 @@ export class SmartProfileController {
         return;
       }
 
-      if (!clientShare) {
+      // Don't require clientShare for development mode
+      // Check for both boolean true and string "true"
+      const isDevelopmentMode = developmentMode === true || developmentMode === 'true' || developmentMode === 1 || developmentMode === '1';
+      
+      console.log('Development mode check:', {
+        originalValue: developmentMode,
+        isDevelopmentMode,
+        checkResults: {
+          'equals true': developmentMode === true,
+          'equals "true"': developmentMode === 'true',
+          'equals 1': developmentMode === 1,
+          'equals "1"': developmentMode === '1'
+        }
+      });
+      
+      if (!isDevelopmentMode && !clientShare) {
+        console.log('ClientShare validation failed:', {
+          isDevelopmentMode,
+          hasClientShare: !!clientShare,
+          developmentMode
+        });
         res.status(400).json({
           success: false,
           error: 'clientShare is required'
@@ -36,7 +67,19 @@ export class SmartProfileController {
         return;
       }
 
-      const profile = await smartProfileService.createProfile(userId, { name, clientShare });
+      console.log(`Creating profile for user ${userId} with developmentMode: ${isDevelopmentMode}`);
+      
+      const profile = await smartProfileService.createProfile(userId, { 
+        name, 
+        clientShare,
+        developmentMode: isDevelopmentMode
+      });
+
+      console.log('Profile created successfully, sending response:', {
+        profileId: profile.id,
+        isDevelopmentWallet: profile.isDevelopmentWallet,
+        hasClientShare: !!profile.clientShare
+      });
 
       res.status(201).json({
         success: true,

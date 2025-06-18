@@ -9,10 +9,21 @@ export class MockSessionWalletService {
     return '0x' + hash.slice(0, 40);
   }
 
-  async createSessionWallet(profileId: string, _clientShare: any): Promise<{ address: string }> {
+  async createSessionWallet(profileId: string, _clientShare: any): Promise<{ address: string; clientShare?: any }> {
     const address = this.generateAddress(profileId);
     this.wallets.set(profileId, address);
-    return { address };
+    
+    // Generate a mock clientShare for development
+    const mockClientShare = {
+      p1_key_share: {
+        secret_share: crypto.createHash('sha256').update(`secret-${profileId}`).digest('hex'),
+        public_key: crypto.createHash('sha256').update(`pubkey-${profileId}`).digest('hex').slice(0, 64)
+      },
+      public_key: crypto.createHash('sha256').update(`pubkey-${profileId}`).digest('hex').slice(0, 64),
+      address: address
+    };
+    
+    return { address, clientShare: mockClientShare };
   }
 
   async rotateSessionWallet(profileId: string): Promise<{ clientShare: any }> {
@@ -43,6 +54,16 @@ export class MockSessionWalletService {
 
   isSessionWalletDeployed(profileId: string): boolean {
     return this.wallets.has(profileId);
+  }
+
+  getTransactionRouting(sourceEOA: string, sessionWallet: string, targetApp: string) {
+    return {
+      route: `${sourceEOA} → ${sessionWallet} → ${targetApp}`,
+      steps: [
+        { from: sourceEOA, to: sessionWallet, description: 'User initiates transaction' },
+        { from: sessionWallet, to: targetApp, description: 'Session wallet executes transaction' }
+      ]
+    };
   }
 }
 

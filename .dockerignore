@@ -1,9 +1,68 @@
+# Dependencies
 node_modules
 npm-debug.log
+yarn-error.log
+
+# Build outputs
+dist
+build
+*.log
+
+# Environment files
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+.DS_Store
+
+# Testing
+coverage
+.nyc_output
+
+# Documentation
+*.md
+docs
+LICENSE
+
+# Docker
+docker-compose*.yml
 Dockerfile*
 .dockerignore
-.git
-__mocks__
-tests
-.env*
 
+# Scripts (except necessary ones)
+scripts/*
+!scripts/start-prod.js
+!scripts/check-production-build.js
+!scripts/docker-healthcheck.sh
+
+# Development files
+.editorconfig
+.eslintrc*
+.prettierrc*
+jest.config.js
+tsconfig.test.json
+
+# CI/CD
+.github
+.gitlab-ci.yml
+cloudbuild*.yaml
+
+# Temporary files
+tmp
+temp
+*.tmp
+
+# Infrastructure
+infrastructure
+terraform
+k8s

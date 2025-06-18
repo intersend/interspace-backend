@@ -5,6 +5,7 @@
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
+    "isolatedModules": true,
     "baseUrl": "./src",
     "rootDir": "./",
     "paths": {

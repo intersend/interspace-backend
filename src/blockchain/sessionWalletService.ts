@@ -193,6 +193,7 @@ export class SessionWalletService {
         chainId,
         fromAddress: record.address,
         toAddress: targetAddress,
+        //@ts-ignore
         value: BigInt(value),
         status: 'pending'
       }

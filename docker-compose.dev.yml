@@ -1,0 +1,76 @@
+services:
+  # PostgreSQL for local development
+  postgres:
+    image: postgres:15-alpine
+    container_name: interspace-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: interspace_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-dev-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for distributed features (rate limiting, blacklist, caching)
+  redis:
+    image: redis:7-alpine
+    container_name: interspace-redis-dev
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass devpassword
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-dev-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "-a", "devpassword", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Application service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: interspace-backend-dev
+    restart: unless-stopped
+    command: npm run dev
+    environment:
+      - NODE_ENV=development
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/interspace_dev
+      - REDIS_ENABLED=true
+      - REDIS_URL=redis://:devpassword@redis:6379/0
+      - JWT_SECRET=dev-jwt-secret-change-in-production
+      - JWT_EXPIRES_IN=15m
+      - JWT_REFRESH_SECRET=dev-refresh-secret-change-in-production
+      - JWT_REFRESH_EXPIRES_IN=7d
+      - ENCRYPTION_SECRET=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/usr/src/app
+      - /usr/src/app/node_modules
+      - /usr/src/app/dist
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    stdin_open: true
+    tty: true
+
+volumes:
+  postgres-dev-data:
+  redis-dev-data:
+
+networks:
+  default:
+    name: interspace-dev-network

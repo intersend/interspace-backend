@@ -54,6 +54,11 @@ const setGasTokenPreferenceSchema = Joi.object({
 // Routes
 router.get('/profiles/:id/balance', asyncHandler(orbyController.getUnifiedBalance));
 
+router.get(
+  '/profiles/:id/orby-rpc-url',
+  asyncHandler(orbyController.getVirtualNodeRpcUrl)
+);
+
 router.post(
   '/profiles/:id/intent',
   transactionRateLimit,

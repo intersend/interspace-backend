@@ -64,7 +64,7 @@ interface SwapIntentParams {
 }
 
 export class OrbyService {
-  private orbyProvider: OrbyProvider;
+  private orbyProvider?: OrbyProvider;
   private virtualNodes: Map<string, OrbyProvider> = new Map();
   private config: OrbyConfig;
   private iface: ethers.Interface;
@@ -77,10 +77,6 @@ export class OrbyService {
       appName: config.ORBY_APP_NAME
     };
 
-    // Initialize Orby provider with private instance URL including API key
-    const orbyUrl = `${this.config.privateInstanceUrl}/${this.config.privateApiKey}`;
-    this.orbyProvider = new OrbyProvider(orbyUrl);
-
     // Initialize ERC20 interface for encoding
     const ERC20_ABI = [
       'function transfer(address to, uint256 amount) returns (bool)',
@@ -88,6 +84,20 @@ export class OrbyService {
       'function transferFrom(address from, address to, uint256 amount) returns (bool)'
     ];
     this.iface = new ethers.Interface(ERC20_ABI);
+
+    // OrbyProvider is now lazily initialized when first needed
+  }
+
+  /**
+   * Get or create the OrbyProvider instance
+   */
+  private getProvider(): OrbyProvider {
+    if (!this.orbyProvider) {
+      console.log('Initializing OrbyProvider...');
+      const orbyUrl = `${this.config.privateInstanceUrl}/${this.config.privateApiKey}`;
+      this.orbyProvider = new OrbyProvider(orbyUrl);
+    }
+    return this.orbyProvider;
   }
 
   /**
@@ -119,21 +129,23 @@ export class OrbyService {
       })
     );
 
-    // Add all linked EOAs
-    for (const linkedAccount of profile.linkedAccounts) {
-      if (linkedAccount.isActive) {
-        accounts.push(
-          Account.toAccount({
-            vmType: 'EVM',
-            address: linkedAccount.address,
-            accountType: 'EOA'
-          })
-        );
+    // Add all linked EOAs (check if linkedAccounts exists)
+    if (profile.linkedAccounts && profile.linkedAccounts.length > 0) {
+      for (const linkedAccount of profile.linkedAccounts) {
+        if (linkedAccount.isActive) {
+          accounts.push(
+            Account.toAccount({
+              vmType: 'EVM',
+              address: linkedAccount.address,
+              accountType: 'EOA'
+            })
+          );
+        }
       }
     }
 
     // Create account cluster
-    const cluster = await this.orbyProvider.createAccountCluster(accounts);
+    const cluster = await this.getProvider().createAccountCluster(accounts);
     if (!cluster || !cluster.accountClusterId) {
       throw new AppError('Failed to create Orby account cluster', 500);
     }
@@ -191,7 +203,7 @@ export class OrbyService {
       throw new AppError('Profile does not have an Orby account cluster', 400);
     }
 
-    const rpcUrl = await this.orbyProvider.getVirtualNodeRpcUrl(
+    const rpcUrl = await this.getProvider().getVirtualNodeRpcUrl(
       profileWithOrby.orbyAccountClusterId,
       BigInt(chainId),
       profile.sessionWalletAddress
@@ -281,7 +293,7 @@ export class OrbyService {
   async getStandardizedTokenIds(
     tokens: { chainId: number; tokenAddress: string }[]
   ): Promise<string[]> {
-    const tokenIds = await this.orbyProvider.getStandardizedTokenIds(
+    const tokenIds = await this.getProvider().getStandardizedTokenIds(
       tokens.map(t => ({
         chainId: BigInt(t.chainId),
         tokenAddress: t.tokenAddress
@@ -515,7 +527,7 @@ export class OrbyService {
       }
     };
 
-    this.orbyProvider.subscribeToOperationSetStatus(operationSetId, callback);
+    this.getProvider().subscribeToOperationSetStatus(operationSetId, callback);
   }
 
   /**

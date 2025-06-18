@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { prisma } from '@/utils/database';
 import { orbyService } from '@/services/orbyService';
 import { gasTokenService } from '@/services/gasTokenService';
@@ -444,6 +444,33 @@ export class OrbyController {
     }
   }
 
+  /**
+   * Get virtual node RPC URL for a profile on a specific chain
+   */
+  async getVirtualNodeRpcUrl(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { id: profileId } = req.params;
+      const chainId = parseInt(req.query.chainId as string);
+
+      if (!profileId || isNaN(chainId)) {
+        throw new AppError('Profile ID and Chain ID are required', 400);
+      }
+
+      const profile = await prisma.smartProfile.findUnique({
+        where: { id: profileId }
+      });
+
+      if (!profile) {
+        throw new NotFoundError('Profile not found');
+      }
+
+      const rpcUrl = await orbyService.getVirtualNodeRpcUrl(profile, chainId);
+
+      res.json({ success: true, data: { rpcUrl } });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export const orbyController = new OrbyController();

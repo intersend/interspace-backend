@@ -1,6 +1,10 @@
 import bcrypt from 'bcryptjs';
 import { prisma, withTransaction } from '@/utils/database';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '@/utils/jwt';
+import { auditService } from './auditService';
+import { tokenBlacklistService } from './tokenBlacklistService';
+import { securityMonitoringService } from './securityMonitoringService';
+import { v4 as uuidv4 } from 'uuid';
 import { 
   LoginRequest, 
   RegisterRequest, 
@@ -54,15 +58,17 @@ export class AuthService {
         }
       });
 
-      // Generate tokens
+      // Generate tokens with token family
+      const familyId = uuidv4();
       const accessToken = generateAccessToken(user.id, data.deviceId);
       const refreshToken = generateRefreshToken(user.id, data.deviceId);
 
-      // Store refresh token
+      // Store refresh token with family ID
       await tx.refreshToken.create({
         data: {
           userId: user.id,
           token: refreshToken,
+          familyId,
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
         }
       });
@@ -87,12 +93,35 @@ export class AuthService {
     });
 
     if (!user || !user.hashedPassword) {
+      // Log failed login attempt
+      await auditService.logSecurityEvent({
+        type: 'LOGIN_FAILED',
+        details: { email: data.email, reason: 'user_not_found' },
+        ipAddress: data.ipAddress,
+        userAgent: data.userAgent
+      });
+      
+      // Check for brute force attempts
+      await securityMonitoringService.checkBruteForce(undefined, data.ipAddress);
+      
       throw new AuthenticationError('Invalid credentials');
     }
 
     // Verify password
     const isValidPassword = await bcrypt.compare(data.password, user.hashedPassword);
     if (!isValidPassword) {
+      // Log failed login attempt
+      await auditService.logSecurityEvent({
+        type: 'LOGIN_FAILED',
+        userId: user.id,
+        details: { email: data.email, reason: 'invalid_password' },
+        ipAddress: data.ipAddress,
+        userAgent: data.userAgent
+      });
+      
+      // Check for brute force attempts
+      await securityMonitoringService.checkBruteForce(user.id, data.ipAddress);
+      
       throw new AuthenticationError('Invalid credentials');
     }
 
@@ -122,7 +151,8 @@ export class AuthService {
         });
       }
 
-      // Generate tokens
+      // Generate tokens with token family
+      const familyId = uuidv4();
       const accessToken = generateAccessToken(user.id, data.deviceId);
       const refreshToken = generateRefreshToken(user.id, data.deviceId);
 
@@ -134,11 +164,12 @@ export class AuthService {
         }
       });
 
-      // Store new refresh token
+      // Store new refresh token with family ID
       await tx.refreshToken.create({
         data: {
           userId: user.id,
           token: refreshToken,
+          familyId,
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
         }
       });
@@ -166,6 +197,29 @@ export class AuthService {
         throw new AuthenticationError('Invalid or expired refresh token');
       }
 
+      // Check if token has already been rotated (replay attack detection)
+      if (storedToken.rotatedAt) {
+        // Token has been used before - possible token theft
+        // Invalidate entire token family
+        if (storedToken.familyId) {
+          await tx.refreshToken.deleteMany({
+            where: { familyId: storedToken.familyId }
+          });
+        }
+        
+        // Log security event
+        await auditService.logSecurityEvent({
+          type: 'TOKEN_THEFT_DETECTED',
+          userId: storedToken.userId,
+          details: { 
+            familyId: storedToken.familyId,
+            tokenId: storedToken.id 
+          }
+        });
+        
+        throw new AuthenticationError('Token has been compromised');
+      }
+
       // Verify device is still active
       const device = await tx.deviceRegistration.findUnique({
         where: { deviceId: payload.deviceId }
@@ -179,14 +233,31 @@ export class AuthService {
       const newAccessToken = generateAccessToken(payload.userId, payload.deviceId);
       const newRefreshToken = generateRefreshToken(payload.userId, payload.deviceId);
 
-      // Replace old refresh token with new one
+      // Mark old token as rotated
       await tx.refreshToken.update({
         where: { token: refreshToken },
         data: {
+          rotatedAt: new Date()
+        }
+      });
+
+      // Create new refresh token in the same family
+      await tx.refreshToken.create({
+        data: {
+          userId: storedToken.userId,
           token: newRefreshToken,
+          familyId: storedToken.familyId,
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
         }
       });
+
+      // Blacklist the old refresh token
+      await tokenBlacklistService.blacklistToken(
+        refreshToken,
+        'refresh',
+        storedToken.userId,
+        { reason: 'rotation' }
+      );
 
       return {
         accessToken: newAccessToken,
@@ -197,17 +268,42 @@ export class AuthService {
   }
 
   async logout(refreshToken: string): Promise<void> {
-    await prisma.refreshToken.delete({
-      where: { token: refreshToken }
-    }).catch(() => {
+    try {
+      const token = await prisma.refreshToken.findUnique({
+        where: { token: refreshToken }
+      });
+
+      if (token) {
+        // Blacklist the token
+        await tokenBlacklistService.blacklistToken(
+          refreshToken,
+          'refresh',
+          token.userId,
+          { reason: 'logout' }
+        );
+
+        // Delete the refresh token
+        await prisma.refreshToken.delete({
+          where: { token: refreshToken }
+        });
+      }
+    } catch (error) {
       // Ignore errors if token doesn't exist
-    });
+    }
   }
 
   async logoutAllDevices(userId: string): Promise<void> {
-    await prisma.refreshToken.deleteMany({
-      where: { userId }
-    });
+    // Blacklist all user tokens
+    await tokenBlacklistService.blacklistAllUserTokens(
+      userId,
+      { reason: 'logout' }
+    );
+    
+    // Delete all refresh tokens (handled by blacklistAllUserTokens)
+  }
+
+  async verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
+    return bcrypt.compare(password, hashedPassword);
   }
 
   async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
@@ -236,9 +332,10 @@ export class AuthService {
       });
 
       // Logout all devices (security measure)
-      await tx.refreshToken.deleteMany({
-        where: { userId }
-      });
+      await tokenBlacklistService.blacklistAllUserTokens(
+        userId,
+        { reason: 'password_change' }
+      );
     });
   }
 

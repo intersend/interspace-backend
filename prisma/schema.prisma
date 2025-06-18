@@ -24,13 +24,23 @@ model User {
   walletAddress  String? // Primary wallet address (for SIWE)
 
   // Multi-device support
-  devices       DeviceRegistration[]
-  refreshTokens RefreshToken[]
+  devices          DeviceRegistration[]
+  refreshTokens    RefreshToken[]
+  blacklistedTokens BlacklistedToken[]
 
   // Profiles owned by this user
   smartProfiles  SmartProfile[]
   linkedAccounts LinkedAccount[]
   socialProfiles SocialProfile[]
+
+  // Email verifications
+  emailVerifications EmailVerification[]
+
+  // Two-factor authentication
+  twoFactorEnabled     Boolean   @default(false)
+  twoFactorSecret      String? // Encrypted TOTP secret
+  twoFactorBackupCodes String? // Encrypted JSON array of backup codes
+  twoFactorEnabledAt   DateTime?
 
   @@map("users")
 }
@@ -55,12 +65,30 @@ model RefreshToken {
   id        String   @id @default(cuid())
   userId    String
   token     String   @unique
+  familyId  String?  // Token family for rotation detection
   expiresAt DateTime
   createdAt DateTime @default(now())
+  rotatedAt DateTime? // When this token was rotated
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([familyId])
   @@map("refresh_tokens")
+}
+
+model BlacklistedToken {
+  id         String   @id @default(cuid())
+  token      String   @unique
+  tokenType  String   // "access" or "refresh"
+  userId     String
+  reason     String   // "logout", "rotation", "security", "password_change"
+  expiresAt  DateTime // When the token would have expired naturally
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@map("blacklisted_tokens")
 }
 
 model SmartProfile {
@@ -69,6 +97,7 @@ model SmartProfile {
   name                 String
   sessionWalletAddress String   @unique // ERC-7702 proxy address
   isActive             Boolean  @default(false)
+  isDevelopmentWallet  Boolean  @default(false) // True if using mock wallet for development
   orbyAccountClusterId String?  @unique
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
@@ -84,6 +113,7 @@ model SmartProfile {
   orbyVirtualNodes  OrbyVirtualNode[]
   orbyOperations    OrbyOperation[]
   mpcKeyShare       MpcKeyShare?
+  mpcKeyMapping     MpcKeyMapping?
 
   @@map("smart_profiles")
 }
@@ -262,6 +292,17 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+model SiweNonce {
+  id        String    @id @default(cuid())
+  nonce     String    @unique
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  @@index([expiresAt])
+  @@map("siwe_nonces")
+}
+
 // Orby Integration Models
 model PreferredGasToken {
   id                  String   @id @default(cuid())
@@ -348,4 +389,38 @@ model MpcKeyShare {
   profile SmartProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   @@map("mpc_key_shares")
+}
+
+model MpcKeyMapping {
+  id               String   @id @default(cuid())
+  profileId        String   @unique
+  silenceLabsKeyId String   @unique // The key ID from Silence Labs Duo Server
+  publicKey        String   // The public key for verification
+  keyAlgorithm     String   @default("ecdsa") // "ecdsa" or "schnorr"
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  profile SmartProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@map("mpc_key_mappings")
+}
+
+model EmailVerification {
+  id        String   @id @default(cuid())
+  email     String
+  code      String
+  attempts  Int      @default(0)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  
+  // Rate limiting
+  lastAttemptAt DateTime?
+  
+  // Link to user if verification is for existing user
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([email, code])
+  @@index([expiresAt])
+  @@map("email_verifications")
 }

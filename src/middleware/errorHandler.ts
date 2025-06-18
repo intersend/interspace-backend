@@ -8,31 +8,49 @@ export function errorHandler(
   res: Response,
   next: NextFunction
 ): void {
-  // Log error for debugging
-  console.error('Error occurred:', {
+  const requestId = req.headers['x-request-id'] as string || 'unknown';
+  
+  // Log error for debugging with request correlation
+  const errorLog = {
+    requestId,
     message: error.message,
-    stack: isDevelopment ? error.stack : undefined,
+    name: error.name,
     url: req.url,
     method: req.method,
     ip: req.ip,
-    userAgent: req.get('User-Agent'),
-    userId: req.user?.userId
-  });
+    userAgent: req.get('User-Agent')?.slice(0, 100), // Truncate long user agents
+    userId: req.user?.userId,
+    timestamp: new Date().toISOString()
+  };
+
+  // Only include stack trace in development
+  if (isDevelopment) {
+    (errorLog as any).stack = error.stack;
+  }
+
+  console.error('❌ Request error:', errorLog);
 
   // Handle known application errors
   if (error instanceof AppError) {
-    res.status(error.statusCode).json({
+    const errorResponse: any = {
       success: false,
       error: error.message,
       code: error.code,
-      ...(error instanceof ValidationError && { errors: error.details })
-    });
+      requestId
+    };
+
+    // Add validation errors if present
+    if (error instanceof ValidationError && error.details) {
+      errorResponse.errors = error.details;
+    }
+
+    res.status(error.statusCode).json(errorResponse);
     return;
   }
 
   // Handle Prisma errors
   if (error.name === 'PrismaClientKnownRequestError') {
-    handlePrismaError(error as any, res);
+    handlePrismaError(error as any, res, requestId);
     return;
   }
 
@@ -41,7 +59,8 @@ export function errorHandler(
     res.status(401).json({
       success: false,
       error: 'Authentication failed',
-      code: 'AUTHENTICATION_ERROR'
+      code: 'AUTHENTICATION_ERROR',
+      requestId
     });
     return;
   }
@@ -57,21 +76,29 @@ export function errorHandler(
       success: false,
       error: 'Validation failed',
       code: 'VALIDATION_ERROR',
-      errors: validationErrors
+      errors: validationErrors,
+      requestId
     });
     return;
   }
 
   // Handle unexpected errors
-  res.status(500).json({
+  const unexpectedErrorResponse: any = {
     success: false,
     error: isDevelopment ? error.message : 'Internal server error',
     code: 'INTERNAL_ERROR',
-    ...(isDevelopment && { stack: error.stack })
-  });
+    requestId
+  };
+
+  // Only include stack trace in development
+  if (isDevelopment) {
+    unexpectedErrorResponse.stack = error.stack;
+  }
+
+  res.status(500).json(unexpectedErrorResponse);
 }
 
-function handlePrismaError(error: any, res: Response): void {
+function handlePrismaError(error: any, res: Response, requestId: string): void {
   switch (error.code) {
     case 'P2002':
       // Unique constraint violation
@@ -79,7 +106,8 @@ function handlePrismaError(error: any, res: Response): void {
       res.status(409).json({
         success: false,
         error: `${field} already exists`,
-        code: 'DUPLICATE_ERROR'
+        code: 'DUPLICATE_ERROR',
+        requestId
       });
       return;
 
@@ -88,7 +116,8 @@ function handlePrismaError(error: any, res: Response): void {
       res.status(404).json({
         success: false,
         error: 'Record not found',
-        code: 'NOT_FOUND_ERROR'
+        code: 'NOT_FOUND_ERROR',
+        requestId
       });
       return;
 
@@ -97,7 +126,8 @@ function handlePrismaError(error: any, res: Response): void {
       res.status(400).json({
         success: false,
         error: 'Invalid reference',
-        code: 'REFERENCE_ERROR'
+        code: 'REFERENCE_ERROR',
+        requestId
       });
       return;
 
@@ -105,7 +135,8 @@ function handlePrismaError(error: any, res: Response): void {
       res.status(500).json({
         success: false,
         error: 'Database error',
-        code: 'DATABASE_ERROR'
+        code: 'DATABASE_ERROR',
+        requestId
       });
       return;
   }
@@ -113,10 +144,13 @@ function handlePrismaError(error: any, res: Response): void {
 
 // Handle 404 errors for unmatched routes
 export function notFound(req: Request, res: Response): void {
+  const requestId = req.headers['x-request-id'] as string || 'unknown';
+  
   res.status(404).json({
     success: false,
     error: `Route ${req.method} ${req.url} not found`,
-    code: 'NOT_FOUND_ERROR'
+    code: 'NOT_FOUND_ERROR',
+    requestId
   });
 }
 

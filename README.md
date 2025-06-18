@@ -11,9 +11,24 @@ Backend API for Interspace MVP wallet with SmartProfiles, ERC-7702 session walle
 ### Prerequisites
 - Node.js 18+ or 20+
 - npm or yarn
-- PostgreSQL (local development)
+- Docker & Docker Compose (for local development)
 
-### Installation
+### Local Development with Docker
+
+The easiest way to run the project locally is using Docker:
+
+```bash
+# Option 1: Use the local development script (recommended)
+./scripts/local-dev.sh start
+
+# Option 2: Use docker-compose directly
+docker-compose -f docker-compose.local.yml --profile local up --build
+
+# Option 3: For development environment
+docker-compose -f docker-compose.dev.yml up --build
+```
+
+### Manual Installation (without Docker)
 
 ```bash
 # Install dependencies
@@ -31,9 +46,15 @@ npm run prisma:migrate
 # Start development server
 npm run dev
 ```
-The included `docker-compose.yml` spins up a local PostgreSQL container with persistent storage. Start it with `docker-compose up -d postgres`.
 
 The server will start on `http://localhost:3000` with full CORS support for React Native development.
+
+### Docker Compose Files
+
+- `docker-compose.yml` - Production-oriented configuration
+- `docker-compose.dev.yml` - Development configuration with hot reload
+- `docker-compose.local.yml` - Local development with profile support
+- Use `./scripts/local-dev.sh` for easy local development management
 
 ### Environment Variables
 
@@ -714,8 +735,233 @@ ISC License - see LICENSE file for details.
  - Verify Silence Labs configuration
 - Test on device and simulator
 
+## 🌩️ Google Cloud Deployment
+
+### Prerequisites for Deployment
+
+- Google Cloud Project with billing enabled
+- gcloud CLI installed and authenticated
+- Required GCP APIs enabled (see setup script)
+- Docker installed for local testing
+
+### Quick Deployment
+
+#### 1. Setup Infrastructure
+
+```bash
+# Make setup script executable
+chmod +x infrastructure/setup-infrastructure.sh
+
+# Run infrastructure setup
+./infrastructure/setup-infrastructure.sh -p YOUR_PROJECT_ID
+```
+
+#### 2. Configure Secrets
+
+Update the placeholder secrets in Google Secret Manager:
+
+```bash
+# Example: Update Silence Labs token
+echo "your-actual-silence-token" | gcloud secrets versions add interspace-silence-admin-token --data-file=-
+
+# Update other secrets as needed
+gcloud secrets versions add interspace-google-client-id --data-file=your-google-client-id.txt
+gcloud secrets versions add interspace-orby-private-key --data-file=your-orby-key.txt
+```
+
+#### 3. Deploy to Development
+
+```bash
+# Make deployment script executable
+chmod +x infrastructure/deploy.sh
+
+# Deploy to development environment
+./infrastructure/deploy.sh -e dev -p YOUR_PROJECT_ID
+```
+
+#### 4. Deploy to Production
+
+```bash
+# Deploy to production environment
+./infrastructure/deploy.sh -e prod -p YOUR_PROJECT_ID
+```
+
+### Environment-Specific Configurations
+
+#### Development Environment
+- **Service Name**: `interspace-backend-dev`
+- **Database**: `interspace-dev-db` (f1-micro)
+- **Min Instances**: 0 (scales to zero)
+- **Max Instances**: 5
+- **Features**: 
+  - BYPASS_LOGIN enabled for testing
+  - Permissive CORS settings
+  - Testnet blockchain support
+
+#### Production Environment
+- **Service Name**: `interspace-backend-prod`
+- **Database**: `interspace-prod-db` (g1-small)
+- **Min Instances**: 1 (always warm)
+- **Max Instances**: 100
+- **Features**:
+  - BYPASS_LOGIN disabled
+  - Restricted CORS origins
+  - Mainnet blockchain support
+  - Enhanced security validations
+
+### Local Development with Cloud SQL
+
+For testing against Cloud SQL during development:
+
+```bash
+# Start Cloud SQL proxy
+docker-compose --profile cloud-sql up -d
+
+# Update your .env file
+DATABASE_URL="postgresql://username:password@localhost:5432/interspace_dev"
+
+# Run application
+npm run dev
+```
+
+### Infrastructure as Code (Terraform)
+
+For advanced infrastructure management:
+
+```bash
+cd infrastructure/terraform
+
+# Copy and configure variables
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your values
+
+# Initialize Terraform
+terraform init
+
+# Plan deployment
+terraform plan
+
+# Apply infrastructure
+terraform apply
+```
+
+### MPC Service Integration
+
+The backend communicates with Silkencia Labs MPC services internally:
+
+```
+Interspace Backend (Cloud Run)
+     ↓ (Internal VPC)
+Silence Node (Cloud Run)
+     ↓ (Internal VPC)  
+DUO Node (Cloud Run)
+```
+
+**Internal URLs**:
+- Dev: `https://interspace-silence-node-dev-PROJECT_NUMBER.us-central1.run.app`
+- Prod: `https://interspace-silence-node-prod-PROJECT_NUMBER.us-central1.run.app`
+
+### Monitoring and Troubleshooting
+
+#### Health Checks
+```bash
+# Check service health
+curl https://your-service-url.run.app/health
+
+# Check specific environment
+curl https://interspace-backend-dev-PROJECT_NUMBER.us-central1.run.app/health
+```
+
+#### View Logs
+```bash
+# View recent logs
+gcloud logs read --filter="resource.type=cloud_run_revision" --limit=50
+
+# Follow logs in real-time
+gcloud logs tail --filter="resource.type=cloud_run_revision"
+```
+
+#### Database Access
+```bash
+# Connect to development database
+gcloud sql connect interspace-dev-db --user=interspace_dev
+
+# Connect to production database (be careful!)
+gcloud sql connect interspace-prod-db --user=interspace_prod
+```
+
+### Security Considerations
+
+#### Secret Management
+- All sensitive data stored in Google Secret Manager
+- Automatic secret rotation capabilities
+- Environment-specific secret separation
+
+#### Network Security
+- Private VPC for internal service communication
+- No public IPs for databases
+- VPC connector for secure Cloud Run access
+
+#### Authentication
+- Google Cloud IAM for service-to-service auth
+- JWT tokens for API authentication
+- MPC-based wallet security
+
+### Scaling and Performance
+
+#### Auto-Scaling Configuration
+- **Development**: 0-5 instances (cost-optimized)
+- **Production**: 1-100 instances (performance-optimized)
+- CPU and memory limits configured per environment
+
+#### Database Performance
+- Connection pooling via Prisma
+- Read replicas for production (when needed)
+- Automated backups and point-in-time recovery
+
+### Deployment Pipeline
+
+#### CI/CD with Cloud Build
+1. Code pushed to repository
+2. Cloud Build triggered automatically
+3. Docker image built and pushed
+4. Database migrations executed
+5. Cloud Run service updated
+6. Health checks performed
+
+#### Manual Deployment Steps
+1. Review deployment checklist in `DEPLOYMENT_BACKLOG.md`
+2. Update secrets in Secret Manager
+3. Run infrastructure setup (first time only)
+4. Deploy using deployment script
+5. Verify health checks and functionality
+
+### Cost Optimization
+
+#### Development Environment
+- **Always Free Tier**: Uses f1-micro for database
+- **Scale to Zero**: No instances when not in use
+- **Minimal Resources**: 1 CPU, 1Gi memory
+
+#### Production Environment
+- **Optimized Sizing**: 2 CPU, 2Gi memory
+- **Warm Instances**: 1 minimum for performance
+- **Efficient Scaling**: Based on CPU and request metrics
+
+### Backup and Recovery
+
+#### Database Backups
+- **Automated Backups**: Daily at 3 AM UTC
+- **Retention**: 7 days (dev), 30 days (prod)
+- **Point-in-time Recovery**: Available for production
+
+#### Application Recovery
+- **Container Images**: Stored in Container Registry
+- **Configuration**: Stored in Git and Secret Manager
+- **Infrastructure**: Reproducible via Terraform
+
 ---
 
 **🚀 Backend Status: Production Ready for React Native Development**
 
-**✅ All systems verified • ✅ Real blockchain integration • ✅ Complete test coverage**
+**✅ All systems verified • ✅ Real blockchain integration • ✅ Complete test coverage • ✅ Google Cloud Ready**

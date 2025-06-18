@@ -55,19 +55,26 @@ export class LinkedAccountController {
         if (!walletType) missingFields.push('walletType');
 
         console.log(`❌ [${requestId}] Missing required fields:`, missingFields);
-        res.status(400).json({
+        
+        const response: ApiResponse = {
           success: false,
           error: `Missing required fields: ${missingFields.join(', ')}`,
-          debugInfo: {
+          requestId
+        };
+
+        // Add debug info only in development
+        if (process.env.NODE_ENV === 'development') {
+          (response as any).debugInfo = {
             operation: 'linkAccount',
             profileId,
             receivedFields: Object.keys(req.body),
             requiredFields: ['profileId', 'address', 'walletType'],
             missingFields,
             timestamp: new Date().toISOString()
-          },
-          requestId
-        } as ApiResponse);
+          };
+        }
+
+        res.status(400).json(response);
         return;
       }
 
@@ -77,18 +84,25 @@ export class LinkedAccountController {
       
       if (!isDevelopment && !isTestWallet && (!signature || !message)) {
         console.log(`❌ [${requestId}] Missing signature/message for production wallet linking`);
-        res.status(400).json({
+        
+        const response: ApiResponse = {
           success: false,
-          error: 'Signature and message are required for production wallet linking',
-          debugInfo: {
+          error: 'Signature and message are required for wallet verification',
+          requestId
+        };
+
+        // Add debug info only in development
+        if (isDevelopment) {
+          (response as any).debugInfo = {
             isDevelopment,
             isTestWallet,
             walletType,
             hasSignature: !!signature,
             hasMessage: !!message
-          },
-          requestId
-        } as ApiResponse);
+          };
+        }
+
+        res.status(400).json(response);
         return;
       }
 
@@ -110,7 +124,9 @@ export class LinkedAccountController {
         customName,
         chainId,
         signature: signature || 'dev_bypass', // Provide default for development
-        message: message || 'dev_bypass'
+        message: message || 'dev_bypass',
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent')
       });
 
       console.log(`✅ [${requestId}] Account linked successfully:`, {

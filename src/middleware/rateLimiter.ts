@@ -23,21 +23,25 @@ function createRateLimitMiddleware(
 
 const windowSeconds = Math.ceil(config.RATE_LIMIT_WINDOW_MS / 1000);
 
+// Environment-aware rate limiting - more permissive in development
+const isDevelopment = config.NODE_ENV === 'development';
+const basePoints = isDevelopment ? config.RATE_LIMIT_MAX_REQUESTS * 5 : config.RATE_LIMIT_MAX_REQUESTS;
+
 // General API limiter
 const apiLimiter = new RateLimiterMemory({
-  points: config.RATE_LIMIT_MAX_REQUESTS,
+  points: basePoints,
   duration: windowSeconds
 });
 
-// Auth-specific limiter (5x stricter)
+// Auth-specific limiter (5x stricter, but still generous in development)
 const authLimiter = new RateLimiterMemory({
-  points: Math.max(1, Math.floor(config.RATE_LIMIT_MAX_REQUESTS / 5)),
+  points: isDevelopment ? basePoints : Math.max(1, Math.floor(config.RATE_LIMIT_MAX_REQUESTS / 5)),
   duration: windowSeconds
 });
 
 // Transaction limiter tied to user ID when available
 const txLimiter = new RateLimiterMemory({
-  points: config.RATE_LIMIT_MAX_REQUESTS,
+  points: isDevelopment ? basePoints * 2 : config.RATE_LIMIT_MAX_REQUESTS,
   duration: windowSeconds
 });
 
@@ -53,4 +57,14 @@ export const userRateLimit = createRateLimitMiddleware(
   (req: Request) => (req as any).user?.userId || req.ip || 'unknown'
 );
 
-console.log('🛡️  Rate limiting enabled');
+// Log rate limiting configuration
+if (isDevelopment) {
+  console.log('🛡️  Rate limiting enabled (Development mode - increased limits):', {
+    apiLimit: basePoints,
+    authLimit: authLimiter.points,
+    transactionLimit: txLimiter.points,
+    windowSeconds
+  });
+} else {
+  console.log('🛡️  Rate limiting enabled (Production mode)');
+}

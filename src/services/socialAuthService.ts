@@ -3,6 +3,7 @@ import { generateAccessToken, generateRefreshToken } from '@/utils/jwt';
 import { OAuth2Client } from 'google-auth-library';
 import { verifyIdToken } from 'apple-signin-auth';
 import { passkeyService } from './passkeyService';
+import { auditService } from './auditService';
 import { config } from '@/utils/config';
 import { 
   AuthTokens,
@@ -26,6 +27,8 @@ export interface SocialAuthRequest {
     displayName?: string;
     avatarUrl?: string;
   };
+  ipAddress?: string;
+  userAgent?: string;
 }
 
 export class SocialAuthService {
@@ -36,9 +39,25 @@ export class SocialAuthService {
   async authenticate(data: SocialAuthRequest): Promise<AuthTokens> {
     try {
       // Verify the provided social token or passkey
-      const isValidToken = await this.verifySocialAuth(data.authToken, data.authStrategy);
-      if (!isValidToken) {
+      const verificationResult = await this.verifySocialAuth(data.authToken, data.authStrategy);
+
+      
+      if (!verificationResult.isValid) {
+        await auditService.logSecurityEvent({
+          type: 'LOGIN_FAILED',
+          details: { authStrategy: data.authStrategy, reason: 'invalid_token' },
+          ipAddress: data.ipAddress,
+          userAgent: data.userAgent
+        });
         throw new AuthenticationError('Invalid social auth token');
+      }
+
+      // For social auth strategies that return user data, merge it with the request
+      if (verificationResult.userData && (data.authStrategy === 'google' || data.authStrategy === 'apple')) {
+        data.socialData = verificationResult.userData;
+        if (verificationResult.userData.email) {
+          data.email = verificationResult.userData.email;
+        }
       }
 
       return withTransaction(async (tx) => {
@@ -79,6 +98,20 @@ export class SocialAuthService {
           }
         });
 
+        // Log successful authentication
+        await auditService.log({
+          userId: user.id,
+          action: 'USER_LOGIN',
+          resource: 'Authentication',
+          details: JSON.stringify({
+            authStrategy: data.authStrategy,
+            deviceId: data.deviceId,
+            deviceType: data.deviceType
+          }),
+          ipAddress: data.ipAddress,
+          userAgent: data.userAgent
+        });
+
         return {
           accessToken,
           refreshToken,
@@ -99,30 +132,39 @@ export class SocialAuthService {
       throw new AuthenticationError('Email required for email auth strategy');
     }
 
+    // Normalize email
+    const normalizedEmail = data.email.toLowerCase().trim();
+
+    // For email auth, we don't need to check verification here
+    // The email verification is handled separately by the /auth/email/verify-code endpoint
+    // Once verified, users can authenticate with just their email
+
     // Find existing user by email
     let user = await tx.user.findUnique({
-      where: { email: data.email }
+      where: { email: normalizedEmail }
     });
 
     if (!user) {
-      // Create new user
-      user = await tx.user.create({
-        data: {
-          email: data.email,
-          authStrategies: JSON.stringify(['email']),
-          isGuest: false
+      // For email auth, we only create users after they've verified their email
+      // This happens in the email verification flow
+      throw new AuthenticationError('Email not found. Please verify your email first.');
+    }
+
+    // Check if email is verified
+    if (!user.emailVerified) {
+      throw new AuthenticationError('Email not verified. Please verify your email first.');
+    }
+
+    // Update auth strategies if needed
+    const currentStrategies = JSON.parse(user.authStrategies || '[]');
+    if (!currentStrategies.includes('email')) {
+      currentStrategies.push('email');
+      await tx.user.update({
+        where: { id: user.id },
+        data: { 
+          authStrategies: JSON.stringify(currentStrategies)
         }
       });
-    } else {
-      // Update auth strategies if needed
-      const currentStrategies = JSON.parse(user.authStrategies || '[]');
-      if (!currentStrategies.includes('email')) {
-        currentStrategies.push('email');
-        await tx.user.update({
-          where: { id: user.id },
-          data: { authStrategies: JSON.stringify(currentStrategies) }
-        });
-      }
     }
 
     return user;
@@ -139,7 +181,16 @@ export class SocialAuthService {
     // Find existing linked account
     const linkedAccount = await tx.linkedAccount.findFirst({
       where: { address: data.walletAddress.toLowerCase() },
-      include: { user: true }
+      include: { 
+        user: {
+          include: {
+            smartProfiles: {
+              orderBy: { createdAt: 'desc' },
+              take: 1
+            }
+          }
+        }
+      }
     });
 
     let user;
@@ -163,15 +214,51 @@ export class SocialAuthService {
         }
       });
 
+      // Check if user has any profiles
+      const userProfiles = await tx.smartProfile.findMany({
+        where: { userId: user.id },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      // If user has profiles, link to the most recent one (which should be the one they just created)
+      const profileId = userProfiles.length > 0 ? userProfiles[0].id : null;
+
       await tx.linkedAccount.create({
         data: {
           userId: user.id,
+          profileId: profileId, // Link to profile if exists
           address: data.walletAddress.toLowerCase(),
           authStrategy: 'wallet',
-          walletType: 'external', // Will be updated when linking to profile
+          walletType: 'external',
           isActive: true
         }
       });
+    }
+
+    // Check if this is an orphan wallet (has account but no profile linked)
+    if (!linkedAccount?.profileId) {
+      // Find the user's most recent profile without a wallet
+      const unlinkedProfile = await tx.smartProfile.findFirst({
+        where: {
+          userId: user.id,
+          linkedAccounts: {
+            none: {
+              authStrategy: 'wallet'
+            }
+          }
+        },
+        orderBy: { createdAt: 'desc' }
+      });
+
+      if (unlinkedProfile) {
+        // Link this wallet to the unlinked profile
+        if (linkedAccount) {
+          await tx.linkedAccount.update({
+            where: { id: linkedAccount.id },
+            data: { profileId: unlinkedProfile.id }
+          });
+        }
+      }
     }
 
     return user;
@@ -306,30 +393,61 @@ export class SocialAuthService {
   }
 
   /**
-   * Verify social auth token (placeholder implementation)
+   * Verify social auth token and extract user data
    */
-  private async verifySocialAuth(authToken: string, strategy: string): Promise<boolean> {
+  private async verifySocialAuth(authToken: string, strategy: string): Promise<any> {
     try {
       switch (strategy) {
         case 'google': {
           const client = new OAuth2Client(config.GOOGLE_CLIENT_ID);
-          await client.verifyIdToken({ idToken: authToken, audience: config.GOOGLE_CLIENT_ID });
-          return true;
+          const ticket = await client.verifyIdToken({ idToken: authToken, audience: config.GOOGLE_CLIENT_ID });
+          const payload = ticket.getPayload();
+          return {
+            isValid: true,
+            userData: {
+              provider: 'google',
+              providerId: payload?.sub,
+              email: payload?.email,
+              displayName: payload?.name,
+              avatarUrl: payload?.picture
+            }
+          };
         }
         case 'apple': {
-          await verifyIdToken(authToken, { audience: config.APPLE_CLIENT_ID! });
-          return true;
+          const decodedToken = await verifyIdToken(authToken, { audience: config.APPLE_CLIENT_ID! });
+          return {
+            isValid: true,
+            userData: {
+              provider: 'apple',
+              providerId: decodedToken.sub,
+              email: decodedToken.email,
+              displayName: decodedToken.email?.split('@')[0] || 'Apple User'
+            }
+          };
         }
         case 'passkey': {
           await passkeyService.verifyAuthentication(authToken);
-          return true;
+          return { isValid: true };
+        }
+        case 'guest': {
+          return { isValid: true };
+        }
+        case 'email': {
+          // For email auth, no token verification needed
+          // Email verification is handled separately
+          return { isValid: true };
+        }
+        case 'wallet': {
+          // For wallet auth (SIWE), verification is done in the SIWE controller
+          // The authToken here is the signature which has already been verified
+          return { isValid: true };
         }
         default:
-          return false;
+          return { isValid: false };
       }
     } catch (error) {
       console.error('Token verification error:', error);
-      return false;
+      return { isValid: false };
     }
   }
 
@@ -337,10 +455,18 @@ export class SocialAuthService {
    * Link additional auth method to existing user
    */
   async linkAuthMethod(userId: string, data: Omit<SocialAuthRequest, 'deviceId' | 'deviceName' | 'deviceType'>): Promise<void> {
-    const isValidToken = await this.verifySocialAuth(data.authToken, data.authStrategy);
+    const verificationResult = await this.verifySocialAuth(data.authToken, data.authStrategy);
     
-    if (!isValidToken) {
+    if (!verificationResult.isValid) {
       throw new AuthenticationError('Invalid social auth token');
+    }
+
+    // For social auth strategies that return user data, merge it with the request
+    if (verificationResult.userData && (data.authStrategy === 'google' || data.authStrategy === 'apple')) {
+      data.socialData = verificationResult.userData;
+      if (verificationResult.userData.email) {
+        data.email = verificationResult.userData.email;
+      }
     }
 
     await withTransaction(async (tx) => {

@@ -500,6 +500,27 @@ endpoints:
               amount: '50000000000000000'
               symbol: ETH
           availableGasTokens: []
+  - name: Get Orby Virtual Node RPC URL
+    method: GET
+    path: /profiles/:id/orby-rpc-url
+    parameters:
+      - name: id
+        in: path
+        description: The ID of the user's profile.
+        required: true
+        schema:
+          type: string
+      - name: chainId
+        in: query
+        description: The chain ID for which to retrieve the virtual node RPC URL.
+        required: true
+        schema:
+          type: integer
+          format: int64
+    response_example:
+      success: true
+      data:
+        rpcUrl: https://virtual-node-rpc.orby.com/some-long-url
   - name: Create Intent
     method: POST
     path: /profiles/:id/intent

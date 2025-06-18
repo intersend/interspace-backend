@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { socialAuthService } from '@/services/socialAuthService';
 import { authService } from '@/services/authService';
+import { tokenBlacklistService } from '@/services/tokenBlacklistService';
 import { ApiResponse } from '@/types';
 
 export class AuthController {
@@ -53,7 +54,9 @@ export class AuthController {
         deviceType: deviceType || 'web',
         walletAddress,
         email,
-        socialData: processedSocialData
+        socialData: processedSocialData,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent')
       });
 
       res.status(200).json({
@@ -253,6 +256,99 @@ export class AuthController {
       res.status(error.statusCode || 500).json({
         success: false,
         error: error.message || 'Failed to deactivate device'
+      } as ApiResponse);
+    }
+  }
+
+  /**
+   * Logout from all devices
+   */
+  async logoutAllDevices(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          error: 'Authentication required'
+        } as ApiResponse);
+        return;
+      }
+
+      await authService.logoutAllDevices(userId);
+
+      res.status(200).json({
+        success: true,
+        message: 'Logged out from all devices successfully'
+      } as ApiResponse);
+    } catch (error: any) {
+      console.error('Logout all devices error:', error);
+      res.status(error.statusCode || 500).json({
+        success: false,
+        error: error.message || 'Failed to logout from all devices'
+      } as ApiResponse);
+    }
+  }
+
+  /**
+   * Revoke specific token (admin or security use)
+   */
+  async revokeToken(req: Request, res: Response): Promise<void> {
+    try {
+      const userId = req.user?.userId;
+      if (!userId) {
+        res.status(401).json({
+          success: false,
+          error: 'Authentication required'
+        } as ApiResponse);
+        return;
+      }
+
+      const { token, tokenType = 'access', reason = 'security' } = req.body;
+
+      if (!token) {
+        res.status(400).json({
+          success: false,
+          error: 'Token required'
+        } as ApiResponse);
+        return;
+      }
+
+      await tokenBlacklistService.blacklistToken(
+        token,
+        tokenType as 'access' | 'refresh',
+        userId,
+        { reason: reason as any }
+      );
+
+      res.status(200).json({
+        success: true,
+        message: 'Token revoked successfully'
+      } as ApiResponse);
+    } catch (error: any) {
+      console.error('Revoke token error:', error);
+      res.status(error.statusCode || 500).json({
+        success: false,
+        error: error.message || 'Failed to revoke token'
+      } as ApiResponse);
+    }
+  }
+
+  /**
+   * Get token blacklist statistics (admin use)
+   */
+  async getBlacklistStats(req: Request, res: Response): Promise<void> {
+    try {
+      const stats = await tokenBlacklistService.getBlacklistStats();
+
+      res.status(200).json({
+        success: true,
+        data: stats
+      } as ApiResponse);
+    } catch (error: any) {
+      console.error('Get blacklist stats error:', error);
+      res.status(error.statusCode || 500).json({
+        success: false,
+        error: error.message || 'Failed to get blacklist statistics'
       } as ApiResponse);
     }
   }

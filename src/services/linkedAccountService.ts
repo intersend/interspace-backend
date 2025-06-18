@@ -1,5 +1,6 @@
 import { prisma, withTransaction } from '@/utils/database';
 import { orbyService } from './orbyService';
+import { siweService } from './siweService';
 import { ethers } from 'ethers';
 import { 
   LinkAccountRequest,
@@ -49,9 +50,18 @@ export class LinkedAccountService {
         throw new ConflictError(`Account ${data.address} is already linked to this profile`);
       }
 
-      // Verify signature (flexible for development and test wallets)
-      if (!this.verifyAccountOwnership(data.address, data.signature, data.message, data.walletType)) {
-        throw new AuthorizationError('Invalid signature - account ownership not verified');
+      // Verify account ownership
+      const verificationResult = await this.verifyAccountOwnership(
+        data.address, 
+        data.signature, 
+        data.message, 
+        data.walletType,
+        data.ipAddress,
+        data.userAgent
+      );
+      
+      if (!verificationResult.valid) {
+        throw new AuthorizationError(verificationResult.error || 'Invalid signature - account ownership not verified');
       }
 
       // If this is the first account, make it primary
@@ -272,13 +282,11 @@ export class LinkedAccountService {
         throw new NotFoundError('LinkedAccount');
       }
 
-      // Check if this is the last account - prevent removal
-      if (account.profile && account.profile.linkedAccounts.length <= 1) {
-        throw new ConflictError('Cannot remove the last linked account from a profile');
-      }
+      // Allow removing the last account - profile can exist without linked accounts
+      console.log(`Unlinking account from profile ${account.profileId}. Active accounts: ${account.profile?.linkedAccounts.length || 0}`);
 
-      // If removing primary account, assign primary to another account
-      if (account.isPrimary && account.profile) {
+      // If removing primary account, assign primary to another account (if one exists)
+      if (account.isPrimary && account.profile && account.profile.linkedAccounts.length > 1) {
         const nextAccount = account.profile.linkedAccounts.find(acc => 
           acc.id !== accountId && acc.isActive
         );
@@ -395,7 +403,7 @@ export class LinkedAccountService {
         allowance = await tx.tokenAllowance.update({
           where: { id: existingAllowance.id },
           data: {
-            allowanceAmount: data.allowanceAmount,
+            allowanceAmount: BigInt(data.allowanceAmount),
             updatedAt: new Date()
           }
         });
@@ -405,7 +413,7 @@ export class LinkedAccountService {
           data: {
             linkedAccountId: accountId,
             tokenAddress: data.tokenAddress.toLowerCase(),
-            allowanceAmount: data.allowanceAmount,
+            allowanceAmount: BigInt(data.allowanceAmount),
             chainId: data.chainId
           }
         });
@@ -463,34 +471,66 @@ export class LinkedAccountService {
 
   /**
    * Verify account ownership using the provided signature and message.
-   * The address recovered from the signature must match the provided address.
+   * Supports both SIWE (EIP-4361) and legacy simple message signing.
    */
-  private verifyAccountOwnership(
+  private async verifyAccountOwnership(
     address: string,
     signature: string,
     message: string,
-    _walletType?: string
-  ): boolean {
+    _walletType?: string,
+    ipAddress?: string,
+    userAgent?: string
+  ): Promise<{ valid: boolean; error?: string }> {
     if (!signature || !message || !address) {
       console.log('❌ Missing signature, message or address for verification');
-      return false;
+      return { valid: false, error: 'Missing required verification data' };
     }
 
     try {
-      const recovered = ethers.verifyMessage(message, signature);
-      const normalizedRecovered = recovered.toLowerCase();
-      const normalizedAddress = address.toLowerCase();
+      // Check if this is a SIWE message (contains required SIWE fields)
+      const isSiweMessage = message.includes('wants you to sign in with your Ethereum account:') &&
+                           message.includes('URI:') &&
+                           message.includes('Version:') &&
+                           message.includes('Chain ID:') &&
+                           message.includes('Nonce:');
 
-      const isValid = normalizedRecovered === normalizedAddress;
-      console.log(`${isValid ? '✅' : '❌'} Signature verification result:`, {
-        recovered: normalizedRecovered,
-        expected: normalizedAddress
-      });
+      if (isSiweMessage) {
+        // Use SIWE verification with replay protection
+        const result = await siweService.verifyMessage({
+          message,
+          signature,
+          expectedAddress: address,
+          ipAddress,
+          userAgent
+        });
+        
+        console.log(`${result.valid ? '✅' : '❌'} SIWE verification result:`, {
+          address: result.address,
+          expected: address,
+          error: result.error
+        });
+        
+        return result;
+      } else {
+        // Legacy simple message verification (for backward compatibility)
+        const recovered = ethers.verifyMessage(message, signature);
+        const normalizedRecovered = recovered.toLowerCase();
+        const normalizedAddress = address.toLowerCase();
 
-      return isValid;
-    } catch (error) {
+        const isValid = normalizedRecovered === normalizedAddress;
+        console.log(`${isValid ? '✅' : '❌'} Legacy signature verification result:`, {
+          recovered: normalizedRecovered,
+          expected: normalizedAddress
+        });
+
+        return { 
+          valid: isValid, 
+          error: isValid ? undefined : 'Signature verification failed'
+        };
+      }
+    } catch (error: any) {
       console.log('❌ Signature verification error:', error);
-      return false;
+      return { valid: false, error: error.message };
     }
   }
 
@@ -519,7 +559,7 @@ export class LinkedAccountService {
     return {
       id: allowance.id,
       tokenAddress: allowance.tokenAddress,
-      allowanceAmount: allowance.allowanceAmount,
+      allowanceAmount: allowance.allowanceAmount.toString(),
       chainId: allowance.chainId,
       createdAt: allowance.createdAt.toISOString(),
       updatedAt: allowance.updatedAt.toISOString()

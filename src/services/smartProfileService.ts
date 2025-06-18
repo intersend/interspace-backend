@@ -9,12 +9,12 @@ import {
 } from '@/types';
 import { sessionWalletService } from '@/blockchain/sessionWalletService';
 import { orbyService } from '@/services/orbyService';
-import { config as defaultConfig } from '@/utils/config';
+import { config as defaultConfig, type Config } from '@/utils/config';
 
 export class SmartProfileService {
   private config = defaultConfig;
 
-  constructor(config = defaultConfig) {
+  constructor(config: Config = defaultConfig) {
     this.config = config;
   }
   
@@ -26,8 +26,12 @@ export class SmartProfileService {
     data: CreateSmartProfileRequest,
     primaryWalletAddress?: string
   ): Promise<SmartProfileResponse> {
+    let profileData: any;
+    let isDevelopmentWallet = false;
+    let developmentClientShare: any = null;
+    
     // Use retryable transaction with extended timeout
-    return withRetryableTransaction(async (tx) => {
+    profileData = await withRetryableTransaction(async (tx) => {
       // Check if user already has a profile with this name
       const existingProfile = await tx.smartProfile.findFirst({
         where: {
@@ -52,11 +56,22 @@ export class SmartProfileService {
 
       try {
         let sessionWalletAddress: string;
-        if (this.config.DISABLE_MPC) {
-          console.log('MPC disabled; skipping session wallet creation');
-          sessionWalletAddress = '0x0000000000000000000000000000000000000000';
+
+        // Use mock wallet if either DISABLE_MPC is true or developmentMode is requested
+        if (this.config.DISABLE_MPC || data.developmentMode) {
+          console.log('Using mock wallet service for development profile');
+          isDevelopmentWallet = true;
+          
+          // Import mock service dynamically
+          const { mockSessionWalletService } = await import('@/blockchain/mockSessionWalletService');
+          const result = await mockSessionWalletService.createSessionWallet(
+            profile.id,
+            data.clientShare
+          );
+          sessionWalletAddress = result.address;
+          developmentClientShare = result.clientShare; // Store for return
         } else {
-          // Create session wallet using the profile ID
+          // Create real session wallet using the profile ID
           console.log(`Creating session wallet for profile ${profile.id}...`);
           const result = await sessionWalletService.createSessionWallet(
             profile.id,
@@ -68,7 +83,10 @@ export class SmartProfileService {
         // Update profile with actual or placeholder session wallet address
         const updatedProfile = await tx.smartProfile.update({
           where: { id: profile.id },
-          data: { sessionWalletAddress },
+          data: { 
+            sessionWalletAddress,
+            isDevelopmentWallet 
+          },
           include: {
             linkedAccounts: true,
             folders: true,
@@ -98,28 +116,12 @@ export class SmartProfileService {
           }
         });
 
-        // Create Orby account cluster for the profile (pass transaction context)
-        try {
-          console.log(`Creating Orby cluster for profile ${profile.id}...`);
-          const clusterId = await orbyService.createOrGetAccountCluster(updatedProfile, tx);
-          
-          // The cluster ID is already saved by orbyService.createOrGetAccountCluster
-          // Just update our local copy
-          updatedProfile.orbyAccountClusterId = clusterId as any;
-          
-          console.log(`Orby cluster created successfully: ${clusterId}`);
-        } catch (orbyError) {
-          // Log detailed error for debugging
-          console.error('Failed to create Orby cluster (non-blocking):', {
-            profileId: profile.id,
-            error: orbyError instanceof Error ? orbyError.message : orbyError,
-            stack: orbyError instanceof Error ? orbyError.stack : undefined
-          });
-          // Don't fail profile creation if Orby fails
-          // Profile can still function without Orby integration
-        }
-
-        return this.formatProfileResponse(updatedProfile);
+        // Return the profile data from transaction
+        return {
+          profile: updatedProfile,
+          isDevelopmentWallet,
+          developmentClientShare
+        };
 
       } catch (error) {
         // Log the error for debugging
@@ -143,10 +145,67 @@ export class SmartProfileService {
         throw new Error(`Failed to create profile: ${errorMessage}`);
       }
     }, {
-      timeout: 45000, // 45 seconds timeout for the entire operation
+      timeout: 30000, // 30 seconds timeout for the transaction
       maxRetries: 2, // Retry up to 2 times on retryable errors
       retryDelay: 2000 // Wait 2 seconds between retries
     });
+
+    // Extract values from transaction result
+    const updatedProfile = profileData.profile;
+    isDevelopmentWallet = profileData.isDevelopmentWallet;
+    developmentClientShare = profileData.developmentClientShare;
+
+    // TEMPORARILY SKIP ORBY INTEGRATION TO FIX HANGING ISSUE
+    // TODO: Re-enable when Orby service is properly configured
+    console.log('Temporarily skipping Orby integration for all profiles');
+    
+    /*
+    // Create Orby account cluster OUTSIDE the transaction
+    // Skip Orby integration for development wallets
+    if (!isDevelopmentWallet) {
+      try {
+        console.log(`Creating Orby cluster for profile ${updatedProfile.id}...`);
+        
+        // Add timeout to prevent hanging
+        const orbyPromise = orbyService.createOrGetAccountCluster(updatedProfile);
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Orby cluster creation timeout')), 10000) // 10 second timeout
+        );
+        
+        const clusterId = await Promise.race([orbyPromise, timeoutPromise]) as string;
+        
+        // Update profile with cluster ID
+        await prisma.smartProfile.update({
+          where: { id: updatedProfile.id },
+          data: { orbyAccountClusterId: clusterId }
+        });
+        
+        updatedProfile.orbyAccountClusterId = clusterId;
+        
+        console.log(`Orby cluster created successfully: ${clusterId}`);
+      } catch (orbyError) {
+        // Log detailed error for debugging
+        console.error('Failed to create Orby cluster (non-blocking):', {
+          profileId: updatedProfile.id,
+          error: orbyError instanceof Error ? orbyError.message : orbyError,
+          stack: orbyError instanceof Error ? orbyError.stack : undefined
+        });
+        // Don't fail profile creation if Orby fails
+        // Profile can still function without Orby integration
+      }
+    } else {
+      console.log('Skipping Orby integration for development wallet');
+    }
+    */
+
+    const response = this.formatProfileResponse(updatedProfile);
+    
+    // Include clientShare only for development wallets
+    if (isDevelopmentWallet && developmentClientShare) {
+      response.clientShare = developmentClientShare;
+    }
+    
+    return response;
   }
 
   /**
@@ -496,6 +555,7 @@ export class SmartProfileService {
       linkedAccountsCount: profile._count?.linkedAccounts || 0,
       appsCount: profile._count?.apps || 0,
       foldersCount: profile._count?.folders || 0,
+      isDevelopmentWallet: profile.isDevelopmentWallet || false,
       createdAt: profile.createdAt.toISOString(),
       updatedAt: profile.updatedAt.toISOString(),
     };
