@@ -75,6 +75,11 @@ EXPOSE 3000
 ENV TS_NODE_BASEURL=/usr/src/app/dist
 ENV NODE_OPTIONS="--max-old-space-size=1536"
 
+# V2 API default settings
+ENV ENABLE_V2_API=true
+ENV AUTO_CREATE_PROFILE=true
+ENV DEFAULT_PRIVACY_MODE=linked
+
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
 

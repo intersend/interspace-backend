@@ -66,8 +66,22 @@ services:
       - JWT_REFRESH_EXPIRES_IN=7d
       - ENCRYPTION_SECRET=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
       - DISABLE_MPC=true
-      - BYPASS_LOGIN=true
+      - BYPASS_LOGIN=false
       - CORS_ORIGINS=http://localhost:3000,http://localhost:19006,http://localhost:3001
+      # Required MPC/Orby settings
+      - SILENCE_ADMIN_TOKEN=local-test-token
+      - SILENCE_NODE_URL=http://localhost:8080
+      - DUO_NODE_URL=http://localhost:3001
+      - DUO_NODE_AUDIENCE_URL=http://localhost:3001
+      - ORBY_INSTANCE_PRIVATE_API_KEY=local-orby-private
+      - ORBY_INSTANCE_PUBLIC_API_KEY=local-orby-public
+      - ORBY_APP_NAME=interspace-local
+      - ORBY_PRIVATE_INSTANCE_URL=http://localhost:8545
+      - FRONTEND_URL=http://localhost:3000
+      # V2 API Settings
+      - ENABLE_V2_API=true
+      - AUTO_CREATE_PROFILE=true
+      - DEFAULT_PRIVACY_MODE=linked
     ports:
       - "3000:3000"
     volumes:
