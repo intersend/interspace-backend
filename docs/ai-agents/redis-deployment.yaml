@@ -1,0 +1,42 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: interspace-redis
+  labels:
+    cloud.googleapis.com/location: us-central1
+spec:
+  template:
+    metadata:
+      annotations:
+        # Use minimum resources to stay within free tier
+        run.googleapis.com/cpu-throttling: "true"
+    spec:
+      containers:
+      - image: redis:7-alpine
+        ports:
+        - containerPort: 6379
+        resources:
+          limits:
+            cpu: "0.08"
+            memory: "128Mi"
+        command:
+          - redis-server
+          - "--save"
+          - "60 1"
+          - "--loglevel"
+          - "warning"
+          - "--maxmemory"
+          - "100mb"
+          - "--maxmemory-policy"
+          - "allkeys-lru"
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+      volumes:
+      - name: redis-data
+        emptyDir:
+          sizeLimit: 1Gi
+      serviceAccountName: interspace-backend-dev@intersend.iam.gserviceaccount.com
+  traffic:
+  - percent: 100
+    latestRevision: true

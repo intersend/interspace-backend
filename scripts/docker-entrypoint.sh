@@ -12,7 +12,7 @@ echo "✅ Database is ready!"
 
 # Run migrations
 echo "🔄 Running database migrations..."
-npm run prisma:migrate:deploy || {
+npm run prisma:deploy || {
   echo "⚠️  Migration failed, trying development migration..."
   npm run prisma:migrate
 }

@@ -146,8 +146,8 @@ create_vpc_connector() {
             --subnet="${CONNECTOR_NAME}-subnet" \
             --subnet-project="$PROJECT_ID" \
             --min-instances=2 \
-            --max-instances=10 \
-            --machine-type=f1-micro
+            --max-instances=3 \
+            --machine-type=e2-micro
         log_success "VPC connector created"
     fi
 }
@@ -188,15 +188,15 @@ create_cloud_sql() {
         log_info "Creating development database..."
         gcloud sql instances create interspace-db-dev \
             --database-version=POSTGRES_15 \
-            --tier=db-g1-small \
+            --tier=db-f1-micro \
             --region="$REGION" \
             --network="projects/$PROJECT_ID/global/networks/$VPC_NAME" \
             --no-assign-ip \
             --backup-start-time=03:00 \
             --require-ssl \
-            --enable-point-in-time-recovery \
-            --retained-backups-count=7 \
-            --retained-transaction-log-days=7
+            --no-backup \
+            --storage-size=10GB \
+            --storage-type=HDD
         
         # Create database and user
         gcloud sql databases create interspace_dev --instance=interspace-db-dev
@@ -217,16 +217,16 @@ create_cloud_sql() {
         log_info "Creating production database (this may take a while)..."
         gcloud sql instances create interspace-db-prod \
             --database-version=POSTGRES_15 \
-            --tier=db-custom-2-8192 \
+            --tier=db-g1-small \
             --region="$REGION" \
             --network="projects/$PROJECT_ID/global/networks/$VPC_NAME" \
             --no-assign-ip \
-            --availability-type=REGIONAL \
+            --availability-type=ZONAL \
             --backup-start-time=03:00 \
             --require-ssl \
-            --enable-point-in-time-recovery \
-            --retained-backups-count=30 \
-            --retained-transaction-log-days=7
+            --retained-backups-count=7 \
+            --storage-size=25GB \
+            --storage-type=SSD
         
         # Create database and user
         gcloud sql databases create interspace_prod --instance=interspace-db-prod
@@ -243,40 +243,10 @@ create_cloud_sql() {
 
 # Create Redis instances
 create_redis() {
-    log_info "Creating Redis instances..."
-    
-    # Development Redis
-    if gcloud redis instances describe interspace-redis-dev \
-         --region="$REGION" &> /dev/null; then
-        log_warning "Development Redis already exists"
-    else
-        log_info "Creating development Redis..."
-        gcloud redis instances create interspace-redis-dev \
-            --region="$REGION" \
-            --tier=basic \
-            --size=1 \
-            --redis-version=redis_7_2 \
-            --display-name="Interspace Redis Dev" \
-            --network="projects/$PROJECT_ID/global/networks/$VPC_NAME"
-        log_success "Development Redis created"
-    fi
-    
-    # Production Redis
-    if gcloud redis instances describe interspace-redis-prod \
-         --region="$REGION" &> /dev/null; then
-        log_warning "Production Redis already exists"
-    else
-        log_info "Creating production Redis (this may take a while)..."
-        gcloud redis instances create interspace-redis-prod \
-            --region="$REGION" \
-            --tier=standard \
-            --size=5 \
-            --redis-version=redis_7_2 \
-            --replica-count=1 \
-            --display-name="Interspace Redis Production" \
-            --network="projects/$PROJECT_ID/global/networks/$VPC_NAME"
-        log_success "Production Redis created"
-    fi
+    log_info "Skipping Redis creation - using Cloud Run Redis container instead for cost savings"
+    log_warning "Redis will be deployed as a container service on Cloud Run"
+    # Redis instances commented out to save costs - using containerized Redis instead
+    # Estimated savings: $150-300/month
 }
 
 # Create Artifact Registry
