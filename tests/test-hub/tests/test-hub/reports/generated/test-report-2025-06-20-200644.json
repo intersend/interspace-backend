@@ -1,0 +1,441 @@
+{
+  "summary": {
+    "totalSuites": 1,
+    "totalTests": 19,
+    "passed": 5,
+    "failed": 14,
+    "skipped": 0,
+    "duration": 417,
+    "passRate": "26.32",
+    "startTime": "2025-06-20T20:06:43.635Z",
+    "endTime": "2025-06-20T20:06:44.052Z",
+    "environment": "test"
+  },
+  "suites": [
+    {
+      "suite": "Authentication V2 - Flat Identity",
+      "status": "failed",
+      "tests": [
+        {
+          "name": "POST /auth/authenticate - Wallet auth with automatic profile creation",
+          "status": "passed",
+          "duration": 176.13204099982977,
+          "retries": 0
+        },
+        {
+          "name": "POST /auth/authenticate - Wallet auth with invalid signature",
+          "status": "failed",
+          "duration": 28.208541002124548,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/authenticate - Wallet auth with expired nonce",
+          "status": "failed",
+          "duration": 0.8156250007450581,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/authenticate - Wallet auth with message tampering",
+          "status": "passed",
+          "duration": 12.672500003129244,
+          "retries": 0
+        },
+        {
+          "name": "POST /auth/authenticate - Wallet auth with wrong domain",
+          "status": "failed",
+          "duration": 20.23149999976158,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/authenticate - Wallet auth replay attack prevention",
+          "status": "passed",
+          "duration": 21.035792000591755,
+          "retries": 0
+        },
+        {
+          "name": "POST /auth/authenticate - Email auth with automatic profile creation",
+          "status": "failed",
+          "duration": 6.28133400157094,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "socialAuthService.authenticateWithEmail is not a function",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750450003898_5m0a9mcx8",
+              "stack": "TypeError: socialAuthService.authenticateWithEmail is not a function\n    at authenticateV2 (/usr/src/app/src/controllers/authControllerV2.js:38:46)\n    at Layer.handle [as handle_request] (/usr/src/app/node_modules/express/lib/router/layer.js:95:5)\n    at next (/usr/src/app/node_modules/express/lib/router/route.js:149:13)\n    at middleware (/usr/src/app/node_modules/express-validator/lib/middlewares/check.js:16:13)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750450003898_5m0a9mcx8",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4643",
+              "x-ratelimit-reset": "2025-06-20T20:08:23.360Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "659",
+              "etag": "W/\"293-zuN6taS+UkWEXyBpDMLV1x9VRQY\"",
+              "date": "Fri, 20 Jun 2025 20:06:43 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"email\",\"email\":\"Tyreek_Batz@gmail.com\",\"verificationCode\":\"123456\"}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Email auth case insensitivity",
+          "status": "failed",
+          "duration": 4.12941699847579,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "socialAuthService.authenticateWithEmail is not a function",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750450003904_okinx2pdr",
+              "stack": "TypeError: socialAuthService.authenticateWithEmail is not a function\n    at authenticateV2 (/usr/src/app/src/controllers/authControllerV2.js:38:46)\n    at Layer.handle [as handle_request] (/usr/src/app/node_modules/express/lib/router/layer.js:95:5)\n    at next (/usr/src/app/node_modules/express/lib/router/route.js:149:13)\n    at middleware (/usr/src/app/node_modules/express-validator/lib/middlewares/check.js:16:13)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750450003904_okinx2pdr",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4642",
+              "x-ratelimit-reset": "2025-06-20T20:08:23.360Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "659",
+              "etag": "W/\"293-gTy5Se81b1DUq9FhmeMfkYueeng\"",
+              "date": "Fri, 20 Jun 2025 20:06:43 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"email\",\"email\":\"salvatore8@yahoo.com\",\"verificationCode\":\"123456\"}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Email auth with invalid code",
+          "status": "failed",
+          "duration": 2.751875001937151,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/authenticate - Google auth with automatic profile",
+          "status": "failed",
+          "duration": 2.483958002179861,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "socialAuthService.authenticateWithGoogle is not a function",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750450003910_533x04zzw",
+              "stack": "TypeError: socialAuthService.authenticateWithGoogle is not a function\n    at authenticateV2 (/usr/src/app/src/controllers/authControllerV2.js:81:46)\n    at Layer.handle [as handle_request] (/usr/src/app/node_modules/express/lib/router/layer.js:95:5)\n    at next (/usr/src/app/node_modules/express/lib/router/route.js:149:13)\n    at middleware (/usr/src/app/node_modules/express-validator/lib/middlewares/check.js:16:13)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750450003910_533x04zzw",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4640",
+              "x-ratelimit-reset": "2025-06-20T20:08:23.360Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "661",
+              "etag": "W/\"295-eSEPHl+cV4SgtKeHMFl3a7s5rLQ\"",
+              "date": "Fri, 20 Jun 2025 20:06:43 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"google\",\"idToken\":\"mock_google_token\"}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Apple auth with automatic profile",
+          "status": "failed",
+          "duration": 2.365667000412941,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 400,
+            "statusText": "Bad Request",
+            "data": {
+              "success": false,
+              "error": "Unsupported authentication strategy: apple"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750450003913_yq1vm77cb",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4639",
+              "x-ratelimit-reset": "2025-06-20T20:08:23.360Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "70",
+              "etag": "W/\"46-eyStt0EMImcu5l2Qt/PT1ra0e4M\"",
+              "date": "Fri, 20 Jun 2025 20:06:43 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"apple\",\"idToken\":\"mock_apple_token\"}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Guest auth with automatic profile",
+          "status": "failed",
+          "duration": 2.4430829994380474,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "socialAuthService.authenticateAsGuest is not a function",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750450003915_gfinrohe7",
+              "stack": "TypeError: socialAuthService.authenticateAsGuest is not a function\n    at authenticateV2 (/usr/src/app/src/controllers/authControllerV2.js:95:46)\n    at Layer.handle [as handle_request] (/usr/src/app/node_modules/express/lib/router/layer.js:95:5)\n    at next (/usr/src/app/node_modules/express/lib/router/route.js:149:13)\n    at middleware (/usr/src/app/node_modules/express-validator/lib/middlewares/check.js:16:13)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750450003915_gfinrohe7",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4638",
+              "x-ratelimit-reset": "2025-06-20T20:08:23.361Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "655",
+              "etag": "W/\"28f-3UJIsmTQpHgFEFXbCDuCiWH2SV0\"",
+              "date": "Fri, 20 Jun 2025 20:06:43 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"guest\"}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Auth with privacy mode selection",
+          "status": "passed",
+          "duration": 38.94012499973178,
+          "retries": 0
+        },
+        {
+          "name": "POST /auth/authenticate - Existing user returns all profiles",
+          "status": "failed",
+          "duration": 24.264457996934652,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "\nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750450003972_fsmeou36d",
+              "stack": "PrismaClientValidationError: \nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.\n    at kn (/usr/src/app/node_modules/@prisma/client/runtime/library.js:29:1363)\n    at Zn.handleRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:7102)\n    at Zn.handleAndLogRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6784)\n    at Zn.request (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6491)\n    at async l (/usr/src/app/node_modules/@prisma/client/runtime/library.js:130:9778)\n    at async authenticate (/usr/src/app/src/middleware/auth.ts:59:18)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750450003972_fsmeou36d",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4629",
+              "x-ratelimit-reset": "2025-06-20T20:08:23.361Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "4161",
+              "etag": "W/\"1041-UItfCzTBILx6knp48TJ+raoFNSI\"",
+              "date": "Fri, 20 Jun 2025 20:06:43 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v1/profiles",
+              "data": "{\"name\":\"Trading Profile\"}"
+            }
+          }
+        },
+        {
+          "name": "Authentication rate limiting",
+          "status": "failed",
+          "duration": 36.042417000979185,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/refresh - Token refresh with accountId",
+          "status": "failed",
+          "duration": 15.871332999318838,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "Complete V2 authentication flow test",
+          "status": "failed",
+          "duration": 12.736791998147964,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/authenticate - Invalid strategy",
+          "status": "failed",
+          "duration": 2.2163330018520355,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/authenticate - Missing required fields",
+          "status": "passed",
+          "duration": 3.403166998177767,
+          "retries": 0
+        }
+      ],
+      "startTime": 1750450003635,
+      "duration": 417,
+      "passed": 5,
+      "failed": 14,
+      "skipped": 0
+    }
+  ],
+  "metrics": {
+    "avgResponseTime": 0,
+    "p50ResponseTime": 0,
+    "p95ResponseTime": 0,
+    "p99ResponseTime": 0,
+    "slowestEndpoints": [],
+    "requestsPerSecond": 0,
+    "errorRate": 0
+  },
+  "security": {
+    "vulnerabilities": [],
+    "passedChecks": [],
+    "failedChecks": [],
+    "riskScore": 0,
+    "compliance": {
+      "owasp": true,
+      "pci": true,
+      "gdpr": true,
+      "details": []
+    }
+  },
+  "recommendations": [
+    "High test failure rate (>10%) - review test stability and application bugs"
+  ],
+  "generatedAt": "2025-06-20T20:06:44.052Z"
+}

@@ -1,0 +1,79 @@
+{
+  "summary": {
+    "totalSuites": 2,
+    "totalTests": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "duration": 294,
+    "passRate": "0.00",
+    "startTime": "2025-06-19T15:36:12.632Z",
+    "endTime": "2025-06-19T15:36:12.780Z",
+    "environment": "test"
+  },
+  "suites": [
+    {
+      "suite": "Authentication",
+      "status": "failed",
+      "tests": [],
+      "startTime": 1750347372632,
+      "duration": 147,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "error": {
+        "code": "P2022",
+        "meta": {
+          "modelName": "User",
+          "column": "twoFactorEnabled"
+        },
+        "clientVersion": "6.9.0",
+        "name": "PrismaClientKnownRequestError"
+      }
+    },
+    {
+      "suite": "Security",
+      "status": "failed",
+      "tests": [],
+      "startTime": 1750347372633,
+      "duration": 147,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "error": {
+        "code": "P2022",
+        "meta": {
+          "modelName": "User",
+          "column": "twoFactorEnabled"
+        },
+        "clientVersion": "6.9.0",
+        "name": "PrismaClientKnownRequestError"
+      }
+    }
+  ],
+  "metrics": {
+    "avgResponseTime": 0,
+    "p50ResponseTime": 0,
+    "p95ResponseTime": 0,
+    "p99ResponseTime": 0,
+    "slowestEndpoints": [],
+    "requestsPerSecond": 0,
+    "errorRate": 0
+  },
+  "security": {
+    "vulnerabilities": [],
+    "passedChecks": [],
+    "failedChecks": [],
+    "riskScore": 0,
+    "compliance": {
+      "owasp": true,
+      "pci": true,
+      "gdpr": true,
+      "details": []
+    }
+  },
+  "recommendations": [
+    "High test failure rate (>10%) - review test stability and application bugs"
+  ],
+  "generatedAt": "2025-06-19T15:36:12.780Z"
+}

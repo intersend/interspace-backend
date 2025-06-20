@@ -1,0 +1,1081 @@
+{
+  "summary": {
+    "totalSuites": 2,
+    "totalTests": 28,
+    "passed": 3,
+    "failed": 25,
+    "skipped": 0,
+    "duration": 1481,
+    "passRate": "10.71",
+    "startTime": "2025-06-20T20:50:16.657Z",
+    "endTime": "2025-06-20T20:50:17.456Z",
+    "environment": "test"
+  },
+  "suites": [
+    {
+      "suite": "Profile Management V2 - Flat Identity",
+      "status": "failed",
+      "tests": [
+        {
+          "name": "Automatic \"My Smartprofile\" creation on first auth",
+          "status": "failed",
+          "duration": 172.24808299914002,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "Session wallet creation modes",
+          "status": "passed",
+          "duration": 0.11345800012350082,
+          "retries": 0
+        },
+        {
+          "name": "Profile naming conflict handling",
+          "status": "failed",
+          "duration": 164.48124999925494,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "Profile access based on identity graph",
+          "status": "failed",
+          "duration": 31.900249999016523,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "\nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750452617027_edwss933q",
+              "stack": "PrismaClientValidationError: \nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.\n    at kn (/usr/src/app/node_modules/@prisma/client/runtime/library.js:29:1363)\n    at Zn.handleRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:7102)\n    at Zn.handleAndLogRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6784)\n    at Zn.request (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6491)\n    at async l (/usr/src/app/node_modules/@prisma/client/runtime/library.js:130:9778)\n    at async authenticate (/usr/src/app/src/middleware/auth.ts:59:18)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750452617027_edwss933q",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4553",
+              "x-ratelimit-reset": "2025-06-20T20:55:05.424Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "4161",
+              "etag": "W/\"1041-ypEZ3//aWo1QPoyG9C6AYWiUeak\"",
+              "date": "Fri, 20 Jun 2025 20:50:17 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v1/profiles",
+              "data": "{\"name\":\"Business Profile\"}"
+            }
+          }
+        },
+        {
+          "name": "Privacy mode enforcement on profile access",
+          "status": "failed",
+          "duration": 58.94112499803305,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "\nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750452617088_2j8xd03hi",
+              "stack": "PrismaClientValidationError: \nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.\n    at kn (/usr/src/app/node_modules/@prisma/client/runtime/library.js:29:1363)\n    at Zn.handleRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:7102)\n    at Zn.handleAndLogRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6784)\n    at Zn.request (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6491)\n    at async l (/usr/src/app/node_modules/@prisma/client/runtime/library.js:130:9778)\n    at async authenticate (/usr/src/app/src/middleware/auth.ts:59:18)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750452617088_2j8xd03hi",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4545",
+              "x-ratelimit-reset": "2025-06-20T20:55:05.424Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "4161",
+              "etag": "W/\"1041-8qNFUt6QmpZLzPBai0l7aUqs6jI\"",
+              "date": "Fri, 20 Jun 2025 20:50:17 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "get",
+              "url": "/api/v1/profiles"
+            }
+          }
+        },
+        {
+          "name": "POST /profiles - Create additional profiles",
+          "status": "failed",
+          "duration": 25.591582998633385,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "\nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750452617111_z2kqdgiip",
+              "stack": "PrismaClientValidationError: \nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.\n    at kn (/usr/src/app/node_modules/@prisma/client/runtime/library.js:29:1363)\n    at Zn.handleRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:7102)\n    at Zn.handleAndLogRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6784)\n    at Zn.request (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6491)\n    at async l (/usr/src/app/node_modules/@prisma/client/runtime/library.js:130:9778)\n    at async authenticate (/usr/src/app/src/middleware/auth.ts:59:18)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750452617111_z2kqdgiip",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4539",
+              "x-ratelimit-reset": "2025-06-20T20:55:05.424Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "4161",
+              "etag": "W/\"1041-kUujPTMV4zRldE41NXEf4E0f+3k\"",
+              "date": "Fri, 20 Jun 2025 20:50:17 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v1/profiles",
+              "data": "{\"name\":\"Trading Profile\"}"
+            }
+          }
+        },
+        {
+          "name": "PUT /profiles/:id - Update profile metadata",
+          "status": "failed",
+          "duration": 22.947125002741814,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "\nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750452617137_zuicy3bzj",
+              "stack": "PrismaClientValidationError: \nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.\n    at kn (/usr/src/app/node_modules/@prisma/client/runtime/library.js:29:1363)\n    at Zn.handleRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:7102)\n    at Zn.handleAndLogRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6784)\n    at Zn.request (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6491)\n    at async l (/usr/src/app/node_modules/@prisma/client/runtime/library.js:130:9778)\n    at async authenticate (/usr/src/app/src/middleware/auth.ts:59:18)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750452617137_zuicy3bzj",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4534",
+              "x-ratelimit-reset": "2025-06-20T20:55:05.424Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "4161",
+              "etag": "W/\"1041-Xhb4vMO1SrBAASH0AYw9l1Wrz8w\"",
+              "date": "Fri, 20 Jun 2025 20:50:17 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "put",
+              "url": "/api/v1/profiles/cmc57x21t0009mplg7gqzx9sf",
+              "data": "{\"name\":\"Updated Profile Name\"}"
+            }
+          }
+        },
+        {
+          "name": "DELETE /profiles/:id - Delete profile with reassignment",
+          "status": "failed",
+          "duration": 21.155166000127792,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "\nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750452617159_8s1x37n9k",
+              "stack": "PrismaClientValidationError: \nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.\n    at kn (/usr/src/app/node_modules/@prisma/client/runtime/library.js:29:1363)\n    at Zn.handleRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:7102)\n    at Zn.handleAndLogRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6784)\n    at Zn.request (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6491)\n    at async l (/usr/src/app/node_modules/@prisma/client/runtime/library.js:130:9778)\n    at async authenticate (/usr/src/app/src/middleware/auth.ts:59:18)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750452617159_8s1x37n9k",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4528",
+              "x-ratelimit-reset": "2025-06-20T20:55:05.424Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "4161",
+              "etag": "W/\"1041-RdgX6R0m80pwLuaud2MbWK/0ivI\"",
+              "date": "Fri, 20 Jun 2025 20:50:17 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v1/profiles",
+              "data": "{\"name\":\"Temporary Profile\"}"
+            }
+          }
+        },
+        {
+          "name": "Cannot delete last profile",
+          "status": "failed",
+          "duration": 25.850749999284744,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "Profile switching updates session state",
+          "status": "failed",
+          "duration": 20.55170800164342,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "\nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750452617205_7j4yznr0b",
+              "stack": "PrismaClientValidationError: \nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.\n    at kn (/usr/src/app/node_modules/@prisma/client/runtime/library.js:29:1363)\n    at Zn.handleRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:7102)\n    at Zn.handleAndLogRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6784)\n    at Zn.request (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6491)\n    at async l (/usr/src/app/node_modules/@prisma/client/runtime/library.js:130:9778)\n    at async authenticate (/usr/src/app/src/middleware/auth.ts:59:18)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750452617205_7j4yznr0b",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4517",
+              "x-ratelimit-reset": "2025-06-20T20:55:05.425Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "4161",
+              "etag": "W/\"1041-pF7lT5i1W4/SSQVvfxoaU6VjFyo\"",
+              "date": "Fri, 20 Jun 2025 20:50:17 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v1/profiles",
+              "data": "{\"name\":\"Alt Profile\"}"
+            }
+          }
+        },
+        {
+          "name": "Profile switching persists across sessions",
+          "status": "failed",
+          "duration": 21.13612499833107,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "\nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750452617225_82tvhpdu8",
+              "stack": "PrismaClientValidationError: \nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.\n    at kn (/usr/src/app/node_modules/@prisma/client/runtime/library.js:29:1363)\n    at Zn.handleRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:7102)\n    at Zn.handleAndLogRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6784)\n    at Zn.request (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6491)\n    at async l (/usr/src/app/node_modules/@prisma/client/runtime/library.js:130:9778)\n    at async authenticate (/usr/src/app/src/middleware/auth.ts:59:18)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750452617225_82tvhpdu8",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4512",
+              "x-ratelimit-reset": "2025-06-20T20:55:05.424Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "4161",
+              "etag": "W/\"1041-3C8jg/JDZKmTIDJxVGTjugniCkU\"",
+              "date": "Fri, 20 Jun 2025 20:50:17 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v1/profiles",
+              "data": "{\"name\":\"Persistent Profile\"}"
+            }
+          }
+        },
+        {
+          "name": "Linked accounts share profiles correctly",
+          "status": "failed",
+          "duration": 27.89020900055766,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "\nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750452617255_9y0wpbnfa",
+              "stack": "PrismaClientValidationError: \nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.\n    at kn (/usr/src/app/node_modules/@prisma/client/runtime/library.js:29:1363)\n    at Zn.handleRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:7102)\n    at Zn.handleAndLogRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6784)\n    at Zn.request (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6491)\n    at async l (/usr/src/app/node_modules/@prisma/client/runtime/library.js:130:9778)\n    at async authenticate (/usr/src/app/src/middleware/auth.ts:59:18)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750452617255_9y0wpbnfa",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4505",
+              "x-ratelimit-reset": "2025-06-20T20:55:05.424Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "4161",
+              "etag": "W/\"1041-GyybSYKX6cuyCqEqMbaXz1AgSSk\"",
+              "date": "Fri, 20 Jun 2025 20:50:17 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v1/profiles",
+              "data": "{\"name\":\"Shared Profile 1\"}"
+            }
+          }
+        },
+        {
+          "name": "Profile operations across linked accounts",
+          "status": "failed",
+          "duration": 34.772707998752594,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "\nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750452617290_t7jyittex",
+              "stack": "PrismaClientValidationError: \nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.\n    at kn (/usr/src/app/node_modules/@prisma/client/runtime/library.js:29:1363)\n    at Zn.handleRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:7102)\n    at Zn.handleAndLogRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6784)\n    at Zn.request (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6491)\n    at async l (/usr/src/app/node_modules/@prisma/client/runtime/library.js:130:9778)\n    at async authenticate (/usr/src/app/src/middleware/auth.ts:59:18)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750452617290_t7jyittex",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4497",
+              "x-ratelimit-reset": "2025-06-20T20:55:05.424Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "4161",
+              "etag": "W/\"1041-3LUwPZLvMr5K6hjzs6IdHghsmYY\"",
+              "date": "Fri, 20 Jun 2025 20:50:17 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v1/profiles",
+              "data": "{\"name\":\"Cross-Account Profile\"}"
+            }
+          }
+        },
+        {
+          "name": "Profile operations on non-existent profile",
+          "status": "failed",
+          "duration": 24.83924999833107,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "Profile operations performance",
+          "status": "failed",
+          "duration": 20.03974999859929,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "\nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750452617336_ndwpxan4l",
+              "stack": "PrismaClientValidationError: \nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.\n    at kn (/usr/src/app/node_modules/@prisma/client/runtime/library.js:29:1363)\n    at Zn.handleRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:7102)\n    at Zn.handleAndLogRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6784)\n    at Zn.request (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6491)\n    at async l (/usr/src/app/node_modules/@prisma/client/runtime/library.js:130:9778)\n    at async authenticate (/usr/src/app/src/middleware/auth.ts:59:18)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750452617336_ndwpxan4l",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4486",
+              "x-ratelimit-reset": "2025-06-20T20:55:05.424Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "4161",
+              "etag": "W/\"1041-C1GgcjuBAusV/UqjgaA4nSJp7tk\"",
+              "date": "Fri, 20 Jun 2025 20:50:17 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v1/profiles",
+              "data": "{\"name\":\"Performance Test 0\"}"
+            }
+          }
+        }
+      ],
+      "startTime": 1750452616657,
+      "duration": 682,
+      "passed": 1,
+      "failed": 14,
+      "skipped": 0
+    },
+    {
+      "suite": "Session Management - Flat Identity",
+      "status": "failed",
+      "tests": [
+        {
+          "name": "Session creation with account-based auth",
+          "status": "failed",
+          "duration": 316.09916700050235,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 401,
+            "statusText": "Unauthorized",
+            "data": {
+              "success": false,
+              "error": "Invalid or expired verification code"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750452616907_gyc9ub6x3",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4560",
+              "x-ratelimit-reset": "2025-06-20T20:55:05.424Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "64",
+              "etag": "W/\"40-6rqCG9QoUHug/E5MBswYlQBwa2g\"",
+              "date": "Fri, 20 Jun 2025 20:50:16 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"email\",\"email\":\"Mavis.Botsford89@gmail.com\",\"verificationCode\":\"123456\"}"
+            }
+          }
+        },
+        {
+          "name": "Session privacy modes",
+          "status": "failed",
+          "duration": 118.75629200041294,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "\nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750452617097_fdgf6gtqa",
+              "stack": "PrismaClientValidationError: \nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.\n    at kn (/usr/src/app/node_modules/@prisma/client/runtime/library.js:29:1363)\n    at Zn.handleRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:7102)\n    at Zn.handleAndLogRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6784)\n    at Zn.request (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6491)\n    at async l (/usr/src/app/node_modules/@prisma/client/runtime/library.js:130:9778)\n    at async authenticate (/usr/src/app/src/middleware/auth.ts:59:18)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750452617097_fdgf6gtqa",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4542",
+              "x-ratelimit-reset": "2025-06-20T20:55:05.425Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "4161",
+              "etag": "W/\"1041-h05+q5Tcz5ZIB8XYaqGpj7aWTgs\"",
+              "date": "Fri, 20 Jun 2025 20:50:17 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "get",
+              "url": "/api/v1/profiles"
+            }
+          }
+        },
+        {
+          "name": "Token generation with accountId",
+          "status": "passed",
+          "duration": 24.556000001728535,
+          "retries": 0
+        },
+        {
+          "name": "Token refresh maintains session context",
+          "status": "failed",
+          "duration": 22.028832998126745,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "\nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750452617145_9dd59m9k6",
+              "stack": "PrismaClientValidationError: \nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.\n    at kn (/usr/src/app/node_modules/@prisma/client/runtime/library.js:29:1363)\n    at Zn.handleRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:7102)\n    at Zn.handleAndLogRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6784)\n    at Zn.request (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6491)\n    at async l (/usr/src/app/node_modules/@prisma/client/runtime/library.js:130:9778)\n    at async authenticate (/usr/src/app/src/middleware/auth.ts:59:18)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750452617145_9dd59m9k6",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4531",
+              "x-ratelimit-reset": "2025-06-20T20:55:05.427Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "4161",
+              "etag": "W/\"1041-drz290hFjIXa6XO88cEZ4aXBGos\"",
+              "date": "Fri, 20 Jun 2025 20:50:17 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v1/profiles",
+              "data": "{\"name\":\"Refresh Test Profile\"}"
+            }
+          }
+        },
+        {
+          "name": "Token expiration handling",
+          "status": "failed",
+          "duration": 23.098041001707315,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "Multiple concurrent sessions",
+          "status": "failed",
+          "duration": 60.30400000140071,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "\nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750452617229_ae8mzx3xj",
+              "stack": "PrismaClientValidationError: \nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.\n    at kn (/usr/src/app/node_modules/@prisma/client/runtime/library.js:29:1363)\n    at Zn.handleRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:7102)\n    at Zn.handleAndLogRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6784)\n    at Zn.request (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6491)\n    at async l (/usr/src/app/node_modules/@prisma/client/runtime/library.js:130:9778)\n    at async authenticate (/usr/src/app/src/middleware/auth.ts:59:18)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750452617229_ae8mzx3xj",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4511",
+              "x-ratelimit-reset": "2025-06-20T20:55:05.424Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "4161",
+              "etag": "W/\"1041-g1XjiFoOCB0WszXZ4lHYisvlyVU\"",
+              "date": "Fri, 20 Jun 2025 20:50:17 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "get",
+              "url": "/api/v1/auth/me"
+            }
+          }
+        },
+        {
+          "name": "Session isolation between accounts",
+          "status": "failed",
+          "duration": 41.55720799788833,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "\nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750452617272_3kc3byhuh",
+              "stack": "PrismaClientValidationError: \nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.\n    at kn (/usr/src/app/node_modules/@prisma/client/runtime/library.js:29:1363)\n    at Zn.handleRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:7102)\n    at Zn.handleAndLogRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6784)\n    at Zn.request (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6491)\n    at async l (/usr/src/app/node_modules/@prisma/client/runtime/library.js:130:9778)\n    at async authenticate (/usr/src/app/src/middleware/auth.ts:59:18)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750452617272_3kc3byhuh",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4501",
+              "x-ratelimit-reset": "2025-06-20T20:55:05.424Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "4161",
+              "etag": "W/\"1041-ZQqqp9iafFjSAF/zDq73KyBXntY\"",
+              "date": "Fri, 20 Jun 2025 20:50:17 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "get",
+              "url": "/api/v1/profiles"
+            }
+          }
+        },
+        {
+          "name": "Device tracking with account sessions",
+          "status": "failed",
+          "duration": 60.133542001247406,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "\nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750452617333_2c85x9j1r",
+              "stack": "PrismaClientValidationError: \nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.\n    at kn (/usr/src/app/node_modules/@prisma/client/runtime/library.js:29:1363)\n    at Zn.handleRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:7102)\n    at Zn.handleAndLogRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6784)\n    at Zn.request (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6491)\n    at async l (/usr/src/app/node_modules/@prisma/client/runtime/library.js:130:9778)\n    at async authenticate (/usr/src/app/src/middleware/auth.ts:59:18)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750452617333_2c85x9j1r",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4487",
+              "x-ratelimit-reset": "2025-06-20T20:55:05.424Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "4161",
+              "etag": "W/\"1041-lAL6i3Myu4UHtqO2ub5ePaAOLjo\"",
+              "date": "Fri, 20 Jun 2025 20:50:17 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "get",
+              "url": "/api/v1/auth/devices"
+            }
+          }
+        },
+        {
+          "name": "DELETE /devices/:id - Revoke specific session",
+          "status": "failed",
+          "duration": 28.039083998650312,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "\nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750452617361_rjivqdhtu",
+              "stack": "PrismaClientValidationError: \nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.\n    at kn (/usr/src/app/node_modules/@prisma/client/runtime/library.js:29:1363)\n    at Zn.handleRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:7102)\n    at Zn.handleAndLogRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6784)\n    at Zn.request (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6491)\n    at async l (/usr/src/app/node_modules/@prisma/client/runtime/library.js:130:9778)\n    at async authenticate (/usr/src/app/src/middleware/auth.ts:59:18)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750452617361_rjivqdhtu",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4481",
+              "x-ratelimit-reset": "2025-06-20T20:55:05.424Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "4161",
+              "etag": "W/\"1041-aZTxbwbpbAdDHQNRYTopCsIjwLw\"",
+              "date": "Fri, 20 Jun 2025 20:50:17 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "get",
+              "url": "/api/v1/auth/devices"
+            }
+          }
+        },
+        {
+          "name": "Session invalidation on account unlink",
+          "status": "failed",
+          "duration": 31.81675099954009,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "\nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750452617393_jhgfkry64",
+              "stack": "PrismaClientValidationError: \nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.\n    at kn (/usr/src/app/node_modules/@prisma/client/runtime/library.js:29:1363)\n    at Zn.handleRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:7102)\n    at Zn.handleAndLogRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6784)\n    at Zn.request (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6491)\n    at async l (/usr/src/app/node_modules/@prisma/client/runtime/library.js:130:9778)\n    at async authenticate (/usr/src/app/src/middleware/auth.ts:59:18)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750452617393_jhgfkry64",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4475",
+              "x-ratelimit-reset": "2025-06-20T20:55:05.425Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "4161",
+              "etag": "W/\"1041-5od2W91XIgC1kxrCLk3klV0zmaA\"",
+              "date": "Fri, 20 Jun 2025 20:50:17 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "get",
+              "url": "/api/v1/profiles"
+            }
+          }
+        },
+        {
+          "name": "Logout and logout-all with account sessions",
+          "status": "failed",
+          "duration": 37.5603750012815,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "Backward compatibility with userId tokens",
+          "status": "passed",
+          "duration": 4.880249999463558,
+          "retries": 0
+        },
+        {
+          "name": "Session operations performance",
+          "status": "failed",
+          "duration": 16.896457999944687,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "\nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750452617452_hcwgd53lt",
+              "stack": "PrismaClientValidationError: \nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.\n    at kn (/usr/src/app/node_modules/@prisma/client/runtime/library.js:29:1363)\n    at Zn.handleRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:7102)\n    at Zn.handleAndLogRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6784)\n    at Zn.request (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6491)\n    at async l (/usr/src/app/node_modules/@prisma/client/runtime/library.js:130:9778)\n    at async authenticate (/usr/src/app/src/middleware/auth.ts:59:18)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750452617452_hcwgd53lt",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4462",
+              "x-ratelimit-reset": "2025-06-20T20:55:05.424Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "4161",
+              "etag": "W/\"1041-LQBYyJEvTM4OCPbfS1M43I065Wo\"",
+              "date": "Fri, 20 Jun 2025 20:50:17 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "get",
+              "url": "/api/v1/auth/me"
+            }
+          }
+        }
+      ],
+      "startTime": 1750452616657,
+      "duration": 799,
+      "passed": 2,
+      "failed": 11,
+      "skipped": 0
+    }
+  ],
+  "metrics": {
+    "avgResponseTime": 0,
+    "p50ResponseTime": 0,
+    "p95ResponseTime": 0,
+    "p99ResponseTime": 0,
+    "slowestEndpoints": [],
+    "requestsPerSecond": 0,
+    "errorRate": 0
+  },
+  "security": {
+    "vulnerabilities": [],
+    "passedChecks": [],
+    "failedChecks": [],
+    "riskScore": 0,
+    "compliance": {
+      "owasp": true,
+      "pci": true,
+      "gdpr": true,
+      "details": []
+    }
+  },
+  "recommendations": [
+    "High test failure rate (>10%) - review test stability and application bugs"
+  ],
+  "generatedAt": "2025-06-20T20:50:17.456Z"
+}

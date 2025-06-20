@@ -1,0 +1,668 @@
+{
+  "summary": {
+    "totalSuites": 1,
+    "totalTests": 19,
+    "passed": 1,
+    "failed": 18,
+    "skipped": 0,
+    "duration": 446,
+    "passRate": "5.26",
+    "startTime": "2025-06-20T19:53:23.352Z",
+    "endTime": "2025-06-20T19:53:23.799Z",
+    "environment": "test"
+  },
+  "suites": [
+    {
+      "suite": "Authentication V2 - Flat Identity",
+      "status": "failed",
+      "tests": [
+        {
+          "name": "POST /auth/authenticate - Wallet auth with automatic profile creation",
+          "status": "failed",
+          "duration": 261.3988329991698,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "auditService.logAuthentication is not a function",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750449203407_extvvjl0t",
+              "stack": "TypeError: auditService.logAuthentication is not a function\n    at authenticateV2 (/usr/src/app/src/controllers/authControllerV2.js:147:24)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750449203407_extvvjl0t",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4998",
+              "x-ratelimit-reset": "2025-06-20T20:08:23.360Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "293",
+              "etag": "W/\"125-CqsMoLvkgGG9SOlR+V2dsLOW89A\"",
+              "date": "Fri, 20 Jun 2025 19:53:23 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"wallet\",\"walletAddress\":\"0x2c7536E3605D9C16a7a3D7b1898e529396a65c23\",\"message\":\"localhost:3000 wants you to sign in with your Ethereum account:\\n0x2c7536E3605D9C16a7a3D7b1898e529396a65c23\\n\\nSign in with Ethereum to Interspace\\n\\nURI: http://localhost:3000\\nVersion: 1\\nChain ID: 1\\nNonce: a5e683383669922f65f1c64bf1cc86c2\\nIssued At: 2025-06-20T19:53:23.392Z\",\"signature\":\"0x1085f285844fe435606b615511d77a5a9196e642937ae885578d04b76bbf48593eda092db48f9b6d4c047b324f2064cb026e61681b2058f3404ccc88e1b7cfb81b\",\"walletType\":\"metamask\",\"chainId\":1}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Wallet auth with invalid signature",
+          "status": "failed",
+          "duration": 12.62270800024271,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/authenticate - Wallet auth with expired nonce",
+          "status": "failed",
+          "duration": 0.8052919991314411,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/authenticate - Wallet auth with message tampering",
+          "status": "failed",
+          "duration": 12.90600000321865,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/authenticate - Wallet auth with wrong domain",
+          "status": "failed",
+          "duration": 17.91008400171995,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/authenticate - Wallet auth replay attack prevention",
+          "status": "failed",
+          "duration": 18.045208998024464,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "auditService.logAuthentication is not a function",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750449203669_pow0kf9po",
+              "stack": "TypeError: auditService.logAuthentication is not a function\n    at authenticateV2 (/usr/src/app/src/controllers/authControllerV2.js:147:24)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750449203669_pow0kf9po",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4990",
+              "x-ratelimit-reset": "2025-06-20T20:08:23.360Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "293",
+              "etag": "W/\"125-9LniLxEQ7Qk2N818KVzCANg8YTY\"",
+              "date": "Fri, 20 Jun 2025 19:53:23 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"wallet\",\"walletAddress\":\"0x2c7536E3605D9C16a7a3D7b1898e529396a65c23\",\"message\":\"localhost:3000 wants you to sign in with your Ethereum account:\\n0x2c7536E3605D9C16a7a3D7b1898e529396a65c23\\n\\nSign in with Ethereum to Interspace\\n\\nURI: http://localhost:3000\\nVersion: 1\\nChain ID: 1\\nNonce: e99c5c64c8cdad797c21bf5d9838394d\\nIssued At: 2025-06-20T19:53:23.667Z\",\"signature\":\"0xc69bd2f11933271d80c22f3d648ceb44d4b35655c7ef1324e3ed9d4783a1cc211535ff2660b473b3763fd80f7391e94f26138682a59e4ae4456a1fbca93d5ffd1b\",\"walletType\":\"metamask\",\"chainId\":1}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Email auth with automatic profile creation",
+          "status": "failed",
+          "duration": 5.579459000378847,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "socialAuthService.authenticateWithEmail is not a function",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750449203681_r32bs35gf",
+              "stack": "TypeError: socialAuthService.authenticateWithEmail is not a function\n    at authenticateV2 (/usr/src/app/src/controllers/authControllerV2.js:38:46)\n    at Layer.handle [as handle_request] (/usr/src/app/node_modules/express/lib/router/layer.js:95:5)\n    at next (/usr/src/app/node_modules/express/lib/router/route.js:149:13)\n    at middleware (/usr/src/app/node_modules/express-validator/lib/middlewares/check.js:16:13)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750449203681_r32bs35gf",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4989",
+              "x-ratelimit-reset": "2025-06-20T20:08:23.360Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "659",
+              "etag": "W/\"293-E0ojSi5I8viPzmv/x+gW1TDsJVk\"",
+              "date": "Fri, 20 Jun 2025 19:53:23 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"email\",\"email\":\"Mariam15@yahoo.com\",\"verificationCode\":\"123456\"}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Email auth case insensitivity",
+          "status": "failed",
+          "duration": 3.387457996606827,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "socialAuthService.authenticateWithEmail is not a function",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750449203686_y4h795y8v",
+              "stack": "TypeError: socialAuthService.authenticateWithEmail is not a function\n    at authenticateV2 (/usr/src/app/src/controllers/authControllerV2.js:38:46)\n    at Layer.handle [as handle_request] (/usr/src/app/node_modules/express/lib/router/layer.js:95:5)\n    at next (/usr/src/app/node_modules/express/lib/router/route.js:149:13)\n    at middleware (/usr/src/app/node_modules/express-validator/lib/middlewares/check.js:16:13)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750449203686_y4h795y8v",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4988",
+              "x-ratelimit-reset": "2025-06-20T20:08:23.360Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "659",
+              "etag": "W/\"293-MLwLqZMzqC9ubhO8tJT7C0RegXk\"",
+              "date": "Fri, 20 Jun 2025 19:53:23 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"email\",\"email\":\"isac56@hotmail.com\",\"verificationCode\":\"123456\"}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Email auth with invalid code",
+          "status": "failed",
+          "duration": 2.549457997083664,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/authenticate - Google auth with automatic profile",
+          "status": "failed",
+          "duration": 3.9234169982373714,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "socialAuthService.authenticateWithGoogle is not a function",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750449203692_jm9wyw6s5",
+              "stack": "TypeError: socialAuthService.authenticateWithGoogle is not a function\n    at authenticateV2 (/usr/src/app/src/controllers/authControllerV2.js:78:46)\n    at Layer.handle [as handle_request] (/usr/src/app/node_modules/express/lib/router/layer.js:95:5)\n    at next (/usr/src/app/node_modules/express/lib/router/route.js:149:13)\n    at middleware (/usr/src/app/node_modules/express-validator/lib/middlewares/check.js:16:13)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750449203692_jm9wyw6s5",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4986",
+              "x-ratelimit-reset": "2025-06-20T20:08:23.361Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "661",
+              "etag": "W/\"295-mDIKfHiWIfLUX7kRosji435E8YM\"",
+              "date": "Fri, 20 Jun 2025 19:53:23 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"google\",\"idToken\":\"mock_google_token\"}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Apple auth with automatic profile",
+          "status": "failed",
+          "duration": 2.635749999433756,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "AppError is not a constructor",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750449203696_xna25goe7",
+              "stack": "TypeError: AppError is not a constructor\n    at authenticateV2 (/usr/src/app/src/controllers/authControllerV2.js:103:15)\n    at Layer.handle [as handle_request] (/usr/src/app/node_modules/express/lib/router/layer.js:95:5)\n    at next (/usr/src/app/node_modules/express/lib/router/route.js:149:13)\n    at middleware (/usr/src/app/node_modules/express-validator/lib/middlewares/check.js:16:13)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750449203696_xna25goe7",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4985",
+              "x-ratelimit-reset": "2025-06-20T20:08:23.360Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "604",
+              "etag": "W/\"25c-vuyfBkprwM22g7Mi2EPMmYHN0xI\"",
+              "date": "Fri, 20 Jun 2025 19:53:23 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"apple\",\"idToken\":\"mock_apple_token\"}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Guest auth with automatic profile",
+          "status": "failed",
+          "duration": 2.3596250005066395,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "socialAuthService.authenticateAsGuest is not a function",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750449203699_j36tnu7z5",
+              "stack": "TypeError: socialAuthService.authenticateAsGuest is not a function\n    at authenticateV2 (/usr/src/app/src/controllers/authControllerV2.js:92:46)\n    at Layer.handle [as handle_request] (/usr/src/app/node_modules/express/lib/router/layer.js:95:5)\n    at next (/usr/src/app/node_modules/express/lib/router/route.js:149:13)\n    at middleware (/usr/src/app/node_modules/express-validator/lib/middlewares/check.js:16:13)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750449203699_j36tnu7z5",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4984",
+              "x-ratelimit-reset": "2025-06-20T20:08:23.360Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "655",
+              "etag": "W/\"28f-tHYWGCAN339+82vmRf5PcVRiYbs\"",
+              "date": "Fri, 20 Jun 2025 19:53:23 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"guest\"}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Auth with privacy mode selection",
+          "status": "failed",
+          "duration": 15.170792002230883,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "auditService.logAuthentication is not a function",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750449203705_bx6rh16n4",
+              "stack": "TypeError: auditService.logAuthentication is not a function\n    at authenticateV2 (/usr/src/app/src/controllers/authControllerV2.js:147:24)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750449203705_bx6rh16n4",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4982",
+              "x-ratelimit-reset": "2025-06-20T20:08:23.360Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "293",
+              "etag": "W/\"125-eI9LA5Ov+buC/NPKSZg4jbEHKy4\"",
+              "date": "Fri, 20 Jun 2025 19:53:23 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"wallet\",\"walletAddress\":\"0x2c7536E3605D9C16a7a3D7b1898e529396a65c23\",\"message\":\"localhost:3000 wants you to sign in with your Ethereum account:\\n0x2c7536E3605D9C16a7a3D7b1898e529396a65c23\\n\\nSign in with Ethereum to Interspace\\n\\nURI: http://localhost:3000\\nVersion: 1\\nChain ID: 1\\nNonce: 74307d8c08e8f1452f1c0c3f6e091a18\\nIssued At: 2025-06-20T19:53:23.703Z\",\"signature\":\"0x564b8265a5601838af0477d5b97074ce2a87c4de5e009502af04a3e710145be618c9629e8db2ae5c7512b988d2205de36dd2bae6d9c4397a6f8414486c6a54641b\",\"walletType\":\"metamask\",\"chainId\":1,\"privacyMode\":\"linked\"}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Existing user returns all profiles",
+          "status": "failed",
+          "duration": 13.969250001013279,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "auditService.logAuthentication is not a function",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750449203721_9afygafeh",
+              "stack": "TypeError: auditService.logAuthentication is not a function\n    at authenticateV2 (/usr/src/app/src/controllers/authControllerV2.js:147:24)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750449203721_9afygafeh",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4980",
+              "x-ratelimit-reset": "2025-06-20T20:08:23.360Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "293",
+              "etag": "W/\"125-TWNgVrdGITq3KVB2R8SUsrv7uJg\"",
+              "date": "Fri, 20 Jun 2025 19:53:23 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"wallet\",\"walletAddress\":\"0x2c7536E3605D9C16a7a3D7b1898e529396a65c23\",\"message\":\"localhost:3000 wants you to sign in with your Ethereum account:\\n0x2c7536E3605D9C16a7a3D7b1898e529396a65c23\\n\\nSign in with Ethereum to Interspace\\n\\nURI: http://localhost:3000\\nVersion: 1\\nChain ID: 1\\nNonce: 54e662f93bec0bdfa169c24002468efe\\nIssued At: 2025-06-20T19:53:23.720Z\",\"signature\":\"0x70b141c7c0bc171d84bef854560959ae507932b00e9964aca7ab9a6b0b98948024b026c67143174ddef16a97ffcd694951eacb188dd15f0c4fc334b50900e9671c\",\"walletType\":\"metamask\",\"chainId\":1}"
+            }
+          }
+        },
+        {
+          "name": "Authentication rate limiting",
+          "status": "failed",
+          "duration": 36.727708000689745,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/refresh - Token refresh with accountId",
+          "status": "failed",
+          "duration": 12.11583299934864,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "auditService.logAuthentication is not a function",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750449203771_gahn8ca3d",
+              "stack": "TypeError: auditService.logAuthentication is not a function\n    at authenticateV2 (/usr/src/app/src/controllers/authControllerV2.js:147:24)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750449203771_gahn8ca3d",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4963",
+              "x-ratelimit-reset": "2025-06-20T20:08:23.360Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "293",
+              "etag": "W/\"125-jvLD0UP10KfiYPW1EC/JQKsBqpE\"",
+              "date": "Fri, 20 Jun 2025 19:53:23 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"wallet\",\"walletAddress\":\"0x2B44088CA720cFD6267fBA33Fd88A709E23BF286\",\"message\":\"localhost:3000 wants you to sign in with your Ethereum account:\\n0x2B44088CA720cFD6267fBA33Fd88A709E23BF286\\n\\nSign in with Ethereum to Interspace\\n\\nURI: http://localhost:3000\\nVersion: 1\\nChain ID: 1\\nNonce: f36ab2bb16d16decf1efc1fb25d2bbb3\\nIssued At: 2025-06-20T19:53:23.769Z\",\"signature\":\"0xcadecf2b081629a210d2c4c9d95489a8f5a1c1e0ba4f18745f195aab724b4c2516940efdf81e553dfc58ccba94224e829c712c1328b4836030caca74450f59811b\",\"walletType\":\"metamask\",\"chainId\":1}"
+            }
+          }
+        },
+        {
+          "name": "Complete V2 authentication flow test",
+          "status": "failed",
+          "duration": 14.391583003103733,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "auditService.logAuthentication is not a function",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750449203783_eroiypu0m",
+              "stack": "TypeError: auditService.logAuthentication is not a function\n    at authenticateV2 (/usr/src/app/src/controllers/authControllerV2.js:147:24)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750449203783_eroiypu0m",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4961",
+              "x-ratelimit-reset": "2025-06-20T20:08:23.360Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "293",
+              "etag": "W/\"125-dgLyCepJW9u6GP003TxQfHFtsbk\"",
+              "date": "Fri, 20 Jun 2025 19:53:23 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"wallet\",\"walletAddress\":\"0x2c7536E3605D9C16a7a3D7b1898e529396a65c23\",\"message\":\"localhost:3000 wants you to sign in with your Ethereum account:\\n0x2c7536E3605D9C16a7a3D7b1898e529396a65c23\\n\\nSign in with Ethereum to Interspace\\n\\nURI: http://localhost:3000\\nVersion: 1\\nChain ID: 1\\nNonce: a413031f0f999ffe23eba979d9d59c38\\nIssued At: 2025-06-20T19:53:23.782Z\",\"signature\":\"0x7545f2c9a01521d11470b8fcd5a3d34078367a8ab4eabbece939ccecd610672049fc5b0319058b27959c7a6cc7bd2bccec14f523d53134fa8650345109869e341b\",\"walletType\":\"metamask\",\"chainId\":1}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Invalid strategy",
+          "status": "failed",
+          "duration": 1.7833330035209656,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/authenticate - Missing required fields",
+          "status": "passed",
+          "duration": 3.042083002626896,
+          "retries": 0
+        }
+      ],
+      "startTime": 1750449203352,
+      "duration": 446,
+      "passed": 1,
+      "failed": 18,
+      "skipped": 0
+    }
+  ],
+  "metrics": {
+    "avgResponseTime": 0,
+    "p50ResponseTime": 0,
+    "p95ResponseTime": 0,
+    "p99ResponseTime": 0,
+    "slowestEndpoints": [],
+    "requestsPerSecond": 0,
+    "errorRate": 0
+  },
+  "security": {
+    "vulnerabilities": [],
+    "passedChecks": [],
+    "failedChecks": [],
+    "riskScore": 0,
+    "compliance": {
+      "owasp": true,
+      "pci": true,
+      "gdpr": true,
+      "details": []
+    }
+  },
+  "recommendations": [
+    "High test failure rate (>10%) - review test stability and application bugs"
+  ],
+  "generatedAt": "2025-06-20T19:53:23.799Z"
+}

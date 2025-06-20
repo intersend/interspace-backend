@@ -1,0 +1,300 @@
+{
+  "summary": {
+    "totalSuites": 3,
+    "totalTests": 14,
+    "passed": 0,
+    "failed": 14,
+    "skipped": 0,
+    "duration": 448,
+    "passRate": "0.00",
+    "startTime": "2025-06-19T16:19:31.326Z",
+    "endTime": "2025-06-19T16:19:31.484Z",
+    "environment": "test"
+  },
+  "suites": [
+    {
+      "suite": "Security",
+      "status": "failed",
+      "tests": [],
+      "startTime": 1750349971326,
+      "duration": 144,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "error": {
+        "code": "P2022",
+        "meta": {
+          "modelName": "User",
+          "column": "twoFactorEnabled"
+        },
+        "clientVersion": "6.9.0",
+        "name": "PrismaClientKnownRequestError"
+      }
+    },
+    {
+      "suite": "Authentication",
+      "status": "failed",
+      "tests": [],
+      "startTime": 1750349971325,
+      "duration": 146,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "error": {
+        "code": "P2022",
+        "meta": {
+          "modelName": "User",
+          "column": "twoFactorEnabled"
+        },
+        "clientVersion": "6.9.0",
+        "name": "PrismaClientKnownRequestError"
+      }
+    },
+    {
+      "suite": "App Management",
+      "status": "failed",
+      "tests": [
+        {
+          "name": "POST /profiles/:profileId/apps - Add app to profile (root level)",
+          "status": "failed",
+          "duration": 136.38179099559784,
+          "retries": 1,
+          "error": {
+            "code": "P2022",
+            "meta": {
+              "modelName": "User",
+              "column": "twoFactorEnabled"
+            },
+            "clientVersion": "6.9.0",
+            "name": "PrismaClientKnownRequestError"
+          }
+        },
+        {
+          "name": "POST /profiles/:profileId/apps - Add multiple apps with auto-positioning",
+          "status": "failed",
+          "duration": 2.6768749952316284,
+          "retries": 1,
+          "error": {
+            "code": "P2022",
+            "meta": {
+              "modelName": "User",
+              "column": "twoFactorEnabled"
+            },
+            "clientVersion": "6.9.0",
+            "name": "PrismaClientKnownRequestError"
+          }
+        },
+        {
+          "name": "POST /profiles/:profileId/apps - Add app to folder",
+          "status": "failed",
+          "duration": 1.6375420093536377,
+          "retries": 1,
+          "error": {
+            "code": "P2022",
+            "meta": {
+              "modelName": "User",
+              "column": "twoFactorEnabled"
+            },
+            "clientVersion": "6.9.0",
+            "name": "PrismaClientKnownRequestError"
+          }
+        },
+        {
+          "name": "POST /profiles/:profileId/apps - Validation errors",
+          "status": "failed",
+          "duration": 1.6381670236587524,
+          "retries": 1,
+          "error": {
+            "code": "P2022",
+            "meta": {
+              "modelName": "User",
+              "column": "twoFactorEnabled"
+            },
+            "clientVersion": "6.9.0",
+            "name": "PrismaClientKnownRequestError"
+          }
+        },
+        {
+          "name": "POST /profiles/:profileId/apps - Authorization checks",
+          "status": "failed",
+          "duration": 1.541583001613617,
+          "retries": 1,
+          "error": {
+            "code": "P2022",
+            "meta": {
+              "modelName": "User",
+              "column": "twoFactorEnabled"
+            },
+            "clientVersion": "6.9.0",
+            "name": "PrismaClientKnownRequestError"
+          }
+        },
+        {
+          "name": "GET /profiles/:profileId/apps - List apps in profile",
+          "status": "failed",
+          "duration": 2.7280839681625366,
+          "retries": 1,
+          "error": {
+            "code": "P2022",
+            "meta": {
+              "modelName": "User",
+              "column": "twoFactorEnabled"
+            },
+            "clientVersion": "6.9.0",
+            "name": "PrismaClientKnownRequestError"
+          }
+        },
+        {
+          "name": "PUT /apps/:appId - Update app details",
+          "status": "failed",
+          "duration": 1.176417052745819,
+          "retries": 1,
+          "error": {
+            "code": "P2022",
+            "meta": {
+              "modelName": "User",
+              "column": "twoFactorEnabled"
+            },
+            "clientVersion": "6.9.0",
+            "name": "PrismaClientKnownRequestError"
+          }
+        },
+        {
+          "name": "DELETE /apps/:appId - Delete app from profile",
+          "status": "failed",
+          "duration": 1.0088329911231995,
+          "retries": 1,
+          "error": {
+            "code": "P2022",
+            "meta": {
+              "modelName": "User",
+              "column": "twoFactorEnabled"
+            },
+            "clientVersion": "6.9.0",
+            "name": "PrismaClientKnownRequestError"
+          }
+        },
+        {
+          "name": "PUT /apps/:appId/move - Move app between folders",
+          "status": "failed",
+          "duration": 0.9243339896202087,
+          "retries": 1,
+          "error": {
+            "code": "P2022",
+            "meta": {
+              "modelName": "User",
+              "column": "twoFactorEnabled"
+            },
+            "clientVersion": "6.9.0",
+            "name": "PrismaClientKnownRequestError"
+          }
+        },
+        {
+          "name": "POST /profiles/:profileId/apps/reorder - Reorder apps",
+          "status": "failed",
+          "duration": 1.0069589614868164,
+          "retries": 1,
+          "error": {
+            "code": "P2022",
+            "meta": {
+              "modelName": "User",
+              "column": "twoFactorEnabled"
+            },
+            "clientVersion": "6.9.0",
+            "name": "PrismaClientKnownRequestError"
+          }
+        },
+        {
+          "name": "GET /profiles/:profileId/apps/search - Search apps",
+          "status": "failed",
+          "duration": 1.1054580211639404,
+          "retries": 1,
+          "error": {
+            "code": "P2022",
+            "meta": {
+              "modelName": "User",
+              "column": "twoFactorEnabled"
+            },
+            "clientVersion": "6.9.0",
+            "name": "PrismaClientKnownRequestError"
+          }
+        },
+        {
+          "name": "Edge case: Special characters in app data",
+          "status": "failed",
+          "duration": 0.8704580068588257,
+          "retries": 1,
+          "error": {
+            "code": "P2022",
+            "meta": {
+              "modelName": "User",
+              "column": "twoFactorEnabled"
+            },
+            "clientVersion": "6.9.0",
+            "name": "PrismaClientKnownRequestError"
+          }
+        },
+        {
+          "name": "Performance: Add many apps to profile",
+          "status": "failed",
+          "duration": 0.9507080316543579,
+          "retries": 1,
+          "error": {
+            "code": "P2022",
+            "meta": {
+              "modelName": "User",
+              "column": "twoFactorEnabled"
+            },
+            "clientVersion": "6.9.0",
+            "name": "PrismaClientKnownRequestError"
+          }
+        },
+        {
+          "name": "Complete user journey: iOS app adding apps to profile",
+          "status": "failed",
+          "duration": 1.0393750071525574,
+          "retries": 1,
+          "error": {
+            "code": "P2022",
+            "meta": {
+              "modelName": "User",
+              "column": "twoFactorEnabled"
+            },
+            "clientVersion": "6.9.0",
+            "name": "PrismaClientKnownRequestError"
+          }
+        }
+      ],
+      "startTime": 1750349971326,
+      "duration": 158,
+      "passed": 0,
+      "failed": 14,
+      "skipped": 0
+    }
+  ],
+  "metrics": {
+    "avgResponseTime": 0,
+    "p50ResponseTime": 0,
+    "p95ResponseTime": 0,
+    "p99ResponseTime": 0,
+    "slowestEndpoints": [],
+    "requestsPerSecond": 0,
+    "errorRate": 0
+  },
+  "security": {
+    "vulnerabilities": [],
+    "passedChecks": [],
+    "failedChecks": [],
+    "riskScore": 0,
+    "compliance": {
+      "owasp": true,
+      "pci": true,
+      "gdpr": true,
+      "details": []
+    }
+  },
+  "recommendations": [
+    "High test failure rate (>10%) - review test stability and application bugs"
+  ],
+  "generatedAt": "2025-06-19T16:19:31.485Z"
+}

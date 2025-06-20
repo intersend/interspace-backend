@@ -1,0 +1,147 @@
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant API as API Gateway
+    participant Auth as Auth Service
+    participant Link as Link Service
+    participant DB as Database
+    participant Email as Email Service
+
+    Note over C,Email: Link Email Account to Wallet Account
+    
+    C->>API: POST /api/v2/auth/link-accounts<br/>{targetType: "email",<br/>targetIdentifier: "user@example.com"}
+    API->>Auth: Verify current session
+    Auth->>DB: Get current account<br/>(wallet account)
+    Auth->>Auth: Check account verified
+    
+    alt Current Account Not Verified
+        API-->>C: 403 {error: "Verify account first"}
+    else Verified
+        Auth->>Link: Process link request
+        Link->>DB: Find/Create target account<br/>{type: "email", identifier}
+        Link->>DB: Check existing links
+        
+        alt Already Linked
+            API-->>C: 409 {error: "Already linked"}
+        else Target Linked Elsewhere
+            API-->>C: 409 {error: "Target linked to another"}
+        else Can Link
+            Link->>Email: Send verification code
+            Link->>DB: Store pending link<br/>with verification code
+            API-->>C: 200 OK {message: "Check email"}
+        end
+    end
+
+    Note over C,Email: Complete Email Link Verification
+    
+    C->>API: POST /api/v2/auth/verify-link<br/>{code: "123456"}
+    API->>Link: Verify link code
+    Link->>DB: Find pending link by code
+    Link->>Link: Verify code & expiry
+    
+    alt Valid Code
+        Link->>DB: Create IdentityLink<br/>{accountAId, accountBId,<br/>linkType: "direct",<br/>privacyMode: "linked"}
+        Link->>DB: Mark accounts verified
+        Link->>DB: Audit log link created
+        Link->>Auth: Get updated profiles
+        API-->>C: 200 OK {link, profiles}
+    else Invalid Code
+        API-->>C: 401 {error: "Invalid code"}
+    end
+
+    Note over C,Email: Link Social Account (Google)
+    
+    C->>API: POST /api/v2/auth/link-accounts<br/>{targetType: "social",<br/>targetProvider: "google",<br/>idToken: "..."}
+    API->>Auth: Verify current session
+    API->>Link: Process social link
+    Link->>Link: Verify Google ID token
+    Link->>DB: Extract Google user ID
+    Link->>DB: Find/Create social account
+    
+    alt Social Account Exists & Linked
+        API-->>C: 409 {error: "Google account already linked"}
+    else Can Link
+        Link->>DB: Create IdentityLink
+        Link->>DB: Merge profile access
+        API-->>C: 200 OK {link, linkedAccount}
+    end
+
+    Note over C,Email: Update Link Privacy Mode
+    
+    C->>API: PUT /api/v2/auth/link-privacy<br/>{targetAccountId: "acc123",<br/>privacyMode: "partial"}
+    API->>Auth: Verify session
+    API->>Link: Update privacy request
+    Link->>DB: Find IdentityLink between<br/>current & target accounts
+    
+    alt Link Exists
+        Link->>DB: Update privacyMode
+        Link->>DB: Audit log change
+        API-->>C: 200 OK {link}
+    else No Link
+        API-->>C: 404 {error: "Link not found"}
+    end
+
+    Note over C,Email: Query Identity Graph
+    
+    C->>API: GET /api/v2/auth/identity-graph
+    API->>Auth: Get current account
+    API->>Link: Build identity graph
+    Link->>DB: Find all IdentityLinks<br/>WHERE accountA OR accountB<br/>= currentAccount
+    
+    loop For Each Link
+        Link->>Link: Check privacyMode
+        alt Privacy != "isolated"
+            Link->>DB: Get linked account details
+            Link->>Link: Add to graph
+        end
+    end
+    
+    Link->>Link: Build adjacency list
+    API-->>C: 200 OK {accounts: [...],<br/>links: [...],<br/>currentAccountId}
+
+    Note over C,Email: Cross-Account Profile Access
+    
+    C->>API: GET /api/v2/profiles
+    API->>Auth: Get session info
+    Auth->>Link: Get accessible accounts<br/>based on privacy mode
+    
+    alt Session Privacy = "linked"
+        Link->>DB: Get all linked accounts
+        Link->>DB: Get all profiles from<br/>linked accounts
+    else Session Privacy = "partial"
+        Link->>DB: Get linked with permissions
+        Link->>DB: Filter profiles by access
+    else Session Privacy = "isolated"
+        Link->>DB: Only current account profiles
+    end
+    
+    API-->>C: 200 OK {data: profiles[]}
+
+    Note over C,Email: Attempted Circular Linking
+    
+    C->>API: POST /api/v2/auth/link-accounts<br/>{targetType: "wallet",<br/>targetIdentifier: "0xABC"}
+    API->>Link: Check for circular links
+    Link->>DB: Traverse identity graph
+    Link->>Link: Detect if target already<br/>in current identity cluster
+    
+    alt Circular Link Detected
+        API-->>C: 409 {error: "Would create circular link"}
+    end
+
+    Note over C,Email: Security - Prevent Account Takeover
+    
+    C->>API: POST /api/v2/auth/link-accounts<br/>{targetType: "email", ...}
+    API->>Auth: Security checks
+    
+    rect rgb(255, 200, 200)
+        Auth->>DB: Check rate limits
+        Auth->>DB: Verify account age > 24h
+        Auth->>DB: Check suspicious patterns
+        Auth->>DB: Require 2FA if enabled
+    end
+    
+    alt Security Check Failed
+        Auth->>DB: Log security event
+        API-->>C: 403 {error: "Security verification required"}
+    end
+```
