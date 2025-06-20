@@ -1,0 +1,425 @@
+{
+  "summary": {
+    "totalSuites": 1,
+    "totalTests": 19,
+    "passed": 7,
+    "failed": 12,
+    "skipped": 0,
+    "duration": 502,
+    "passRate": "36.84",
+    "startTime": "2025-06-20T20:44:43.535Z",
+    "endTime": "2025-06-20T20:44:44.037Z",
+    "environment": "test"
+  },
+  "suites": [
+    {
+      "suite": "Authentication V2 - Flat Identity",
+      "status": "failed",
+      "tests": [
+        {
+          "name": "POST /auth/authenticate - Wallet auth with automatic profile creation",
+          "status": "passed",
+          "duration": 147.18337500095367,
+          "retries": 0
+        },
+        {
+          "name": "POST /auth/authenticate - Wallet auth with invalid signature",
+          "status": "passed",
+          "duration": 31.42179100215435,
+          "retries": 0
+        },
+        {
+          "name": "POST /auth/authenticate - Wallet auth with expired nonce",
+          "status": "failed",
+          "duration": 0.8335000015795231,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/authenticate - Wallet auth with message tampering",
+          "status": "passed",
+          "duration": 14.869249999523163,
+          "retries": 0
+        },
+        {
+          "name": "POST /auth/authenticate - Wallet auth with wrong domain",
+          "status": "failed",
+          "duration": 16.070374999195337,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/authenticate - Wallet auth replay attack prevention",
+          "status": "passed",
+          "duration": 22.3634580001235,
+          "retries": 0
+        },
+        {
+          "name": "POST /auth/authenticate - Email auth with automatic profile creation",
+          "status": "failed",
+          "duration": 68.87475099787116,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 404,
+            "statusText": "Not Found",
+            "data": {
+              "success": false,
+              "message": "No active verification code found for this email"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750452283837_7yvnn0m5j",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4865",
+              "x-ratelimit-reset": "2025-06-20T20:55:05.424Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "78",
+              "etag": "W/\"4e-DoINPouzxFLvtCSXudEPXqlAkkc\"",
+              "date": "Fri, 20 Jun 2025 20:44:43 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "get",
+              "url": "/api/v1/auth/email/dev/last-code?email=Randal10%40yahoo.com"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Email auth case insensitivity",
+          "status": "failed",
+          "duration": 61.53008400276303,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 404,
+            "statusText": "Not Found",
+            "data": {
+              "success": false,
+              "message": "No active verification code found for this email"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750452283899_jkulnodk7",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4863",
+              "x-ratelimit-reset": "2025-06-20T20:55:05.425Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "78",
+              "etag": "W/\"4e-DoINPouzxFLvtCSXudEPXqlAkkc\"",
+              "date": "Fri, 20 Jun 2025 20:44:43 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "get",
+              "url": "/api/v1/auth/email/dev/last-code?email=murray.fritsch71%40gmail.com"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Email auth with invalid code",
+          "status": "failed",
+          "duration": 2.775499999523163,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/authenticate - Google auth with automatic profile",
+          "status": "failed",
+          "duration": 2.293708000332117,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "Google authentication not yet implemented"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750452283905_dmiwysq8r",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4861",
+              "x-ratelimit-reset": "2025-06-20T20:55:05.424Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "69",
+              "etag": "W/\"45-V8gsw74atXNmem5P4DeL6oZAI7E\"",
+              "date": "Fri, 20 Jun 2025 20:44:43 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"google\",\"idToken\":\"mock_google_token\"}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Apple auth with automatic profile",
+          "status": "failed",
+          "duration": 1.9841660000383854,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "Apple authentication not yet implemented"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750452283907_jtz7lfio0",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4860",
+              "x-ratelimit-reset": "2025-06-20T20:55:05.425Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "68",
+              "etag": "W/\"44-c4Xq7ikBrA++Y1wTaV5V6GEOUGU\"",
+              "date": "Fri, 20 Jun 2025 20:44:43 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"apple\",\"idToken\":\"mock_apple_token\"}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Guest auth with automatic profile",
+          "status": "failed",
+          "duration": 2.479832999408245,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "Guest authentication not yet implemented"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750452283910_mwynj6u6i",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4859",
+              "x-ratelimit-reset": "2025-06-20T20:55:05.424Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "68",
+              "etag": "W/\"44-bPIRaqeJcEe0RFd8U7+evNpVeOw\"",
+              "date": "Fri, 20 Jun 2025 20:44:43 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"guest\"}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Auth with privacy mode selection",
+          "status": "passed",
+          "duration": 41.5177499987185,
+          "retries": 0
+        },
+        {
+          "name": "POST /auth/authenticate - Existing user returns all profiles",
+          "status": "failed",
+          "duration": 21.879291001707315,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "\nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750452283966_vvihrsqdh",
+              "stack": "PrismaClientValidationError: \nInvalid `prisma.user.findUnique()` invocation in\n/usr/src/app/src/middleware/auth.ts:59:36\n\n  56 const payload = verifyAccessToken(token);\n  57 \n  58 // Verify user exists (remove device requirement)\n→ 59 const user = await prisma.user.findUnique({\n       where: {\n         id: undefined,\n     ?   email?: String,\n     ?   AND?: UserWhereInput | UserWhereInput[],\n     ?   OR?: UserWhereInput[],\n     ?   NOT?: UserWhereInput | UserWhereInput[],\n     ?   hashedPassword?: StringNullableFilter | String | Null,\n     ?   emailVerified?: BoolFilter | Boolean,\n     ?   createdAt?: DateTimeFilter | DateTime,\n     ?   updatedAt?: DateTimeFilter | DateTime,\n     ?   authStrategies?: StringNullableFilter | String | Null,\n     ?   isGuest?: BoolFilter | Boolean,\n     ?   walletAddress?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabled?: BoolFilter | Boolean,\n     ?   twoFactorSecret?: StringNullableFilter | String | Null,\n     ?   twoFactorBackupCodes?: StringNullableFilter | String | Null,\n     ?   twoFactorEnabledAt?: DateTimeNullableFilter | DateTime | Null,\n     ?   blacklistedTokens?: BlacklistedTokenListRelationFilter,\n     ?   devices?: DeviceRegistrationListRelationFilter,\n     ?   emailVerifications?: EmailVerificationListRelationFilter,\n     ?   linkedAccounts?: LinkedAccountListRelationFilter,\n     ?   refreshTokens?: RefreshTokenListRelationFilter,\n     ?   smartProfiles?: SmartProfileListRelationFilter,\n     ?   socialProfiles?: SocialProfileListRelationFilter,\n     ?   dragOperations?: DragOperationListRelationFilter\n       }\n     })\n\nArgument `where` of type UserWhereUniqueInput needs at least one of `id` or `email` arguments. Available options are marked with ?.\n    at kn (/usr/src/app/node_modules/@prisma/client/runtime/library.js:29:1363)\n    at Zn.handleRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:7102)\n    at Zn.handleAndLogRequestError (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6784)\n    at Zn.request (/usr/src/app/node_modules/@prisma/client/runtime/library.js:121:6491)\n    at async l (/usr/src/app/node_modules/@prisma/client/runtime/library.js:130:9778)\n    at async authenticate (/usr/src/app/src/middleware/auth.ts:59:18)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750452283966_vvihrsqdh",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4850",
+              "x-ratelimit-reset": "2025-06-20T20:55:05.424Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "4161",
+              "etag": "W/\"1041-KMCzh4mv3a9b/cyDpUJL/bpDtRQ\"",
+              "date": "Fri, 20 Jun 2025 20:44:43 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v1/profiles",
+              "data": "{\"name\":\"Trading Profile\"}"
+            }
+          }
+        },
+        {
+          "name": "Authentication rate limiting",
+          "status": "failed",
+          "duration": 27.718709003180265,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/refresh - Token refresh with accountId",
+          "status": "passed",
+          "duration": 15.677666999399662,
+          "retries": 0
+        },
+        {
+          "name": "Complete V2 authentication flow test",
+          "status": "failed",
+          "duration": 12.728041999042034,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/authenticate - Invalid strategy",
+          "status": "failed",
+          "duration": 2.0114170014858246,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/authenticate - Missing required fields",
+          "status": "passed",
+          "duration": 3.1609999984502792,
+          "retries": 0
+        }
+      ],
+      "startTime": 1750452283535,
+      "duration": 502,
+      "passed": 7,
+      "failed": 12,
+      "skipped": 0
+    }
+  ],
+  "metrics": {
+    "avgResponseTime": 0,
+    "p50ResponseTime": 0,
+    "p95ResponseTime": 0,
+    "p99ResponseTime": 0,
+    "slowestEndpoints": [],
+    "requestsPerSecond": 0,
+    "errorRate": 0
+  },
+  "security": {
+    "vulnerabilities": [],
+    "passedChecks": [],
+    "failedChecks": [],
+    "riskScore": 0,
+    "compliance": {
+      "owasp": true,
+      "pci": true,
+      "gdpr": true,
+      "details": []
+    }
+  },
+  "recommendations": [
+    "High test failure rate (>10%) - review test stability and application bugs"
+  ],
+  "generatedAt": "2025-06-20T20:44:44.037Z"
+}

@@ -1,0 +1,125 @@
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant API as API Gateway
+    participant Auth as Auth Service
+    participant Profile as Profile Service
+    participant DB as Database
+    participant Session as Session Service
+
+    Note over C,Session: Automatic Profile Creation - New User
+    
+    C->>API: POST /api/v2/auth/authenticate<br/>{strategy: "email", ...}
+    API->>Auth: Process authentication
+    Auth->>DB: Create/Find Account
+    Auth->>Profile: Check existing profiles
+    Profile->>DB: Query ProfileAccount<br/>WHERE accountId = ...
+    
+    alt No Profiles Exist
+        Profile->>Session: Generate session wallet
+        Session-->>Profile: wallet address
+        Profile->>DB: Create SmartProfile<br/>{name: "My Smartprofile",<br/>address: sessionWallet}
+        Profile->>DB: Create ProfileAccount link
+        Profile->>DB: Set as primary profile
+    end
+    
+    Auth-->>C: 200 OK {account, profiles: [myProfile]}
+
+    Note over C,Session: Manual Profile Creation
+    
+    C->>API: POST /api/v2/profiles<br/>{name: "Work Profile"}
+    API->>Auth: Verify token & session
+    API->>Profile: Create profile request
+    Profile->>Session: Generate new session wallet
+    Session-->>Profile: wallet address
+    Profile->>DB: Create SmartProfile<br/>{name, address, createdBy}
+    Profile->>DB: Create ProfileAccount link
+    API-->>C: 201 Created {profile}
+
+    Note over C,Session: Profile Switching
+    
+    C->>API: POST /api/v2/auth/switch-profile/:id
+    API->>Auth: Verify token
+    Auth->>Profile: Check profile access
+    Profile->>DB: Verify ProfileAccount exists<br/>for current account
+    
+    alt Profile Accessible
+        Auth->>Session: Rotate session wallet
+        Session->>Session: Generate new wallet
+        Auth->>DB: Update AccountSession<br/>{activeProfileId, sessionWallet}
+        Auth->>Auth: Generate new tokens<br/>with new activeProfileId
+        API-->>C: 200 OK {tokens, activeProfile}
+    else Profile Not Accessible
+        API-->>C: 404 {error: "Profile not found"}
+    end
+
+    Note over C,Session: Profile Update
+    
+    C->>API: PUT /api/v2/profiles/:id<br/>{name: "Updated Name", metadata: {...}}
+    API->>Auth: Verify token
+    API->>Profile: Update request
+    Profile->>DB: Check ownership/access
+    
+    alt Has Write Access
+        Profile->>DB: Update SmartProfile
+        API-->>C: 200 OK {profile}
+    else Read-Only Access
+        API-->>C: 403 {error: "Cannot modify"}
+    end
+
+    Note over C,Session: Profile Deletion
+    
+    C->>API: DELETE /api/v2/profiles/:id
+    API->>Auth: Verify token
+    API->>Profile: Delete request
+    Profile->>DB: Count user profiles
+    
+    alt Multiple Profiles Exist
+        Profile->>DB: Check if primary
+        alt Not Primary
+            Profile->>DB: Delete SmartProfile
+            Profile->>DB: Delete ProfileAccount links
+            Profile->>DB: Delete related data
+            API-->>C: 200 OK {message: "Deleted"}
+        else Is Primary
+            Profile->>DB: Find non-primary profile
+            Profile->>DB: Set new primary
+            Profile->>DB: Delete old primary
+            API-->>C: 200 OK {message: "Deleted"}
+        end
+    else Last Profile
+        API-->>C: 400 {error: "Cannot delete last profile"}
+    end
+
+    Note over C,Session: List Accessible Profiles
+    
+    C->>API: GET /api/v2/profiles
+    API->>Auth: Extract account & privacy mode
+    API->>Profile: Get accessible profiles
+    Profile->>DB: Get direct profiles<br/>FROM ProfileAccount
+    
+    alt Privacy Mode = "linked"
+        Profile->>DB: Get linked accounts<br/>via IdentityLink
+        Profile->>DB: Get profiles from<br/>linked accounts
+    else Privacy Mode = "partial"
+        Profile->>DB: Get linked with permissions
+    else Privacy Mode = "isolated"
+        Note over Profile,DB: Only direct profiles
+    end
+    
+    Profile->>Profile: Deduplicate & sort
+    API-->>C: 200 OK {data: profiles[]}
+
+    Note over C,Session: Session Wallet Rotation
+    
+    C->>API: Any authenticated request
+    API->>Auth: Check wallet rotation needed
+    
+    alt Rotation Needed (profile switch/security)
+        Auth->>Session: Request new wallet
+        Session->>Session: Generate deterministic wallet
+        Session->>DB: Store encrypted mnemonic
+        Auth->>DB: Update session wallet
+        Note over Auth: Include in token/response
+    end
+```

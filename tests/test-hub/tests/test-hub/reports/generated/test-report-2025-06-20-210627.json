@@ -1,0 +1,1642 @@
+{
+  "summary": {
+    "totalSuites": 5,
+    "totalTests": 78,
+    "passed": 23,
+    "failed": 55,
+    "skipped": 0,
+    "duration": 3442,
+    "passRate": "29.49",
+    "startTime": "2025-06-20T21:06:23.953Z",
+    "endTime": "2025-06-20T21:06:27.396Z",
+    "environment": "test"
+  },
+  "suites": [
+    {
+      "suite": "Authentication V2 - Flat Identity",
+      "status": "failed",
+      "tests": [
+        {
+          "name": "POST /auth/authenticate - Wallet auth with automatic profile creation",
+          "status": "passed",
+          "duration": 135.96849999949336,
+          "retries": 0
+        },
+        {
+          "name": "POST /auth/authenticate - Wallet auth with invalid signature",
+          "status": "failed",
+          "duration": 30.17858299985528,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/authenticate - Wallet auth with expired nonce",
+          "status": "failed",
+          "duration": 0.6959169991314411,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/authenticate - Wallet auth with message tampering",
+          "status": "passed",
+          "duration": 14.190792001783848,
+          "retries": 0
+        },
+        {
+          "name": "POST /auth/authenticate - Wallet auth with wrong domain",
+          "status": "failed",
+          "duration": 17.61108300089836,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/authenticate - Wallet auth replay attack prevention",
+          "status": "passed",
+          "duration": 22.054666999727488,
+          "retries": 0
+        },
+        {
+          "name": "POST /auth/authenticate - Email auth with automatic profile creation",
+          "status": "failed",
+          "duration": 70.43991599977016,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 404,
+            "statusText": "Not Found",
+            "data": {
+              "success": false,
+              "message": "No active verification code found for this email"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750453584243_3uizyabhz",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4886",
+              "x-ratelimit-reset": "2025-06-20T21:19:10.293Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "78",
+              "etag": "W/\"4e-DoINPouzxFLvtCSXudEPXqlAkkc\"",
+              "date": "Fri, 20 Jun 2025 21:06:24 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "get",
+              "url": "/api/v1/auth/email/dev/last-code?email=Brody_Keeling22%40gmail.com"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Email auth case insensitivity",
+          "status": "failed",
+          "duration": 185.91612499952316,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 404,
+            "statusText": "Not Found",
+            "data": {
+              "success": false,
+              "message": "No active verification code found for this email"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750453584430_h0e8mzac4",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4881",
+              "x-ratelimit-reset": "2025-06-20T21:19:10.293Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "78",
+              "etag": "W/\"4e-DoINPouzxFLvtCSXudEPXqlAkkc\"",
+              "date": "Fri, 20 Jun 2025 21:06:24 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "get",
+              "url": "/api/v1/auth/email/dev/last-code?email=DOMENICO_DIETRICH26%40GMAIL.COM"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Email auth with invalid code",
+          "status": "failed",
+          "duration": 3.138875000178814,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/authenticate - Google auth with automatic profile",
+          "status": "failed",
+          "duration": 3.7261670008301735,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "Google authentication not yet implemented"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750453584436_ei4zzum79",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4879",
+              "x-ratelimit-reset": "2025-06-20T21:19:10.293Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "69",
+              "etag": "W/\"45-V8gsw74atXNmem5P4DeL6oZAI7E\"",
+              "date": "Fri, 20 Jun 2025 21:06:24 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"google\",\"idToken\":\"mock_google_token\"}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Apple auth with automatic profile",
+          "status": "failed",
+          "duration": 2.184792000800371,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "Apple authentication not yet implemented"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750453584440_0ikp2scrv",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4878",
+              "x-ratelimit-reset": "2025-06-20T21:19:10.294Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "68",
+              "etag": "W/\"44-c4Xq7ikBrA++Y1wTaV5V6GEOUGU\"",
+              "date": "Fri, 20 Jun 2025 21:06:24 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"apple\",\"idToken\":\"mock_apple_token\"}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Guest auth with automatic profile",
+          "status": "failed",
+          "duration": 2.028625000268221,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "Guest authentication not yet implemented"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750453584443_wxryzu182",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4877",
+              "x-ratelimit-reset": "2025-06-20T21:19:10.293Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "68",
+              "etag": "W/\"44-bPIRaqeJcEe0RFd8U7+evNpVeOw\"",
+              "date": "Fri, 20 Jun 2025 21:06:24 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"guest\"}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Auth with privacy mode selection",
+          "status": "passed",
+          "duration": 41.01712499931455,
+          "retries": 0
+        },
+        {
+          "name": "POST /auth/authenticate - Existing user returns all profiles",
+          "status": "failed",
+          "duration": 18.449458997696638,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 400,
+            "statusText": "Bad Request",
+            "data": {
+              "success": false,
+              "error": "clientShare is required"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750453584499_818p33pk8",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4868",
+              "x-ratelimit-reset": "2025-06-20T21:19:10.293Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "51",
+              "etag": "W/\"33-+w+RejZSt0SrKdYc7jft3JKcTcs\"",
+              "date": "Fri, 20 Jun 2025 21:06:24 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v1/profiles",
+              "data": "{\"name\":\"Trading Profile\"}"
+            }
+          }
+        },
+        {
+          "name": "Authentication rate limiting",
+          "status": "failed",
+          "duration": 27.934374999254942,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/refresh - Token refresh with accountId",
+          "status": "passed",
+          "duration": 18.427958000451326,
+          "retries": 0
+        },
+        {
+          "name": "Complete V2 authentication flow test",
+          "status": "failed",
+          "duration": 10.125665999948978,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/authenticate - Invalid strategy",
+          "status": "failed",
+          "duration": 2.412500001490116,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/authenticate - Missing required fields",
+          "status": "passed",
+          "duration": 3.734375,
+          "retries": 0
+        }
+      ],
+      "startTime": 1750453583953,
+      "duration": 614,
+      "passed": 6,
+      "failed": 13,
+      "skipped": 0
+    },
+    {
+      "suite": "Account Linking - Flat Identity",
+      "status": "failed",
+      "tests": [
+        {
+          "name": "POST /link-accounts - Link wallet to email account",
+          "status": "failed",
+          "duration": 117.73550000041723,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 401,
+            "statusText": "Unauthorized",
+            "data": {
+              "success": false,
+              "error": "Invalid or expired verification code"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750453584627_4i07ibgcp",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4843",
+              "x-ratelimit-reset": "2025-06-20T21:19:10.293Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "64",
+              "etag": "W/\"40-6rqCG9QoUHug/E5MBswYlQBwa2g\"",
+              "date": "Fri, 20 Jun 2025 21:06:24 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"email\",\"email\":\"Emmett93@yahoo.com\",\"verificationCode\":\"123456\"}"
+            }
+          }
+        },
+        {
+          "name": "POST /link-accounts - Link social to wallet account",
+          "status": "passed",
+          "duration": 55.623250000178814,
+          "retries": 0
+        },
+        {
+          "name": "POST /link-accounts - Link multiple wallets",
+          "status": "failed",
+          "duration": 36.38933299854398,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "Account linking with different privacy modes",
+          "status": "passed",
+          "duration": 30.84775000065565,
+          "retries": 0
+        },
+        {
+          "name": "PUT /link-privacy - Update privacy mode",
+          "status": "passed",
+          "duration": 27.054875001311302,
+          "retries": 0
+        },
+        {
+          "name": "GET /identity-graph - Basic graph retrieval",
+          "status": "failed",
+          "duration": 15.720166999846697,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "Identity graph with privacy boundaries",
+          "status": "failed",
+          "duration": 42.483666997402906,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "Identity graph transitive relationships",
+          "status": "failed",
+          "duration": 131.025582998991,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 401,
+            "statusText": "Unauthorized",
+            "data": {
+              "success": false,
+              "error": "Invalid or expired verification code"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750453584968_whik12h6w",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4808",
+              "x-ratelimit-reset": "2025-06-20T21:19:10.293Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "64",
+              "etag": "W/\"40-6rqCG9QoUHug/E5MBswYlQBwa2g\"",
+              "date": "Fri, 20 Jun 2025 21:06:25 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"email\",\"email\":\"Kamron41@yahoo.com\",\"verificationCode\":\"123456\"}"
+            }
+          }
+        },
+        {
+          "name": "Profile access after linking accounts",
+          "status": "failed",
+          "duration": 14.565790999680758,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 400,
+            "statusText": "Bad Request",
+            "data": {
+              "success": false,
+              "error": "clientShare is required"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750453585038_kv0nvh5a3",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4805",
+              "x-ratelimit-reset": "2025-06-20T21:19:10.293Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "51",
+              "etag": "W/\"33-+w+RejZSt0SrKdYc7jft3JKcTcs\"",
+              "date": "Fri, 20 Jun 2025 21:06:25 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v1/profiles",
+              "data": "{\"name\":\"Gaming Profile\"}"
+            }
+          }
+        },
+        {
+          "name": "POST /link-accounts - Prevent self-linking",
+          "status": "failed",
+          "duration": 18.38783299922943,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /link-accounts - Prevent duplicate linking",
+          "status": "failed",
+          "duration": 33.86695799976587,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /link-accounts - Circular linking prevention",
+          "status": "passed",
+          "duration": 62.125709000974894,
+          "retries": 0
+        },
+        {
+          "name": "POST /link-accounts - Invalid account type",
+          "status": "failed",
+          "duration": 21.099500000476837,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "Large identity graph performance",
+          "status": "failed",
+          "duration": 87.15570900216699,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /switch-profile - Switch between accessible profiles",
+          "status": "failed",
+          "duration": 20.216333001852036,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 400,
+            "statusText": "Bad Request",
+            "data": {
+              "success": false,
+              "error": "clientShare is required"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750453585281_4tc862owc",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4767",
+              "x-ratelimit-reset": "2025-06-20T21:19:10.293Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "51",
+              "etag": "W/\"33-+w+RejZSt0SrKdYc7jft3JKcTcs\"",
+              "date": "Fri, 20 Jun 2025 21:06:25 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v1/profiles",
+              "data": "{\"name\":\"Work Profile\"}"
+            }
+          }
+        },
+        {
+          "name": "POST /switch-profile - Cannot switch to inaccessible profile",
+          "status": "failed",
+          "duration": 47.43854200094938,
+          "retries": 0,
+          "error": {}
+        }
+      ],
+      "startTime": 1750453584567,
+      "duration": 765,
+      "passed": 4,
+      "failed": 12,
+      "skipped": 0
+    },
+    {
+      "suite": "Profile Management V2 - Flat Identity",
+      "status": "failed",
+      "tests": [
+        {
+          "name": "Automatic \"My Smartprofile\" creation on first auth",
+          "status": "failed",
+          "duration": 11.595042001456022,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "Session wallet creation modes",
+          "status": "passed",
+          "duration": 0.1180419996380806,
+          "retries": 0
+        },
+        {
+          "name": "Profile naming conflict handling",
+          "status": "failed",
+          "duration": 15.800166998058558,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "Profile access based on identity graph",
+          "status": "failed",
+          "duration": 13.240458000451326,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 400,
+            "statusText": "Bad Request",
+            "data": {
+              "success": false,
+              "error": "clientShare is required"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750453585372_w240pkymh",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4754",
+              "x-ratelimit-reset": "2025-06-20T21:19:10.293Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "51",
+              "etag": "W/\"33-+w+RejZSt0SrKdYc7jft3JKcTcs\"",
+              "date": "Fri, 20 Jun 2025 21:06:25 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v1/profiles",
+              "data": "{\"name\":\"Business Profile\"}"
+            }
+          }
+        },
+        {
+          "name": "Privacy mode enforcement on profile access",
+          "status": "passed",
+          "duration": 36.24883399903774,
+          "retries": 0
+        },
+        {
+          "name": "POST /profiles - Create additional profiles",
+          "status": "failed",
+          "duration": 13.727708999067545,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 400,
+            "statusText": "Bad Request",
+            "data": {
+              "success": false,
+              "error": "clientShare is required"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750453585422_zof9linir",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4745",
+              "x-ratelimit-reset": "2025-06-20T21:19:10.294Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "51",
+              "etag": "W/\"33-+w+RejZSt0SrKdYc7jft3JKcTcs\"",
+              "date": "Fri, 20 Jun 2025 21:06:25 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v1/profiles",
+              "data": "{\"name\":\"Trading Profile\"}"
+            }
+          }
+        },
+        {
+          "name": "PUT /profiles/:id - Update profile metadata",
+          "status": "passed",
+          "duration": 15.476124998182058,
+          "retries": 0
+        },
+        {
+          "name": "DELETE /profiles/:id - Delete profile with reassignment",
+          "status": "failed",
+          "duration": 14.64104200154543,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 400,
+            "statusText": "Bad Request",
+            "data": {
+              "success": false,
+              "error": "clientShare is required"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750453585453_3phvktue5",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4739",
+              "x-ratelimit-reset": "2025-06-20T21:19:10.293Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "51",
+              "etag": "W/\"33-+w+RejZSt0SrKdYc7jft3JKcTcs\"",
+              "date": "Fri, 20 Jun 2025 21:06:25 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v1/profiles",
+              "data": "{\"name\":\"Temporary Profile\"}"
+            }
+          }
+        },
+        {
+          "name": "Cannot delete last profile",
+          "status": "failed",
+          "duration": 19.143125001341105,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "Profile switching updates session state",
+          "status": "failed",
+          "duration": 16.17466700077057,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 400,
+            "statusText": "Bad Request",
+            "data": {
+              "success": false,
+              "error": "clientShare is required"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750453585488_ps5slrnzp",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4733",
+              "x-ratelimit-reset": "2025-06-20T21:19:10.293Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "51",
+              "etag": "W/\"33-+w+RejZSt0SrKdYc7jft3JKcTcs\"",
+              "date": "Fri, 20 Jun 2025 21:06:25 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v1/profiles",
+              "data": "{\"name\":\"Alt Profile\"}"
+            }
+          }
+        },
+        {
+          "name": "Profile switching persists across sessions",
+          "status": "failed",
+          "duration": 15.077624998986721,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 400,
+            "statusText": "Bad Request",
+            "data": {
+              "success": false,
+              "error": "clientShare is required"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750453585502_1hlo0affx",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4730",
+              "x-ratelimit-reset": "2025-06-20T21:19:10.293Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "51",
+              "etag": "W/\"33-+w+RejZSt0SrKdYc7jft3JKcTcs\"",
+              "date": "Fri, 20 Jun 2025 21:06:25 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v1/profiles",
+              "data": "{\"name\":\"Persistent Profile\"}"
+            }
+          }
+        },
+        {
+          "name": "Linked accounts share profiles correctly",
+          "status": "failed",
+          "duration": 18.875624999403954,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 400,
+            "statusText": "Bad Request",
+            "data": {
+              "success": false,
+              "error": "clientShare is required"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750453585521_sf22urmku",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4727",
+              "x-ratelimit-reset": "2025-06-20T21:19:10.294Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "51",
+              "etag": "W/\"33-+w+RejZSt0SrKdYc7jft3JKcTcs\"",
+              "date": "Fri, 20 Jun 2025 21:06:25 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v1/profiles",
+              "data": "{\"name\":\"Shared Profile 1\"}"
+            }
+          }
+        },
+        {
+          "name": "Profile operations across linked accounts",
+          "status": "failed",
+          "duration": 34.516166001558304,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 400,
+            "statusText": "Bad Request",
+            "data": {
+              "success": false,
+              "error": "clientShare is required"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750453585557_lblexgpnj",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4723",
+              "x-ratelimit-reset": "2025-06-20T21:19:10.293Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "51",
+              "etag": "W/\"33-+w+RejZSt0SrKdYc7jft3JKcTcs\"",
+              "date": "Fri, 20 Jun 2025 21:06:25 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v1/profiles",
+              "data": "{\"name\":\"Cross-Account Profile\"}"
+            }
+          }
+        },
+        {
+          "name": "Profile operations on non-existent profile",
+          "status": "failed",
+          "duration": 24.357790999114513,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "Profile operations performance",
+          "status": "failed",
+          "duration": 18.230749998241663,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 400,
+            "statusText": "Bad Request",
+            "data": {
+              "success": false,
+              "error": "clientShare is required"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750453585599_2so55zjvl",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4715",
+              "x-ratelimit-reset": "2025-06-20T21:19:10.293Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "51",
+              "etag": "W/\"33-+w+RejZSt0SrKdYc7jft3JKcTcs\"",
+              "date": "Fri, 20 Jun 2025 21:06:25 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v1/profiles",
+              "data": "{\"name\":\"Performance Test 0\"}"
+            }
+          }
+        }
+      ],
+      "startTime": 1750453585332,
+      "duration": 270,
+      "passed": 3,
+      "failed": 12,
+      "skipped": 0
+    },
+    {
+      "suite": "Session Management - Flat Identity",
+      "status": "failed",
+      "tests": [
+        {
+          "name": "Session creation with account-based auth",
+          "status": "failed",
+          "duration": 127.95441699773073,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 401,
+            "statusText": "Unauthorized",
+            "data": {
+              "success": false,
+              "error": "Invalid or expired verification code"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750453585672_f9x385hrt",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4711",
+              "x-ratelimit-reset": "2025-06-20T21:19:10.293Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "64",
+              "etag": "W/\"40-6rqCG9QoUHug/E5MBswYlQBwa2g\"",
+              "date": "Fri, 20 Jun 2025 21:06:25 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"email\",\"email\":\"Murray_Wisozk@yahoo.com\",\"verificationCode\":\"123456\"}"
+            }
+          }
+        },
+        {
+          "name": "Session privacy modes",
+          "status": "failed",
+          "duration": 40.54016599804163,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "Token generation with accountId",
+          "status": "passed",
+          "duration": 12.233041997998953,
+          "retries": 0
+        },
+        {
+          "name": "Token refresh maintains session context",
+          "status": "failed",
+          "duration": 13.289583999663591,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 400,
+            "statusText": "Bad Request",
+            "data": {
+              "success": false,
+              "error": "clientShare is required"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750453585795_507bkpfhx",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4700",
+              "x-ratelimit-reset": "2025-06-20T21:19:10.293Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "51",
+              "etag": "W/\"33-+w+RejZSt0SrKdYc7jft3JKcTcs\"",
+              "date": "Fri, 20 Jun 2025 21:06:25 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v1/profiles",
+              "data": "{\"name\":\"Refresh Test Profile\"}"
+            }
+          }
+        },
+        {
+          "name": "Token expiration handling",
+          "status": "failed",
+          "duration": 15.322875000536442,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "Multiple concurrent sessions",
+          "status": "failed",
+          "duration": 50.80229099839926,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "Unexpected token w in JSON at position 0"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750453585857_5143390zf",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4690",
+              "x-ratelimit-reset": "2025-06-20T21:19:10.293Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "68",
+              "etag": "W/\"44-63vBkdXIo7nmoTJqaiSF73HFPNM\"",
+              "date": "Fri, 20 Jun 2025 21:06:25 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "get",
+              "url": "/api/v1/auth/me"
+            }
+          }
+        },
+        {
+          "name": "Session isolation between accounts",
+          "status": "passed",
+          "duration": 29.267540998756886,
+          "retries": 0
+        },
+        {
+          "name": "Device tracking with account sessions",
+          "status": "failed",
+          "duration": 33.03204100206494,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "DELETE /devices/:id - Revoke specific session",
+          "status": "failed",
+          "duration": 38.81291699782014,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "Session invalidation on account unlink",
+          "status": "passed",
+          "duration": 30.85225000232458,
+          "retries": 0
+        },
+        {
+          "name": "Logout and logout-all with account sessions",
+          "status": "failed",
+          "duration": 35.63383400067687,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "Backward compatibility with userId tokens",
+          "status": "passed",
+          "duration": 5.291166998445988,
+          "retries": 0
+        },
+        {
+          "name": "Session operations performance",
+          "status": "failed",
+          "duration": 18.869375001639128,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "Unexpected token w in JSON at position 0"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750453586052_oh86e85wp",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4653",
+              "x-ratelimit-reset": "2025-06-20T21:19:10.293Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "68",
+              "etag": "W/\"44-63vBkdXIo7nmoTJqaiSF73HFPNM\"",
+              "date": "Fri, 20 Jun 2025 21:06:26 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "get",
+              "url": "/api/v1/auth/me"
+            }
+          }
+        }
+      ],
+      "startTime": 1750453585602,
+      "duration": 454,
+      "passed": 4,
+      "failed": 9,
+      "skipped": 0
+    },
+    {
+      "suite": "Flat Identity Security",
+      "status": "failed",
+      "tests": [
+        {
+          "name": "Prevent account takeover through linking",
+          "status": "failed",
+          "duration": 25.557000000029802,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "Prevent email takeover through pre-registration",
+          "status": "failed",
+          "duration": 139.75041699782014,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "Session token binding to account",
+          "status": "failed",
+          "duration": 23.726541999727488,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "Session token replay prevention",
+          "status": "failed",
+          "duration": 15.824750002473593,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "Isolated account privacy enforcement",
+          "status": "failed",
+          "duration": 13.003750000149012,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 400,
+            "statusText": "Bad Request",
+            "data": {
+              "success": false,
+              "error": "clientShare is required"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750453586275_wqkeuebu3",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4632",
+              "x-ratelimit-reset": "2025-06-20T21:19:10.293Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "51",
+              "etag": "W/\"33-+w+RejZSt0SrKdYc7jft3JKcTcs\"",
+              "date": "Fri, 20 Jun 2025 21:06:26 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v1/profiles",
+              "data": "{\"name\":\"Private Trading Strategy\"}"
+            }
+          }
+        },
+        {
+          "name": "Partial privacy mode selective sharing",
+          "status": "failed",
+          "duration": 12.371458999812603,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 400,
+            "statusText": "Bad Request",
+            "data": {
+              "success": false,
+              "error": "clientShare is required"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750453586288_vweo4ulxw",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4629",
+              "x-ratelimit-reset": "2025-06-20T21:19:10.293Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "51",
+              "etag": "W/\"33-+w+RejZSt0SrKdYc7jft3JKcTcs\"",
+              "date": "Fri, 20 Jun 2025 21:06:26 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v1/profiles",
+              "data": "{\"name\":\"Public Profile\"}"
+            }
+          }
+        },
+        {
+          "name": "Rate limiting tracks by account not IP",
+          "status": "failed",
+          "duration": 890.1309590004385,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "Audit logging for security events",
+          "status": "passed",
+          "duration": 29.52004200220108,
+          "retries": 0
+        },
+        {
+          "name": "JWT validation and security",
+          "status": "passed",
+          "duration": 18.8165830001235,
+          "retries": 0
+        },
+        {
+          "name": "Prevent cross-account data leakage",
+          "status": "failed",
+          "duration": 25.339207999408245,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 404,
+            "statusText": "Not Found",
+            "data": {
+              "success": false,
+              "error": "Route POST /api/v1/apps not found",
+              "code": "NOT_FOUND_ERROR",
+              "requestId": "req_1750453587242_5xnrgmfui"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750453587242_5xnrgmfui",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4596",
+              "x-ratelimit-reset": "2025-06-20T21:19:10.293Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "128",
+              "etag": "W/\"80-DErLZx+/8mJ6ykMsoSyRpKyNUKY\"",
+              "date": "Fri, 20 Jun 2025 21:06:27 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v1/apps",
+              "data": "{\"profileId\":\"cmc57x21t0009mplg7gqzx9sf\",\"appUrl\":\"https://secret-trading-app.com\",\"appName\":\"Secret Strategy\"}"
+            }
+          }
+        },
+        {
+          "name": "SIWE replay attack prevention",
+          "status": "passed",
+          "duration": 49.30791600048542,
+          "retries": 0
+        },
+        {
+          "name": "SIWE message expiration",
+          "status": "passed",
+          "duration": 10.44020900130272,
+          "retries": 0
+        },
+        {
+          "name": "SIWE domain validation",
+          "status": "failed",
+          "duration": 15.687291000038385,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "Privacy mode downgrade protection",
+          "status": "passed",
+          "duration": 24.49329200014472,
+          "retries": 0
+        },
+        {
+          "name": "Input validation and sanitization",
+          "status": "passed",
+          "duration": 40.84745800122619,
+          "retries": 0
+        }
+      ],
+      "startTime": 1750453586056,
+      "duration": 1339,
+      "passed": 6,
+      "failed": 9,
+      "skipped": 0
+    }
+  ],
+  "metrics": {
+    "avgResponseTime": 0,
+    "p50ResponseTime": 0,
+    "p95ResponseTime": 0,
+    "p99ResponseTime": 0,
+    "slowestEndpoints": [],
+    "requestsPerSecond": 0,
+    "errorRate": 0
+  },
+  "security": {
+    "vulnerabilities": [],
+    "passedChecks": [],
+    "failedChecks": [],
+    "riskScore": 0,
+    "compliance": {
+      "owasp": true,
+      "pci": true,
+      "gdpr": true,
+      "details": []
+    }
+  },
+  "recommendations": [
+    "High test failure rate (>10%) - review test stability and application bugs"
+  ],
+  "generatedAt": "2025-06-20T21:06:27.396Z"
+}

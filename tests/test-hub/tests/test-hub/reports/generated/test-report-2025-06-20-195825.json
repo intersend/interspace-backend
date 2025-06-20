@@ -1,0 +1,59 @@
+{
+  "summary": {
+    "totalSuites": 1,
+    "totalTests": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped": 0,
+    "duration": 141,
+    "passRate": "0.00",
+    "startTime": "2025-06-20T19:58:25.214Z",
+    "endTime": "2025-06-20T19:58:25.355Z",
+    "environment": "test"
+  },
+  "suites": [
+    {
+      "suite": "Authentication V2 - Flat Identity",
+      "status": "failed",
+      "tests": [
+        {
+          "name": "POST /auth/authenticate - Wallet auth with automatic profile creation",
+          "status": "failed",
+          "duration": 135.4994580000639,
+          "retries": 0,
+          "error": {}
+        }
+      ],
+      "startTime": 1750449505214,
+      "duration": 141,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0
+    }
+  ],
+  "metrics": {
+    "avgResponseTime": 0,
+    "p50ResponseTime": 0,
+    "p95ResponseTime": 0,
+    "p99ResponseTime": 0,
+    "slowestEndpoints": [],
+    "requestsPerSecond": 0,
+    "errorRate": 0
+  },
+  "security": {
+    "vulnerabilities": [],
+    "passedChecks": [],
+    "failedChecks": [],
+    "riskScore": 0,
+    "compliance": {
+      "owasp": true,
+      "pci": true,
+      "gdpr": true,
+      "details": []
+    }
+  },
+  "recommendations": [
+    "High test failure rate (>10%) - review test stability and application bugs"
+  ],
+  "generatedAt": "2025-06-20T19:58:25.356Z"
+}

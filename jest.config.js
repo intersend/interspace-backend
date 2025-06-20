@@ -38,5 +38,9 @@ module.exports = {
       diagnostics: false
     }]
   },
-  testTimeout: 30000
+  testTimeout: 30000,
+  // Run tests sequentially to avoid database deadlocks
+  maxWorkers: 1,
+  // Disable parallel runs within test files
+  testRunner: 'jest-circus/runner'
 };

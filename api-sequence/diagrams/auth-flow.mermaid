@@ -1,0 +1,90 @@
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant API as API Gateway
+    participant Auth as Auth Service
+    participant DB as Database
+    participant Email as Email Service
+    participant Session as Session Service
+
+    Note over C,Session: Email Authentication Flow - New User
+    
+    C->>API: POST /api/v2/auth/send-email-code<br/>{email: "user@example.com"}
+    API->>Auth: Validate & normalize email
+    Auth->>DB: Check rate limit (3/hour)
+    Auth->>Auth: Generate 6-digit code
+    Auth->>Auth: Hash code with bcrypt
+    Auth->>DB: Store EmailVerification<br/>{email, hashedCode, expiresAt}
+    Auth->>Email: Send verification email
+    API-->>C: 200 OK {success: true}
+
+    Note over C,API: User receives email with code
+    
+    C->>API: POST /api/v2/auth/authenticate<br/>{strategy: "email", email, code}
+    API->>Auth: Process authentication
+    Auth->>DB: Find EmailVerification records
+    Auth->>Auth: Verify code (bcrypt.compare)
+    
+    alt Invalid Code
+        Auth-->>C: 401 {error: "Invalid code"}
+        Auth->>DB: Increment attempts
+        Auth->>DB: Log security event
+    else Valid Code
+        Auth->>DB: Delete EmailVerification
+        Auth->>DB: Create/Find Account<br/>{type: "email", verified: true}
+        Auth->>Session: Create SessionWallet
+        Auth->>DB: Create SmartProfile<br/>"My Smartprofile"
+        Auth->>DB: Create ProfileAccount link
+        Auth->>DB: Create AccountSession
+        Auth->>Auth: Generate JWT tokens
+        Auth->>DB: Audit log success
+        API-->>C: 200 OK {account, profiles, tokens, isNewUser: true}
+    end
+
+    Note over C,Session: Wallet (SIWE) Authentication Flow
+    
+    C->>API: GET /api/v1/siwe/nonce
+    API->>Auth: Generate nonce
+    Auth->>DB: Store nonce (5min TTL)
+    API-->>C: 200 OK {nonce}
+    
+    C->>C: Create & sign SIWE message
+    
+    C->>API: POST /api/v2/auth/authenticate<br/>{strategy: "wallet", address, message, signature}
+    API->>Auth: Verify SIWE
+    Auth->>Auth: Verify signature
+    Auth->>DB: Verify nonce validity
+    Auth->>Auth: Extract address from signature
+    
+    alt Invalid Signature
+        Auth-->>C: 401 {error: "Invalid signature"}
+        Auth->>DB: Log security event
+    else Valid Signature
+        Auth->>DB: Create/Find Account<br/>{type: "wallet", verified: true}
+        Auth->>Session: Create profile if new
+        Auth->>DB: Create session & tokens
+        API-->>C: 200 OK {account, profiles, tokens}
+    end
+
+    Note over C,Session: Token Refresh Flow
+    
+    C->>API: POST /api/v2/auth/refresh<br/>{refreshToken}
+    API->>Auth: Verify refresh token
+    Auth->>Auth: Check signature & expiry
+    Auth->>DB: Check if blacklisted
+    
+    alt Invalid Token
+        Auth-->>C: 401 {error: "Invalid refresh token"}
+    else Valid Token
+        Auth->>Auth: Generate new token pair
+        API-->>C: 200 OK {accessToken, refreshToken}
+    end
+
+    Note over C,Session: Logout Flow
+    
+    C->>API: POST /api/v2/auth/logout<br/>Authorization: Bearer token
+    API->>Auth: Process logout
+    Auth->>DB: Delete AccountSession
+    Auth->>DB: Blacklist access token
+    API-->>C: 200 OK {message: "Logged out"}
+```

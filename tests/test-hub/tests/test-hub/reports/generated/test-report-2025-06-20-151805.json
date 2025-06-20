@@ -1,0 +1,1072 @@
+{
+  "summary": {
+    "totalSuites": 5,
+    "totalTests": 78,
+    "passed": 2,
+    "failed": 76,
+    "skipped": 0,
+    "duration": 346,
+    "passRate": "2.56",
+    "startTime": "2025-06-20T19:18:05.708Z",
+    "endTime": "2025-06-20T19:18:05.807Z",
+    "environment": "test"
+  },
+  "suites": [
+    {
+      "suite": "Account Linking - Flat Identity",
+      "status": "failed",
+      "tests": [
+        {
+          "name": "POST /link-accounts - Link wallet to email account",
+          "status": "failed",
+          "duration": 15.101999998092651,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/send-email-code",
+              "data": "{\"email\":\"Presley.Rogahn@yahoo.com\"}"
+            }
+          }
+        },
+        {
+          "name": "POST /link-accounts - Link social to wallet account",
+          "status": "failed",
+          "duration": 1.49795800447464,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "POST /link-accounts - Link multiple wallets",
+          "status": "failed",
+          "duration": 0.9139589667320251,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Account linking with different privacy modes",
+          "status": "failed",
+          "duration": 0.5835840106010437,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "PUT /link-privacy - Update privacy mode",
+          "status": "failed",
+          "duration": 0.7077919840812683,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "GET /identity-graph - Basic graph retrieval",
+          "status": "failed",
+          "duration": 0.6131670475006104,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Identity graph with privacy boundaries",
+          "status": "failed",
+          "duration": 0.5338330268859863,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Identity graph transitive relationships",
+          "status": "failed",
+          "duration": 0.5735840201377869,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Profile access after linking accounts",
+          "status": "failed",
+          "duration": 0.8345420360565186,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "POST /link-accounts - Prevent self-linking",
+          "status": "failed",
+          "duration": 0.9282079935073853,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "POST /link-accounts - Prevent duplicate linking",
+          "status": "failed",
+          "duration": 0.7473750114440918,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "POST /link-accounts - Circular linking prevention",
+          "status": "failed",
+          "duration": 0.8566659688949585,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "POST /link-accounts - Invalid account type",
+          "status": "failed",
+          "duration": 0.9220420122146606,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Large identity graph performance",
+          "status": "failed",
+          "duration": 0.8474169969558716,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "POST /switch-profile - Switch between accessible profiles",
+          "status": "failed",
+          "duration": 0.5353749990463257,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "POST /switch-profile - Cannot switch to inaccessible profile",
+          "status": "failed",
+          "duration": 0.5559999942779541,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        }
+      ],
+      "startTime": 1750447085708,
+      "duration": 30,
+      "passed": 0,
+      "failed": 16,
+      "skipped": 0
+    },
+    {
+      "suite": "Profile Management V2 - Flat Identity",
+      "status": "failed",
+      "tests": [
+        {
+          "name": "Automatic \"My Smartprofile\" creation on first auth",
+          "status": "failed",
+          "duration": 0.9433749914169312,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Session wallet creation modes",
+          "status": "passed",
+          "duration": 0.042291998863220215,
+          "retries": 0
+        },
+        {
+          "name": "Profile naming conflict handling",
+          "status": "failed",
+          "duration": 0.46033304929733276,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Profile access based on identity graph",
+          "status": "failed",
+          "duration": 0.6526669859886169,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Privacy mode enforcement on profile access",
+          "status": "failed",
+          "duration": 0.7929999828338623,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "POST /profiles - Create additional profiles",
+          "status": "failed",
+          "duration": 0.4194999933242798,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "PUT /profiles/:id - Update profile metadata",
+          "status": "failed",
+          "duration": 0.46312499046325684,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "DELETE /profiles/:id - Delete profile with reassignment",
+          "status": "failed",
+          "duration": 0.40074998140335083,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Cannot delete last profile",
+          "status": "failed",
+          "duration": 0.46195799112319946,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Profile switching updates session state",
+          "status": "failed",
+          "duration": 0.4212909936904907,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Profile switching persists across sessions",
+          "status": "failed",
+          "duration": 0.41850000619888306,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Linked accounts share profiles correctly",
+          "status": "failed",
+          "duration": 0.3811250329017639,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Profile operations across linked accounts",
+          "status": "failed",
+          "duration": 2.324625015258789,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Profile operations on non-existent profile",
+          "status": "failed",
+          "duration": 0.38554102182388306,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Profile operations performance",
+          "status": "failed",
+          "duration": 0.3650420308113098,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        }
+      ],
+      "startTime": 1750447085708,
+      "duration": 40,
+      "passed": 1,
+      "failed": 14,
+      "skipped": 0
+    },
+    {
+      "suite": "Flat Identity Security",
+      "status": "failed",
+      "tests": [
+        {
+          "name": "Prevent account takeover through linking",
+          "status": "failed",
+          "duration": 5.522915959358215,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Prevent email takeover through pre-registration",
+          "status": "failed",
+          "duration": 0.5711249709129333,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Session token binding to account",
+          "status": "failed",
+          "duration": 0.34116703271865845,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Session token replay prevention",
+          "status": "failed",
+          "duration": 0.2844589948654175,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Isolated account privacy enforcement",
+          "status": "failed",
+          "duration": 0.2949169874191284,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Partial privacy mode selective sharing",
+          "status": "failed",
+          "duration": 0.2863749861717224,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Rate limiting tracks by account not IP",
+          "status": "failed",
+          "duration": 0.2894579768180847,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Audit logging for security events",
+          "status": "failed",
+          "duration": 0.36308300495147705,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "JWT validation and security",
+          "status": "failed",
+          "duration": 0.2859160304069519,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Prevent cross-account data leakage",
+          "status": "failed",
+          "duration": 0.27016597986221313,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "SIWE replay attack prevention",
+          "status": "failed",
+          "duration": 0.2529999613761902,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "SIWE message expiration",
+          "status": "failed",
+          "duration": 1.0382919907569885,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "SIWE domain validation",
+          "status": "failed",
+          "duration": 0.8707090020179749,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Privacy mode downgrade protection",
+          "status": "failed",
+          "duration": 0.31758296489715576,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Input validation and sanitization",
+          "status": "failed",
+          "duration": 0.2798340320587158,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        }
+      ],
+      "startTime": 1750447085709,
+      "duration": 81,
+      "passed": 0,
+      "failed": 15,
+      "skipped": 0
+    },
+    {
+      "suite": "Authentication V2 - Flat Identity",
+      "status": "failed",
+      "tests": [
+        {
+          "name": "POST /auth/authenticate - Wallet auth with automatic profile creation",
+          "status": "failed",
+          "duration": 0.6000829935073853,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Wallet auth with invalid signature",
+          "status": "failed",
+          "duration": 0.3490830063819885,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Wallet auth with expired nonce",
+          "status": "failed",
+          "duration": 2.435582995414734,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/authenticate - Wallet auth with message tampering",
+          "status": "failed",
+          "duration": 0.32691699266433716,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Wallet auth with wrong domain",
+          "status": "failed",
+          "duration": 0.256833016872406,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Wallet auth replay attack prevention",
+          "status": "failed",
+          "duration": 0.24558401107788086,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Email auth with automatic profile creation",
+          "status": "failed",
+          "duration": 0.3664160370826721,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"email\",\"email\":\"Kamron12@gmail.com\",\"verificationCode\":\"123456\"}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Email auth case insensitivity",
+          "status": "failed",
+          "duration": 0.4037500023841858,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"email\",\"email\":\"kianna.goyette@gmail.com\",\"verificationCode\":\"123456\"}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Email auth with invalid code",
+          "status": "failed",
+          "duration": 0.30274999141693115,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/authenticate - Google auth with automatic profile",
+          "status": "failed",
+          "duration": 0.26579201221466064,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"google\",\"idToken\":\"mock_google_token\"}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Apple auth with automatic profile",
+          "status": "failed",
+          "duration": 0.2992500066757202,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"apple\",\"idToken\":\"mock_apple_token\"}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Guest auth with automatic profile",
+          "status": "failed",
+          "duration": 0.2637919783592224,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"guest\"}"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Auth with privacy mode selection",
+          "status": "failed",
+          "duration": 1.8852499723434448,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Existing user returns all profiles",
+          "status": "failed",
+          "duration": 0.3052080273628235,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Authentication rate limiting",
+          "status": "failed",
+          "duration": 3.557124972343445,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/refresh - Token refresh with accountId",
+          "status": "failed",
+          "duration": 0.39537501335144043,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Complete V2 authentication flow test",
+          "status": "failed",
+          "duration": 0.38520801067352295,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "POST /auth/authenticate - Invalid strategy",
+          "status": "failed",
+          "duration": 0.30583304166793823,
+          "retries": 0,
+          "error": {}
+        },
+        {
+          "name": "POST /auth/authenticate - Missing required fields",
+          "status": "failed",
+          "duration": 0.2600409984588623,
+          "retries": 0,
+          "error": {}
+        }
+      ],
+      "startTime": 1750447085708,
+      "duration": 97,
+      "passed": 0,
+      "failed": 19,
+      "skipped": 0
+    },
+    {
+      "suite": "Session Management - Flat Identity",
+      "status": "failed",
+      "tests": [
+        {
+          "name": "Session creation with account-based auth",
+          "status": "failed",
+          "duration": 5.994208037853241,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Session privacy modes",
+          "status": "failed",
+          "duration": 0.5077919960021973,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Token generation with accountId",
+          "status": "failed",
+          "duration": 0.38745802640914917,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Token refresh maintains session context",
+          "status": "failed",
+          "duration": 0.390375018119812,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Token expiration handling",
+          "status": "failed",
+          "duration": 0.36299997568130493,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Multiple concurrent sessions",
+          "status": "failed",
+          "duration": 19.797374963760376,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Session isolation between accounts",
+          "status": "failed",
+          "duration": 0.3918750286102295,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Device tracking with account sessions",
+          "status": "failed",
+          "duration": 0.36254096031188965,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "DELETE /devices/:id - Revoke specific session",
+          "status": "failed",
+          "duration": 0.3341670036315918,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Session invalidation on account unlink",
+          "status": "failed",
+          "duration": 0.3092919588088989,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Logout and logout-all with account sessions",
+          "status": "failed",
+          "duration": 0.3202499747276306,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        },
+        {
+          "name": "Backward compatibility with userId tokens",
+          "status": "passed",
+          "duration": 28.531999945640564,
+          "retries": 0
+        },
+        {
+          "name": "Session operations performance",
+          "status": "failed",
+          "duration": 0.31337499618530273,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "config": {
+              "method": "get",
+              "url": "/api/v1/siwe/nonce"
+            }
+          }
+        }
+      ],
+      "startTime": 1750447085709,
+      "duration": 98,
+      "passed": 1,
+      "failed": 12,
+      "skipped": 0
+    }
+  ],
+  "metrics": {
+    "avgResponseTime": 0,
+    "p50ResponseTime": 0,
+    "p95ResponseTime": 0,
+    "p99ResponseTime": 0,
+    "slowestEndpoints": [],
+    "requestsPerSecond": 0,
+    "errorRate": 0
+  },
+  "security": {
+    "vulnerabilities": [],
+    "passedChecks": [],
+    "failedChecks": [],
+    "riskScore": 0,
+    "compliance": {
+      "owasp": true,
+      "pci": true,
+      "gdpr": true,
+      "details": []
+    }
+  },
+  "recommendations": [
+    "High test failure rate (>10%) - review test stability and application bugs"
+  ],
+  "generatedAt": "2025-06-20T19:18:05.807Z"
+}

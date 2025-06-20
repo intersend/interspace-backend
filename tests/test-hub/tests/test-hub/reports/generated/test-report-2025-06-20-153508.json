@@ -1,0 +1,349 @@
+{
+  "summary": {
+    "totalSuites": 5,
+    "totalTests": 5,
+    "passed": 0,
+    "failed": 5,
+    "skipped": 0,
+    "duration": 1337,
+    "passRate": "0.00",
+    "startTime": "2025-06-20T19:35:08.273Z",
+    "endTime": "2025-06-20T19:35:08.593Z",
+    "environment": "test"
+  },
+  "suites": [
+    {
+      "suite": "Account Linking - Flat Identity",
+      "status": "failed",
+      "tests": [
+        {
+          "name": "POST /link-accounts - Link wallet to email account",
+          "status": "failed",
+          "duration": 69.376040995121,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "require(...).sendEmailCode is not a function",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750448108303_84y6s0s9c",
+              "stack": "TypeError: require(...).sendEmailCode is not a function\n    at /usr/src/app/src/routes/authRoutesV2.js:100:54\n    at Layer.handle [as handle_request] (/usr/src/app/node_modules/express/lib/router/layer.js:95:5)\n    at next (/usr/src/app/node_modules/express/lib/router/route.js:149:13)\n    at middleware (/usr/src/app/node_modules/express-validator/lib/middlewares/check.js:16:13)\n    at processTicksAndRejections (node:internal/process/task_queues:95:5)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750448108303_84y6s0s9c",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4841",
+              "x-ratelimit-reset": "2025-06-20T19:47:55.903Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "608",
+              "etag": "W/\"260-ZieMxp1HYTlfh/7X/WJPoT1Ney4\"",
+              "date": "Fri, 20 Jun 2025 19:35:08 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/send-email-code",
+              "data": "{\"email\":\"Libbie_Boyle@hotmail.com\"}"
+            }
+          }
+        }
+      ],
+      "startTime": 1750448108273,
+      "duration": 71,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0
+    },
+    {
+      "suite": "Session Management - Flat Identity",
+      "status": "failed",
+      "tests": [
+        {
+          "name": "Session creation with account-based auth",
+          "status": "failed",
+          "duration": 294.7005000114441,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 409,
+            "statusText": "Conflict",
+            "data": {
+              "success": false,
+              "error": "type already exists",
+              "code": "DUPLICATE_ERROR",
+              "requestId": "req_1750448108382_uxnosv7bj"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750448108382_uxnosv7bj",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4834",
+              "x-ratelimit-reset": "2025-06-20T19:47:55.901Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "114",
+              "etag": "W/\"72-1q8hwfgHMpUveI1fcbIMBQFIul8\"",
+              "date": "Fri, 20 Jun 2025 19:35:08 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"wallet\",\"walletAddress\":\"0x2c7536E3605D9C16a7a3D7b1898e529396a65c23\",\"message\":\"localhost:3000 wants you to sign in with your Ethereum account:\\n0x2c7536E3605D9C16a7a3D7b1898e529396a65c23\\n\\nSign in with Ethereum to Interspace\\n\\nURI: http://localhost:3000\\nVersion: 1\\nChain ID: 1\\nNonce: 87dca1f108c0a0df18d91fcc24d51e09\\nIssued At: 2025-06-20T19:35:08.375Z\",\"signature\":\"0x81bb3db5b75eb0741b16c773955c8655a8d1642357718b552567a48639f326f12e2422a8853c87bb09be59108a4116a109b28b378c22e7d41d0b565352b59b081b\",\"walletType\":\"metamask\",\"chainId\":1}"
+            }
+          }
+        }
+      ],
+      "startTime": 1750448108273,
+      "duration": 308,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0
+    },
+    {
+      "suite": "Flat Identity Security",
+      "status": "failed",
+      "tests": [
+        {
+          "name": "Prevent account takeover through linking",
+          "status": "failed",
+          "duration": 304.29112499952316,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 409,
+            "statusText": "Conflict",
+            "data": {
+              "success": false,
+              "error": "type already exists",
+              "code": "DUPLICATE_ERROR",
+              "requestId": "req_1750448108381_7ihv3wrbq"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750448108381_7ihv3wrbq",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4836",
+              "x-ratelimit-reset": "2025-06-20T19:47:55.903Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "114",
+              "etag": "W/\"72-yWRZQkS/i9Kb1CD149TTzlFaHuc\"",
+              "date": "Fri, 20 Jun 2025 19:35:08 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"wallet\",\"walletAddress\":\"0x2c7536E3605D9C16a7a3D7b1898e529396a65c23\",\"message\":\"localhost:3000 wants you to sign in with your Ethereum account:\\n0x2c7536E3605D9C16a7a3D7b1898e529396a65c23\\n\\nSign in with Ethereum to Interspace\\n\\nURI: http://localhost:3000\\nVersion: 1\\nChain ID: 1\\nNonce: fd28e1d29a46d9c4e596fcfcf71d4328\\nIssued At: 2025-06-20T19:35:08.367Z\",\"signature\":\"0xa6791837fa79df3c5119ff232d803b9dc3629bdabf0931bb94c977da2210b84e7c87e2449c21b1ddb65c8ae80f82b70d9b0a8ec8ddccf99dd3ebe4267ddaacc51b\",\"walletType\":\"metamask\",\"chainId\":1}"
+            }
+          }
+        }
+      ],
+      "startTime": 1750448108273,
+      "duration": 318,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0
+    },
+    {
+      "suite": "Profile Management V2 - Flat Identity",
+      "status": "failed",
+      "tests": [
+        {
+          "name": "Automatic \"My Smartprofile\" creation on first auth",
+          "status": "failed",
+          "duration": 308.06608402729034,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "sessionWalletInstance.createSession is not a function",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750448108382_94flxq4mn",
+              "stack": "TypeError: sessionWalletInstance.createSession is not a function\n    at Object.createSessionWallet (/usr/src/app/src/services/sessionWalletService.js:42:49)\n    at authenticateV2 (/usr/src/app/src/controllers/authControllerV2.js:117:56)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750448108382_94flxq4mn",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4835",
+              "x-ratelimit-reset": "2025-06-20T19:47:55.903Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "396",
+              "etag": "W/\"18c-G5evhLfDVSNCEmgpPGy55oRLxGQ\"",
+              "date": "Fri, 20 Jun 2025 19:35:08 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"wallet\",\"walletAddress\":\"0x2c7536E3605D9C16a7a3D7b1898e529396a65c23\",\"message\":\"localhost:3000 wants you to sign in with your Ethereum account:\\n0x2c7536E3605D9C16a7a3D7b1898e529396a65c23\\n\\nSign in with Ethereum to Interspace\\n\\nURI: http://localhost:3000\\nVersion: 1\\nChain ID: 1\\nNonce: 3292d4ac2d05dea0d45ca3d90333ea21\\nIssued At: 2025-06-20T19:35:08.377Z\",\"signature\":\"0xcc0573bd612e00e4b91c89cf5591de60afa483d7cd1973cb1a3206e00fe20cdb3893363b3b461329c68426c61a51b2694930bc589f3c39ca568f65b3f2ff17a81b\",\"walletType\":\"metamask\",\"chainId\":1}"
+            }
+          }
+        }
+      ],
+      "startTime": 1750448108273,
+      "duration": 319,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0
+    },
+    {
+      "suite": "Authentication V2 - Flat Identity",
+      "status": "failed",
+      "tests": [
+        {
+          "name": "POST /auth/authenticate - Wallet auth with automatic profile creation",
+          "status": "failed",
+          "duration": 305.5557499527931,
+          "retries": 0,
+          "error": {
+            "name": "ApiError",
+            "status": 500,
+            "statusText": "Internal Server Error",
+            "data": {
+              "success": false,
+              "error": "sessionWalletInstance.createSession is not a function",
+              "code": "INTERNAL_ERROR",
+              "requestId": "req_1750448108479_08ib5oyak",
+              "stack": "TypeError: sessionWalletInstance.createSession is not a function\n    at Object.createSessionWallet (/usr/src/app/src/services/sessionWalletService.js:42:49)\n    at authenticateV2 (/usr/src/app/src/controllers/authControllerV2.js:117:56)"
+            },
+            "headers": {
+              "cross-origin-opener-policy": "same-origin",
+              "cross-origin-resource-policy": "same-origin",
+              "origin-agent-cluster": "?1",
+              "referrer-policy": "same-origin",
+              "x-content-type-options": "nosniff",
+              "x-dns-prefetch-control": "off",
+              "x-download-options": "noopen",
+              "x-frame-options": "DENY",
+              "x-xss-protection": "0",
+              "permissions-policy": "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()",
+              "cache-control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+              "pragma": "no-cache",
+              "expires": "0",
+              "surrogate-control": "no-store",
+              "vary": "Origin",
+              "access-control-allow-credentials": "true",
+              "access-control-expose-headers": "Content-Length,X-Request-ID,X-Rate-Limit-Remaining",
+              "x-request-id": "req_1750448108479_08ib5oyak",
+              "x-ratelimit-limit": "5000",
+              "x-ratelimit-remaining": "4833",
+              "x-ratelimit-reset": "2025-06-20T19:47:55.900Z",
+              "content-type": "application/json; charset=utf-8",
+              "content-length": "396",
+              "etag": "W/\"18c-ktUrTlvnm2RHPLkKUqxxYyhazf4\"",
+              "date": "Fri, 20 Jun 2025 19:35:08 GMT",
+              "connection": "close"
+            },
+            "config": {
+              "method": "post",
+              "url": "/api/v2/auth/authenticate",
+              "data": "{\"strategy\":\"wallet\",\"walletAddress\":\"0x2c7536E3605D9C16a7a3D7b1898e529396a65c23\",\"message\":\"localhost:3000 wants you to sign in with your Ethereum account:\\n0x2c7536E3605D9C16a7a3D7b1898e529396a65c23\\n\\nSign in with Ethereum to Interspace\\n\\nURI: http://localhost:3000\\nVersion: 1\\nChain ID: 1\\nNonce: 64377f52fe9578ff09cc361a1b7b1503\\nIssued At: 2025-06-20T19:35:08.379Z\",\"signature\":\"0xb2639f63dae1dba59848d778f2af586075fa455c88917f872b772b43bcc8052f05e3f8564adc0ee6264fe17822f03a1a7b0cc41e99c3222a4c3202648208bdfe1b\",\"walletType\":\"metamask\",\"chainId\":1}"
+            }
+          }
+        }
+      ],
+      "startTime": 1750448108272,
+      "duration": 321,
+      "passed": 0,
+      "failed": 1,
+      "skipped": 0
+    }
+  ],
+  "metrics": {
+    "avgResponseTime": 0,
+    "p50ResponseTime": 0,
+    "p95ResponseTime": 0,
+    "p99ResponseTime": 0,
+    "slowestEndpoints": [],
+    "requestsPerSecond": 0,
+    "errorRate": 0
+  },
+  "security": {
+    "vulnerabilities": [],
+    "passedChecks": [],
+    "failedChecks": [],
+    "riskScore": 0,
+    "compliance": {
+      "owasp": true,
+      "pci": true,
+      "gdpr": true,
+      "details": []
+    }
+  },
+  "recommendations": [
+    "High test failure rate (>10%) - review test stability and application bugs"
+  ],
+  "generatedAt": "2025-06-20T19:35:08.593Z"
+}
