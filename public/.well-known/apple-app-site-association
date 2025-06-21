@@ -1,0 +1,16 @@
+{
+  "webcredentials": {
+    "apps": [
+      "TEAMID.com.interspace.ios"
+    ]
+  },
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "TEAMID.com.interspace.ios",
+        "paths": ["*"]
+      }
+    ]
+  }
+}

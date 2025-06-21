@@ -42,6 +42,9 @@ model User {
   twoFactorBackupCodes String? // Encrypted JSON array of backup codes
   twoFactorEnabledAt   DateTime?
 
+  // Passkey credentials
+  passkeyCredentials PasskeyCredential[]
+
   @@map("users")
 }
 
@@ -369,13 +372,20 @@ model OrbyTransaction {
 
 model PasskeyCredential {
   id           String   @id @default(cuid())
+  userId       String
   credentialId String   @unique
   publicKey    String
   username     String
   counter      Int
+  deviceName   String?
+  transports   String?  // JSON array of transport types
+  lastUsedAt   DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, credentialId])
   @@map("passkey_credentials")
 }
 
@@ -423,4 +433,20 @@ model EmailVerification {
   @@index([email, code])
   @@index([expiresAt])
   @@map("email_verifications")
+}
+
+model DragOperation {
+  id        String   @id @default(cuid())
+  profileId String
+  userId    String
+  type      String   // "reorder", "move", "batch_move", "batch_update"
+  before    Json     // State before the operation
+  after     Json     // State after the operation
+  details   Json?    // Additional operation details
+  undone    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([profileId, createdAt])
+  @@map("drag_operations")
 }

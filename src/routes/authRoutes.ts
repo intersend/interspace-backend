@@ -5,11 +5,15 @@ import { authRateLimit } from '@/middleware/rateLimiter';
 import { distributedAuthRateLimit } from '@/middleware/distributedRateLimiter';
 import { config } from '@/utils/config';
 import emailAuthRoutes from './emailAuthRoutes';
+import passkeyRoutes from './passkeyRoutes';
 
 const router = Router();
 
 // Email authentication routes (public - no auth required)
 router.use('/email', emailAuthRoutes);
+
+// Passkey authentication routes
+router.use('/passkey', passkeyRoutes);
 
 // Use distributed rate limiting if Redis is available
 const rateLimiter = config.REDIS_ENABLED ? distributedAuthRateLimit : authRateLimit;

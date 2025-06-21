@@ -15,6 +15,7 @@ const profileRoutes = require('./routes/profileRoutes');
 const userRoutes = require('./routes/userRoutes');
 const mpcRoutes = require('./routes/mpcRoutes');
 const orbyRoutes = require('./routes/orbyRoutes');
+const wellKnownRoutes = require('./routes/wellKnownRoutes').default;
 
 // Create Express app
 const app = express();
@@ -63,6 +64,9 @@ app.get('/health', (req, res) => {
     version: process.env.npm_package_version || '2.0.0'
   });
 });
+
+// Well-known routes (for app associations, passkeys, etc.)
+app.use('/.well-known', wellKnownRoutes);
 
 // API routes
 const apiV1Router = express.Router();
