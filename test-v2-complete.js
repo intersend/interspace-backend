@@ -55,7 +55,7 @@ async function testV2Complete() {
     const wallet = ethers.Wallet.createRandom();
     
     // Get nonce
-    const nonceRes = await api.get('/api/v1/siwe/nonce');
+    const nonceRes = await api.get('/api/v2/siwe/nonce');
     logTest('Get SIWE nonce', nonceRes.status === 200, nonceRes.data.error);
     const nonce = nonceRes.data.data.nonce;
     

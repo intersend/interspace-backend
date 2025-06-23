@@ -1,8 +1,24 @@
-const { PrismaClient } = require('@prisma/client');
 const { v4: uuidv4 } = require('uuid');
 const { logger } = require('../utils/logger');
+const { PrismaClient } = require('@prisma/client');
 
-const prisma = new PrismaClient();
+// Create a singleton instance of PrismaClient
+const prismaClientSingleton = () => {
+  return new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  });
+};
+
+// Use global to ensure we don't create multiple instances
+const globalForPrisma = global;
+const prisma = globalForPrisma.prisma || prismaClientSingleton();
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
+}
+
+// Debug log
+console.log('[AccountService] Prisma initialized successfully');
 
 class AccountService {
   /**
@@ -161,7 +177,7 @@ class AccountService {
   /**
    * Create automatic profile for new user
    */
-  async createAutomaticProfile(account, sessionWallet) {
+  async createAutomaticProfile(account, sessionWallet = null, profileId = null) {
     try {
       // For backward compatibility, we still need a user record
       // In future, this can be removed
@@ -190,12 +206,14 @@ class AccountService {
       // Create the profile
       const profile = await prisma.smartProfile.create({
         data: {
+          id: profileId || undefined, // Use provided ID or let Prisma generate one
           name: 'My Smartprofile',
-          userId: user.id,
-          sessionWalletAddress: sessionWallet.address,
+          user: {
+            connect: { id: user.id }
+          },
+          sessionWalletAddress: sessionWallet?.address || '0x' + '0'.repeat(40), // Fallback address for edge cases
           isActive: true,
-          isDevelopmentWallet: sessionWallet.isDevelopment || false,
-          createdByAccountId: account.id
+          isDevelopmentWallet: sessionWallet?.isDevelopment || false
         }
       });
 
@@ -221,13 +239,13 @@ class AccountService {
    */
   async createSession(accountId, { deviceId, ipAddress, userAgent, privacyMode = 'linked', expiresIn = 7 * 24 * 60 * 60 * 1000 }) {
     try {
-      const sessionToken = uuidv4();
+      const sessionId = uuidv4();
       const expiresAt = new Date(Date.now() + expiresIn);
 
       const session = await prisma.accountSession.create({
         data: {
           accountId,
-          sessionToken,
+          sessionId,
           deviceId,
           ipAddress,
           userAgent,
@@ -235,6 +253,9 @@ class AccountService {
           expiresAt
         }
       });
+
+      // Add sessionToken for backward compatibility
+      session.sessionToken = sessionId;
 
       return session;
     } catch (error) {
@@ -303,6 +324,24 @@ class AccountService {
       return link;
     } catch (error) {
       logger.error('Error in setLinkPrivacyMode:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Update profile session wallet address
+   */
+  async updateProfileSessionWallet(profileId, sessionWalletAddress) {
+    try {
+      const profile = await prisma.smartProfile.update({
+        where: { id: profileId },
+        data: { sessionWalletAddress }
+      });
+
+      logger.info(`Updated session wallet for profile ${profileId}: ${sessionWalletAddress}`);
+      return profile;
+    } catch (error) {
+      logger.error('Error in updateProfileSessionWallet:', error);
       throw error;
     }
   }

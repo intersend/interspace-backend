@@ -14,6 +14,15 @@ class ProfileControllerV2 {
     try {
       const accountId = req.account?.id || req.user?.accountId;
       
+      // Debug logging
+      logger.info('ProfileControllerV2.getProfiles - Request details:', {
+        accountId,
+        hasAccount: !!req.account,
+        accountObj: req.account,
+        hasUser: !!req.user,
+        userObj: req.user
+      });
+      
       if (!accountId) {
         return res.status(401).json({
           success: false,

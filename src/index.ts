@@ -14,11 +14,14 @@ import { getRedisClient, closeRedisConnection } from '@/utils/redis';
 
 // Import routes
 import authRoutes from '@/routes/authRoutes';
+const authRoutesV2 = require('@/routes/authRoutesV2');
 import profileRoutes from '@/routes/profileRoutes';
+const profileRoutesV2 = require('@/routes/profileRoutesV2');
 import appsRoutes from '@/routes/appsRoutes';
 import foldersRoutes from '@/routes/foldersRoutes';
 import linkedAccountRoutes from '@/routes/linkedAccountRoutes';
 import userRoutes from '@/routes/userRoutes';
+const userRoutesV2 = require('@/routes/userRoutesV2');
 import orbyRoutes from '@/routes/orbyRoutes';
 import mpcRoutes from '@/routes/mpcRoutes';
 import twoFactorRoutes from '@/routes/twoFactorRoutes';
@@ -345,21 +348,30 @@ class Application {
   }
 
   private initializeRoutes(): void {
-    // API base path
-    const apiPath = `/api/${config.API_VERSION}`;
+    // V1 Routes (Legacy)
+    const apiV1Path = '/api/v1';
+    this.app.use(`${apiV1Path}/auth`, authRoutes);
+    this.app.use(`${apiV1Path}/users`, userRoutes); // User routes (social accounts)
+    this.app.use(`${apiV1Path}/profiles`, profileRoutes);
+    this.app.use(`${apiV1Path}`, appsRoutes); // Apps routes include profile paths
+    this.app.use(`${apiV1Path}`, foldersRoutes); // Folders routes include profile paths
+    this.app.use(`${apiV1Path}`, linkedAccountRoutes); // Account routes include profile paths
+    this.app.use(`${apiV1Path}/orby`, orbyRoutes); // Orby chain abstraction routes
+    this.app.use(`${apiV1Path}/mpc`, mpcRoutes); // MPC key management routes
+    this.app.use(`${apiV1Path}/2fa`, twoFactorRoutes); // Two-factor authentication routes
+    this.app.use(`${apiV1Path}/siwe`, siweRoutes); // Sign-In with Ethereum routes
+    this.app.use(`${apiV1Path}/security`, securityRoutes); // Security monitoring routes
 
-    // Mount routes
-    this.app.use(`${apiPath}/auth`, authRoutes);
-    this.app.use(`${apiPath}/users`, userRoutes); // User routes (social accounts)
-    this.app.use(`${apiPath}/profiles`, profileRoutes);
-    this.app.use(`${apiPath}`, appsRoutes); // Apps routes include profile paths
-    this.app.use(`${apiPath}`, foldersRoutes); // Folders routes include profile paths
-    this.app.use(`${apiPath}`, linkedAccountRoutes); // Account routes include profile paths
-    this.app.use(`${apiPath}`, orbyRoutes); // Orby chain abstraction routes
-    this.app.use(`${apiPath}/mpc`, mpcRoutes); // MPC key management routes
-    this.app.use(`${apiPath}/2fa`, twoFactorRoutes); // Two-factor authentication routes
-    this.app.use(`${apiPath}/siwe`, siweRoutes); // Sign-In with Ethereum routes
-    this.app.use(`${apiPath}/security`, securityRoutes); // Security monitoring routes
+    // V2 Routes (Flat Identity Model)
+    if (process.env.ENABLE_V2_API !== 'false') {
+      const apiV2Path = '/api/v2';
+      this.app.use(`${apiV2Path}/auth`, authRoutesV2);
+      this.app.use(`${apiV2Path}/profiles`, profileRoutesV2); // Use V2 profile routes with V2 auth
+      this.app.use(`${apiV2Path}/users`, userRoutesV2); // Use V2 user routes with V2 middleware
+      this.app.use(`${apiV2Path}/siwe`, siweRoutes); // SIWE routes for v2
+      
+      console.log('✅ V2 API endpoints enabled');
+    }
 
     // Security.txt endpoint (before API routes)
     this.app.get('/.well-known/security.txt', (req, res) => {
@@ -374,30 +386,54 @@ Canonical: https://interspace.wallet/.well-known/security.txt
 `);
     });
 
-    // API info endpoint
-    this.app.get(apiPath, (req, res) => {
+    // API info endpoints
+    this.app.get('/api/v1', (req, res) => {
       res.json({
         success: true,
-        message: 'Interspace API - Ready for React Native',
-        version: config.API_VERSION,
+        message: 'Interspace API v1 - Ready for React Native',
+        version: 'v1',
         timestamp: new Date().toISOString(),
         environment: config.NODE_ENV,
         cors: config.CORS_ORIGINS,
         endpoints: {
-          auth: `${apiPath}/auth`,
-          users: `${apiPath}/users`,
-          profiles: `${apiPath}/profiles`,
-          apps: `${apiPath}/profiles/:profileId/apps`,
-          folders: `${apiPath}/profiles/:profileId/folders`,
-          accounts: `${apiPath}/profiles/:profileId/accounts`
+          auth: `/api/v1/auth`,
+          users: `/api/v1/users`,
+          profiles: `/api/v1/profiles`,
+          apps: `/api/v1/profiles/:profileId/apps`,
+          folders: `/api/v1/profiles/:profileId/folders`,
+          accounts: `/api/v1/profiles/:profileId/accounts`
         },
         reactNative: {
-          baseUrl: `http://localhost:${config.PORT}${apiPath}`,
+          baseUrl: `http://localhost:${config.PORT}/api/v1`,
           websocket: `http://localhost:${config.PORT}`,
           testEndpoint: `http://localhost:${config.PORT}/ping`
         }
       });
     });
+
+    if (process.env.ENABLE_V2_API !== 'false') {
+      this.app.get('/api/v2', (req, res) => {
+        res.json({
+          success: true,
+          message: 'Interspace API v2 - Flat Identity Model',
+          version: 'v2',
+          timestamp: new Date().toISOString(),
+          environment: config.NODE_ENV,
+          cors: config.CORS_ORIGINS,
+          endpoints: {
+            auth: `/api/v2/auth`,
+            users: `/api/v2/users`,
+            profiles: `/api/v2/profiles`,
+            siwe: `/api/v2/siwe`
+          },
+          features: {
+            flatIdentity: true,
+            autoProfileCreation: true,
+            supportedAuthMethods: ['wallet', 'email', 'social', 'passkey', 'guest']
+          }
+        });
+      });
+    }
 
     // Root endpoint
     this.app.get('/', (req, res) => {

@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
 const { logger } = require('../utils/logger');
+const { isPublicEndpoint } = require('./publicEndpoints');
 
 const prisma = new PrismaClient();
 
@@ -17,6 +18,20 @@ class AppError extends Error {
  */
 const authenticateAccount = async (req, res, next) => {
   try {
+    logger.info('AuthMiddlewareV2.authenticateAccount - Called for:', {
+      path: req.path,
+      originalUrl: req.originalUrl,
+      baseUrl: req.baseUrl,
+      method: req.method,
+      hasAuthHeader: !!req.headers.authorization
+    });
+    
+    // Skip authentication for public endpoints
+    if (isPublicEndpoint(req)) {
+      logger.info('AuthMiddlewareV2.authenticateAccount - Skipping auth for public endpoint');
+      return next();
+    }
+    
     // Get token from header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -55,10 +70,7 @@ const authenticateAccount = async (req, res, next) => {
       });
 
       session = await prisma.accountSession.findUnique({
-        where: { sessionToken: decoded.sessionToken },
-        include: {
-          activeProfile: true
-        }
+        where: { sessionId: decoded.sessionToken }
       });
 
       if (!session || session.accountId !== decoded.accountId) {
@@ -69,10 +81,10 @@ const authenticateAccount = async (req, res, next) => {
         throw new AppError('Session expired', 401);
       }
 
-      // Update last active
+      // Update last active (updatedAt is automatically updated by Prisma)
       await prisma.accountSession.update({
         where: { id: session.id },
-        data: { lastActiveAt: new Date() }
+        data: { } // Just touching the record updates updatedAt
       });
 
     } else if (decoded.userId) {
@@ -104,14 +116,22 @@ const authenticateAccount = async (req, res, next) => {
             }
           }
         });
+      } else {
+        // Guest users might not have email or wallet
+        console.warn('User has neither email nor wallet address:', user.id);
       }
 
       if (!account) {
         // Create account for legacy user
+        const identifier = user.email || user.walletAddress;
+        if (!identifier) {
+          throw new AppError('No email or wallet address found for user', 401);
+        }
+        
         const accountService = require('../services/accountService');
         account = await accountService.findOrCreateAccount({
           type: user.email ? 'email' : 'wallet',
-          identifier: (user.email || user.walletAddress).toLowerCase(),
+          identifier: identifier.toLowerCase(),
           metadata: { migratedFromLegacy: true, userId: user.id }
         });
       }
@@ -134,6 +154,12 @@ const authenticateAccount = async (req, res, next) => {
     req.session = session;
     req.sessionToken = decoded.sessionToken;
     req.user = { id: decoded.userId }; // For backward compatibility
+
+    logger.info('AuthMiddlewareV2.authenticateAccount - Setting req.account:', {
+      accountId: account.id,
+      accountType: account.type,
+      hasSession: !!session
+    });
 
     // Get active profile if available
     if (session.activeProfile) {

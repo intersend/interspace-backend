@@ -6,9 +6,15 @@ import { getDevUser } from '@/utils/devUser';
 import { auditService } from '@/services/auditService';
 import { tokenBlacklistService } from '@/services/tokenBlacklistService';
 import { AuthenticationError, AuthorizationError } from '@/types';
+const { isPublicEndpoint } = require('./publicEndpoints');
 
 export async function authenticate(req: Request, res: Response, next: NextFunction) {
   try {
+    // Skip authentication for public endpoints
+    if (isPublicEndpoint(req)) {
+      return next();
+    }
+    
     // BYPASS_LOGIN is only allowed in development environment
     if (config.BYPASS_LOGIN && config.NODE_ENV === 'development') {
       // Log security warning

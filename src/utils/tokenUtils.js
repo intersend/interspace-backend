@@ -59,10 +59,13 @@ function generateTokens(payload) {
     audience: 'interspace-app'
   });
 
+  // Convert expiresIn to seconds
+  const expiresInSeconds = 15 * 60; // Default 15 minutes
+  
   return {
     accessToken,
     refreshToken,
-    expiresIn: config.JWT_EXPIRES_IN || '15m'
+    expiresIn: expiresInSeconds
   };
 }
 
