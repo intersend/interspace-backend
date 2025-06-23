@@ -25,6 +25,7 @@ jest.mock('@/utils/database', () => ({
       create: jest.fn(),
       findUnique: jest.fn(),
       update: jest.fn(),
+      upsert: jest.fn(),
       delete: jest.fn()
     }
   }
@@ -159,7 +160,7 @@ describe('MpcKeyShareService', () => {
         expect(prisma.mpcKeyMapping.create).toHaveBeenCalledWith({
           data: {
             profileId,
-            silenceLabsKeyId,
+            silenceLabsKeyId: expect.any(String), // Encrypted value
             publicKey,
             keyAlgorithm
           }
@@ -170,10 +171,14 @@ describe('MpcKeyShareService', () => {
 
     describe('getKeyMapping', () => {
       it('should retrieve a key mapping', async () => {
+        // Import encrypt function to create proper encrypted value
+        const { encrypt } = require('@/utils/crypto');
+        const encryptedKeyId = encrypt(silenceLabsKeyId);
+        
         const mockMapping = {
           id: 'mapping123',
           profileId,
-          silenceLabsKeyId,
+          silenceLabsKeyId: encryptedKeyId,
           publicKey,
           keyAlgorithm
         };
@@ -184,7 +189,12 @@ describe('MpcKeyShareService', () => {
         expect(prisma.mpcKeyMapping.findUnique).toHaveBeenCalledWith({
           where: { profileId }
         });
-        expect(result).toEqual(mockMapping);
+        
+        // Check that the key was decrypted
+        expect(result).toEqual({
+          ...mockMapping,
+          silenceLabsKeyId // Decrypted value
+        });
       });
 
       it('should return null when mapping not found', async () => {
@@ -233,7 +243,7 @@ describe('MpcKeyShareService', () => {
         expect(prisma.mpcKeyMapping.create).toHaveBeenCalledWith({
           data: {
             profileId,
-            silenceLabsKeyId: 'key123',
+            silenceLabsKeyId: expect.any(String), // Encrypted value
             publicKey: 'public-key',
             keyAlgorithm: 'ecdsa'
           }
@@ -241,7 +251,7 @@ describe('MpcKeyShareService', () => {
         expect(prisma.mpcKeyShare.create).toHaveBeenCalledWith({
           data: {
             profileId,
-            serverShare: JSON.stringify(mockShare)
+            serverShare: expect.any(String) // Encrypted value
           }
         });
       });
@@ -259,9 +269,12 @@ describe('MpcKeyShareService', () => {
 
     describe('getKeyShare', () => {
       it('should retrieve and parse key share', async () => {
+        const { encrypt } = require('@/utils/crypto');
+        const encryptedShare = encrypt(JSON.stringify(mockShare));
+        
         (prisma.mpcKeyShare.findUnique as jest.Mock).mockResolvedValue({
           id: 'share123',
-          serverShare: JSON.stringify(mockShare)
+          serverShare: encryptedShare
         });
 
         const result = await mpcKeyShareService.getKeyShare(profileId);
@@ -284,14 +297,18 @@ describe('MpcKeyShareService', () => {
     describe('updateKeyShare', () => {
       it('should update key share', async () => {
         const updatedShare = { ...mockShare, updated: true };
-        (prisma.mpcKeyShare.update as jest.Mock).mockResolvedValue({});
+        (prisma.mpcKeyShare.upsert as jest.Mock).mockResolvedValue({});
 
         await mpcKeyShareService.updateKeyShare(profileId, updatedShare);
 
-        expect(prisma.mpcKeyShare.update).toHaveBeenCalledWith({
+        expect(prisma.mpcKeyShare.upsert).toHaveBeenCalledWith({
           where: { profileId },
-          data: {
-            serverShare: JSON.stringify(updatedShare)
+          update: {
+            serverShare: expect.any(String) // Encrypted value
+          },
+          create: {
+            profileId,
+            serverShare: expect.any(String) // Encrypted value
           }
         });
       });

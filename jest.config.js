@@ -8,13 +8,11 @@ module.exports = {
   ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
-    '^@com\\.silencelaboratories\/two-party-ecdsa-js$': '<rootDir>/tests/__mocks__/@com.silencelaboratories/two-party-ecdsa-js.ts',
+    '^@silencelaboratories/ecdsa-tss$': '<rootDir>/tests/__mocks__/@silencelaboratories/ecdsa-tss.ts',
+    '^@com\\.silencelaboratories/two-party-ecdsa-js$': '<rootDir>/tests/__mocks__/@com.silencelaboratories/two-party-ecdsa-js.ts',
     '^sigpair-admin-v2$': '<rootDir>/tests/__mocks__/sigpair-admin-v2.ts',
-    '^@com\\.silencelaboratories\\/two-party-ecdsa-js$': '<rootDir>/tests/stubs/silence.ts',
-    '^sigpair-admin-v2$': '<rootDir>/tests/stubs/sigpairAdmin.ts',
-    '^@orb-labs\\/orby-ethers6$': '<rootDir>/tests/stubs/orby-ethers6.ts',
-    '^@orb-labs\\/orby-core$': '<rootDir>/tests/stubs/orby-core.ts'
-
+    '^@orb-labs/orby-ethers6$': '<rootDir>/tests/__mocks__/@orb-labs/orby-ethers6.ts',
+    '^@orb-labs/orby-core$': '<rootDir>/tests/stubs/orby-core.ts'
   },
   collectCoverageFrom: [
     'src/**/*.ts',

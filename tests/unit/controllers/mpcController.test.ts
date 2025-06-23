@@ -3,6 +3,8 @@ import { mpcController } from '@/controllers/mpcController';
 import { mpcKeyShareService } from '@/services/mpcKeyShareService';
 import { smartProfileService } from '@/services/smartProfileService';
 import { auditService } from '@/services/auditService';
+import { twoFactorService } from '@/services/twoFactorService';
+import { securityMonitoringService } from '@/services/securityMonitoringService';
 import { prisma } from '@/utils/database';
 import { ApiError } from '@/utils/errors';
 import { config } from '@/utils/config';
@@ -19,7 +21,8 @@ jest.mock('@/services/mpcKeyShareService', () => ({
 
 jest.mock('@/services/smartProfileService', () => ({
   smartProfileService: {
-    getProfile: jest.fn()
+    getProfile: jest.fn(),
+    getProfileById: jest.fn()
   }
 }));
 
@@ -39,6 +42,18 @@ jest.mock('@/utils/database', () => ({
   }
 }));
 
+jest.mock('@/services/twoFactorService', () => ({
+  twoFactorService: {
+    requireTwoFactor: jest.fn()
+  }
+}));
+
+jest.mock('@/services/securityMonitoringService', () => ({
+  securityMonitoringService: {
+    checkMpcAbuse: jest.fn()
+  }
+}));
+
 describe('MpcController', () => {
   let req: Partial<Request>;
   let res: Partial<Response>;
@@ -48,7 +63,7 @@ describe('MpcController', () => {
     req = {
       body: {},
       params: {},
-      user: { id: 'user123' },
+      user: { userId: 'user123' },
       ip: '127.0.0.1',
       get: jest.fn().mockReturnValue('test-user-agent')
     };
@@ -82,14 +97,15 @@ describe('MpcController', () => {
     });
 
     it('should successfully backup a key', async () => {
-      (smartProfileService.getProfile as jest.Mock).mockResolvedValue(mockProfile);
+      (smartProfileService.getProfileById as jest.Mock).mockResolvedValue(mockProfile);
       (prisma.mpcKeyMapping.findUnique as jest.Mock).mockResolvedValue(mockKeyMapping);
+      (twoFactorService.requireTwoFactor as jest.Mock).mockResolvedValue(true);
       (mpcKeyShareService.backupKey as jest.Mock).mockResolvedValue(mockBackupResponse);
       (auditService.log as jest.Mock).mockResolvedValue(undefined);
 
       await mpcController.backupKey(req as Request, res as Response, next);
 
-      expect(smartProfileService.getProfile).toHaveBeenCalledWith('profile123', 'user123');
+      expect(smartProfileService.getProfileById).toHaveBeenCalledWith('profile123', 'user123');
       expect(prisma.mpcKeyMapping.findUnique).toHaveBeenCalledWith({
         where: { profileId: 'profile123' }
       });
@@ -124,7 +140,7 @@ describe('MpcController', () => {
     });
 
     it('should throw error if profile not found', async () => {
-      (smartProfileService.getProfile as jest.Mock).mockResolvedValue(null);
+      (smartProfileService.getProfileById as jest.Mock).mockRejectedValue(new ApiError('Profile not found', 404));
 
       await mpcController.backupKey(req as Request, res as Response, next);
 
@@ -135,7 +151,7 @@ describe('MpcController', () => {
     });
 
     it('should throw error if no MPC key found', async () => {
-      (smartProfileService.getProfile as jest.Mock).mockResolvedValue(mockProfile);
+      (smartProfileService.getProfileById as jest.Mock).mockResolvedValue(mockProfile);
       (prisma.mpcKeyMapping.findUnique as jest.Mock).mockResolvedValue(null);
 
       await mpcController.backupKey(req as Request, res as Response, next);
@@ -153,8 +169,11 @@ describe('MpcController', () => {
       config.NODE_ENV = 'production';
       req.body.twoFactorCode = undefined;
 
-      (smartProfileService.getProfile as jest.Mock).mockResolvedValue(mockProfile);
+      (smartProfileService.getProfileById as jest.Mock).mockResolvedValue(mockProfile);
       (prisma.mpcKeyMapping.findUnique as jest.Mock).mockResolvedValue(mockKeyMapping);
+      (twoFactorService.requireTwoFactor as jest.Mock).mockRejectedValue(
+        new ApiError('Two-factor authentication required', 403)
+      );
 
       await mpcController.backupKey(req as Request, res as Response, next);
 
@@ -189,8 +208,10 @@ describe('MpcController', () => {
     });
 
     it('should successfully export a key', async () => {
-      (smartProfileService.getProfile as jest.Mock).mockResolvedValue(mockProfile);
+      (smartProfileService.getProfileById as jest.Mock).mockResolvedValue(mockProfile);
       (prisma.mpcKeyMapping.findUnique as jest.Mock).mockResolvedValue(mockKeyMapping);
+      (twoFactorService.requireTwoFactor as jest.Mock).mockResolvedValue(true);
+      (securityMonitoringService.checkMpcAbuse as jest.Mock).mockResolvedValue(true);
       (mpcKeyShareService.exportKey as jest.Mock).mockResolvedValue(mockExportResponse);
       (auditService.log as jest.Mock).mockResolvedValue(undefined);
 
@@ -240,7 +261,7 @@ describe('MpcController', () => {
     });
 
     it('should return key status when key exists', async () => {
-      (smartProfileService.getProfile as jest.Mock).mockResolvedValue(mockProfile);
+      (smartProfileService.getProfileById as jest.Mock).mockResolvedValue(mockProfile);
       (prisma.mpcKeyMapping.findUnique as jest.Mock).mockResolvedValue(mockKeyMapping);
 
       await mpcController.getKeyStatus(req as Request, res as Response, next);
@@ -258,7 +279,7 @@ describe('MpcController', () => {
     });
 
     it('should return hasKey false when no key exists', async () => {
-      (smartProfileService.getProfile as jest.Mock).mockResolvedValue(mockProfile);
+      (smartProfileService.getProfileById as jest.Mock).mockResolvedValue(mockProfile);
       (prisma.mpcKeyMapping.findUnique as jest.Mock).mockResolvedValue(null);
 
       await mpcController.getKeyStatus(req as Request, res as Response, next);
@@ -287,7 +308,7 @@ describe('MpcController', () => {
     });
 
     it('should initiate key rotation', async () => {
-      (smartProfileService.getProfile as jest.Mock).mockResolvedValue(mockProfile);
+      (smartProfileService.getProfileById as jest.Mock).mockResolvedValue(mockProfile);
       (auditService.log as jest.Mock).mockResolvedValue(undefined);
 
       await mpcController.rotateKey(req as Request, res as Response, next);
