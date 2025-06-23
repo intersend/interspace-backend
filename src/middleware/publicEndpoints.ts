@@ -3,7 +3,14 @@
  * This should be applied before authentication middleware
  */
 
-const PUBLIC_ENDPOINTS = [
+import { Request, Response, NextFunction } from 'express';
+
+interface PublicEndpoint {
+  method: string;
+  path: string;
+}
+
+const PUBLIC_ENDPOINTS: PublicEndpoint[] = [
   // V2 public endpoints
   { method: 'GET', path: '/api/v2/siwe/nonce' },
   { method: 'POST', path: '/api/v2/auth/send-email-code' },
@@ -29,7 +36,7 @@ const PUBLIC_ENDPOINTS = [
 /**
  * Check if the current request is for a public endpoint
  */
-function isPublicEndpoint(req) {
+export function isPublicEndpoint(req: Request): boolean {
   const method = req.method;
   // Use originalUrl to get the full path, not the relative path
   const path = req.originalUrl || req.path;
@@ -42,12 +49,7 @@ function isPublicEndpoint(req) {
 /**
  * Middleware that marks public endpoints
  */
-function markPublicEndpoints(req, res, next) {
-  req.isPublicEndpoint = isPublicEndpoint(req);
+export function markPublicEndpoints(req: Request, res: Response, next: NextFunction): void {
+  (req as any).isPublicEndpoint = isPublicEndpoint(req);
   next();
 }
-
-module.exports = {
-  isPublicEndpoint,
-  markPublicEndpoints
-};
