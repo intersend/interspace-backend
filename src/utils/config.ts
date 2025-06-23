@@ -31,6 +31,7 @@ export interface Config {
   // Social Providers
   GOOGLE_CLIENT_ID?: string;
   APPLE_CLIENT_ID?: string;
+  APPLE_TEAM_ID?: string;
   
   // Blockchain
   DEFAULT_CHAIN_ID: number;
@@ -40,6 +41,10 @@ export interface Config {
   CORS_ORIGINS: string[];
   RATE_LIMIT_WINDOW_MS: number;
   RATE_LIMIT_MAX_REQUESTS: number;
+  
+  // Passkeys
+  PASSKEY_RP_ID?: string;
+  PASSKEY_ORIGIN?: string;
   
   // Redis (Optional - for distributed features)
   REDIS_URL?: string;
@@ -149,6 +154,7 @@ export const config: Config = {
 
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
   APPLE_CLIENT_ID: process.env.APPLE_CLIENT_ID,
+  APPLE_TEAM_ID: process.env.APPLE_TEAM_ID,
   
   // Blockchain
   DEFAULT_CHAIN_ID: getEnvNumber('DEFAULT_CHAIN_ID', 1),
@@ -158,6 +164,10 @@ export const config: Config = {
   CORS_ORIGINS: getEnvArray('CORS_ORIGINS', ['http://localhost:3000', 'http://localhost:19006']),
   RATE_LIMIT_WINDOW_MS: getEnvNumber('RATE_LIMIT_WINDOW_MS', 900000), // 15 minutes
   RATE_LIMIT_MAX_REQUESTS: getEnvNumber('RATE_LIMIT_MAX_REQUESTS', 100),
+  
+  // Passkeys
+  PASSKEY_RP_ID: process.env.PASSKEY_RP_ID,
+  PASSKEY_ORIGIN: process.env.PASSKEY_ORIGIN,
   
   // Redis (Optional - for distributed features)
   REDIS_URL: process.env.REDIS_URL,
