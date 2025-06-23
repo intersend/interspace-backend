@@ -26,6 +26,7 @@ help:
 	@echo "  make clean          - Clean up containers and volumes"
 	@echo "  make shell          - Open shell in app container"
 	@echo "  make db-shell       - Open PostgreSQL shell"
+	@echo "  make fix-docker     - Fix Docker when port conflicts occur"
 
 # Local development with Docker
 start:
@@ -75,6 +76,16 @@ clean:
 	docker-compose -f docker-compose.local.yml --profile local down -v
 	docker-compose -f docker-compose.dev.yml down -v
 	docker-compose down -v
+
+# Fix Docker when port conflicts occur
+fix-docker:
+	@echo "🔧 Fixing Docker port conflicts..."
+	@lsof -ti:3000 | xargs kill -9 2>/dev/null || true
+	@docker-compose -f docker-compose.local.yml --profile local stop app
+	@docker-compose -f docker-compose.local.yml --profile local rm -f app
+	@sleep 2
+	@docker-compose -f docker-compose.local.yml --profile local up -d app
+	@echo "✅ Docker backend restarted successfully"
 
 # Quick setup for new developers
 setup:
