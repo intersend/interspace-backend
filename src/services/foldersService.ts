@@ -105,7 +105,8 @@ export class FoldersService {
     });
 
     if (!profile) {
-      throw new NotFoundError('SmartProfile');
+      // Return empty array for non-existent profile (could be a new user)
+      return [];
     }
 
     const folders = await prisma.folder.findMany({

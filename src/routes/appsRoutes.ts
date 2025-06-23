@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { appsController } from '@/controllers/appsController';
-import { authenticate } from '@/middleware/auth';
+const { authenticateAccount } = require('../middleware/authMiddlewareV2');
 import { userRateLimit } from '@/middleware/rateLimiter';
 
 const router = Router();
 
 // All routes require authentication
-router.use(authenticate);
+router.use(authenticateAccount);
 router.use(userRateLimit);
 
 // Apps routes

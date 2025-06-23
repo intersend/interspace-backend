@@ -28,13 +28,25 @@ if (config.DISABLE_MPC) {
  */
 async function createSessionWallet(profileId, clientShare, developmentMode = false) {
   try {
-    if (developmentMode || config.DISABLE_MPC) {
-      // Use mock service for development
-      const result = await MockSessionWalletService.generateDevWallet();
+    // In development mode or when MPC is disabled, just generate a simple address
+    if (developmentMode || config.DISABLE_MPC || process.env.NODE_ENV === 'development') {
+      const crypto = require('crypto');
+      const hash = crypto.createHash('sha256').update(profileId || crypto.randomBytes(32)).digest('hex');
+      const address = '0x' + hash.slice(0, 40);
+      
+      logger.info(`Generated development wallet address for profile ${profileId}: ${address}`);
+      
       return {
-        address: result.address,
+        address: address,
         isDevelopment: true,
-        clientShare: result.clientShare
+        clientShare: {
+          p1_key_share: {
+            secret_share: crypto.createHash('sha256').update(`secret-${profileId}`).digest('hex'),
+            public_key: crypto.createHash('sha256').update(`pubkey-${profileId}`).digest('hex').slice(0, 64)
+          },
+          public_key: crypto.createHash('sha256').update(`pubkey-${profileId}`).digest('hex').slice(0, 64),
+          address: address
+        }
       };
     }
 

@@ -9,7 +9,8 @@ export class FoldersController {
    */
   async createFolder(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.userId;
+      // Support both V1 (userId) and V2 (id) auth formats
+      const userId = req.user?.userId || (req.user as any)?.id;
       if (!userId) {
         res.status(401).json({
           success: false,
@@ -54,7 +55,8 @@ export class FoldersController {
    */
   async getProfileFolders(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.userId;
+      // Support both V1 (userId) and V2 (id) auth formats
+      const userId = req.user?.userId || (req.user as any)?.id;
       if (!userId) {
         res.status(401).json({
           success: false,
@@ -93,7 +95,8 @@ export class FoldersController {
    */
   async getFolderById(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.userId;
+      // Support both V1 (userId) and V2 (id) auth formats
+      const userId = req.user?.userId || (req.user as any)?.id;
       if (!userId) {
         res.status(401).json({
           success: false,
@@ -132,7 +135,8 @@ export class FoldersController {
    */
   async updateFolder(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.userId;
+      // Support both V1 (userId) and V2 (id) auth formats
+      const userId = req.user?.userId || (req.user as any)?.id;
       if (!userId) {
         res.status(401).json({
           success: false,
@@ -178,7 +182,8 @@ export class FoldersController {
    */
   async deleteFolder(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.userId;
+      // Support both V1 (userId) and V2 (id) auth formats
+      const userId = req.user?.userId || (req.user as any)?.id;
       if (!userId) {
         res.status(401).json({
           success: false,
@@ -217,7 +222,8 @@ export class FoldersController {
    */
   async reorderFolders(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.userId;
+      // Support both V1 (userId) and V2 (id) auth formats
+      const userId = req.user?.userId || (req.user as any)?.id;
       if (!userId) {
         res.status(401).json({
           success: false,
@@ -258,7 +264,8 @@ export class FoldersController {
    */
   async shareFolder(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.userId;
+      // Support both V1 (userId) and V2 (id) auth formats
+      const userId = req.user?.userId || (req.user as any)?.id;
       if (!userId) {
         res.status(401).json({
           success: false,
@@ -298,7 +305,8 @@ export class FoldersController {
    */
   async unshareFolder(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.userId;
+      // Support both V1 (userId) and V2 (id) auth formats
+      const userId = req.user?.userId || (req.user as any)?.id;
       if (!userId) {
         res.status(401).json({
           success: false,
@@ -367,7 +375,8 @@ export class FoldersController {
    */
   async getFolderContents(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.userId;
+      // Support both V1 (userId) and V2 (id) auth formats
+      const userId = req.user?.userId || (req.user as any)?.id;
       if (!userId) {
         res.status(401).json({
           success: false,

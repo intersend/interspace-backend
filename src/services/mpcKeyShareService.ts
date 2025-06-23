@@ -150,9 +150,13 @@ class MpcKeyShareService {
     
     const encryptedShare = encrypt(JSON.stringify(share));
     
-    return prisma.mpcKeyShare.update({
+    return prisma.mpcKeyShare.upsert({
       where: { profileId },
-      data: {
+      update: {
+        serverShare: encryptedShare
+      },
+      create: {
+        profileId,
         serverShare: encryptedShare
       }
     });

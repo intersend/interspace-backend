@@ -2,13 +2,13 @@ const express = require('express');
 const { body, param } = require('express-validator');
 const profileControllerV2 = require('../controllers/profileControllerV2');
 const { authenticateAccount, requireActiveProfile } = require('../middleware/authMiddlewareV2');
-const { v2UserRateLimit } = require('../middleware/rateLimiter');
+const { userRateLimit } = require('../middleware/rateLimiter');
 
 const router = express.Router();
 
 // All routes require authentication
 router.use(authenticateAccount);
-router.use(v2UserRateLimit);
+router.use(userRateLimit);
 
 /**
  * @route   GET /api/v2/profiles

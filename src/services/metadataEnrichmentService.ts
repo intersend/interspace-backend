@@ -123,7 +123,7 @@ export class MetadataEnrichmentService {
           description: metadata.description || existingMetadata.description,
           iconUrl: metadata.iconUrl || existingMetadata.iconUrl,
           category: metadata.category || existingMetadata.category,
-          tags: metadata.tags || existingMetadata.tags,
+          tags: metadata.tags ? JSON.stringify(metadata.tags) : existingMetadata.tags,
           updatedAt: new Date()
         }
       });
@@ -136,7 +136,7 @@ export class MetadataEnrichmentService {
         description: metadata.description,
         iconUrl: metadata.iconUrl,
         category: metadata.category,
-        tags: metadata.tags || [],
+        tags: JSON.stringify(metadata.tags || []),
         isVerified: false
       }
     });

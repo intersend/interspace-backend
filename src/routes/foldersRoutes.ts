@@ -1,15 +1,15 @@
 import { Router } from 'express';
 import { foldersController } from '@/controllers/foldersController';
-import { authenticate, optionalAuth } from '@/middleware/auth';
+const { authenticateAccount, optionalAuthenticate } = require('../middleware/authMiddlewareV2');
 import { userRateLimit } from '@/middleware/rateLimiter';
 
 const router = Router();
 
 // Public route for shared folders
-router.get('/shared/:shareableId', optionalAuth, foldersController.getSharedFolder);
+router.get('/shared/:shareableId', optionalAuthenticate, foldersController.getSharedFolder);
 
 // Protected routes
-router.use(authenticate);
+router.use(authenticateAccount);
 router.use(userRateLimit);
 
 // Folders routes

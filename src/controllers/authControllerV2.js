@@ -124,8 +124,8 @@ const authenticateV2 = async (req, res, next) => {
             type: 'email',
             identifier: email,
             metadata: { 
-              emailVerified: true,
-              verifiedAt: new Date()
+              emailVerified: "true",  // String instead of boolean
+              verifiedAt: new Date().toISOString()  // ISO string
             }
           });
           
@@ -351,11 +351,15 @@ const authenticateV2 = async (req, res, next) => {
     if (profiles.length === 0) {
       isNewUser = true;
       
-      // Create session wallet for new profile
-      const sessionWallet = await sessionWalletService.createSessionWallet();
+      // Generate a temporary profile ID first
+      const { v4: uuidv4 } = require('uuid');
+      const profileId = uuidv4();
       
-      // Create automatic profile
-      activeProfile = await accountService.createAutomaticProfile(account, sessionWallet);
+      // Create session wallet with the profile ID
+      const sessionWallet = await sessionWalletService.createSessionWallet(profileId);
+      
+      // Create automatic profile with session wallet
+      activeProfile = await accountService.createAutomaticProfile(account, sessionWallet, profileId);
       
       // Add to profiles array
       profiles.push(activeProfile);
@@ -373,7 +377,7 @@ const authenticateV2 = async (req, res, next) => {
     });
 
     // Step 5: Generate JWT tokens (for backward compatibility)
-    const { accessToken, refreshToken } = await generateTokens({
+    const { accessToken, refreshToken, expiresIn } = await generateTokens({
       userId: account.userId || undefined, // Still use user ID for backward compatibility if available
       accountId: account.id,
       sessionToken: session.sessionToken,
@@ -408,35 +412,51 @@ const authenticateV2 = async (req, res, next) => {
       ipAddress: deviceInfo.ipAddress
     });
 
+    // Ensure metadata values are all strings for iOS compatibility
+    const stringifiedMetadata = {};
+    if (account.metadata && typeof account.metadata === 'object') {
+      Object.keys(account.metadata).forEach(key => {
+        const value = account.metadata[key];
+        stringifiedMetadata[key] = value != null ? String(value) : null;
+      });
+    }
+    
     // Response
     res.json({
       success: true,
       account: {
         id: account.id,
-        type: account.type,
+        strategy: account.type, // Frontend expects 'strategy' not 'type'
         identifier: account.identifier,
-        verified: account.verified
+        metadata: stringifiedMetadata,
+        createdAt: account.createdAt.toISOString(),
+        updatedAt: account.updatedAt.toISOString()
       },
-      user: account.userId ? {
-        id: account.userId,
-        email: account.type === 'email' ? account.identifier : undefined,
+      user: {
+        id: account.userId || account.id, // Use account ID if no user ID
+        email: account.type === 'email' ? account.identifier : null,
         isGuest: account.type === 'guest'
-      } : undefined,
+      },
       profiles: profiles.map(p => ({
         id: p.id,
-        name: p.name,
-        isActive: p.id === activeProfile.id,
-        sessionWalletAddress: p.sessionWalletAddress,
-        linkedAccountsCount: p.linkedAccounts?.length || 0
+        displayName: p.name, // Frontend expects 'displayName' not 'name'
+        username: null, // TODO: Add username support
+        avatarUrl: null, // TODO: Add avatar support
+        privacyMode: session.privacyMode,
+        isActive: p.id === activeProfile.id
       })),
       activeProfile: {
         id: activeProfile.id,
-        name: activeProfile.name,
-        sessionWalletAddress: activeProfile.sessionWalletAddress
+        displayName: activeProfile.name, // Frontend expects 'displayName'
+        username: null,
+        avatarUrl: null,
+        privacyMode: session.privacyMode,
+        isActive: true
       },
       tokens: {
         accessToken,
-        refreshToken
+        refreshToken,
+        expiresIn
       },
       isNewUser,
       sessionId: session.id,
@@ -473,23 +493,96 @@ const refreshTokenV2 = async (req, res, next) => {
       });
     }
 
-    // For V2, we don't need to re-fetch the account as all info is in the token
+    // Fetch account details
+    const account = await prisma.account.findUnique({
+      where: { id: decoded.accountId }
+    });
+
+    if (!account) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Account not found' 
+      });
+    }
+
+    // Get session if sessionToken exists (sessionToken is the sessionId in the database)
+    let session = null;
+    if (decoded.sessionToken) {
+      session = await prisma.accountSession.findUnique({
+        where: { sessionId: decoded.sessionToken }
+      });
+    }
+
+    // Get all accessible profiles
+    const profiles = await accountService.getAccessibleProfiles(account.id);
+    
+    // Find active profile
+    const activeProfile = decoded.activeProfileId 
+      ? profiles.find(p => p.id === decoded.activeProfileId)
+      : profiles.find(p => p.isActive);
 
     // Generate new tokens
-    const { accessToken, refreshToken: newRefreshToken } = await generateTokens({
+    const { 
+      accessToken, 
+      refreshToken: newRefreshToken,
+      expiresIn 
+    } = await generateTokens({
       userId: decoded.userId || undefined,
       accountId: decoded.accountId,
       sessionToken: decoded.sessionToken,
-      activeProfileId: decoded.activeProfileId,
+      activeProfileId: activeProfile?.id || decoded.activeProfileId,
       deviceId: decoded.deviceId
     });
 
+    // Ensure metadata values are all strings for iOS compatibility
+    const stringifiedMetadata = {};
+    if (account.metadata && typeof account.metadata === 'object') {
+      Object.keys(account.metadata).forEach(key => {
+        const value = account.metadata[key];
+        stringifiedMetadata[key] = value != null ? String(value) : null;
+      });
+    }
+
+    // Return full auth response matching AuthResponseV2 structure
     res.json({
       success: true,
+      account: {
+        id: account.id,
+        strategy: account.type, // Frontend expects 'strategy' not 'type'
+        identifier: account.identifier,
+        metadata: stringifiedMetadata,
+        createdAt: account.createdAt.toISOString(),
+        updatedAt: account.updatedAt.toISOString()
+      },
+      user: {
+        id: account.userId || account.id, // Use account ID if no user ID
+        email: account.type === 'email' ? account.identifier : null,
+        isGuest: account.type === 'guest'
+      },
+      profiles: profiles.map(p => ({
+        id: p.id,
+        displayName: p.name, // Frontend expects 'displayName' not 'name'
+        username: null, // TODO: Add username support
+        avatarUrl: null, // TODO: Add avatar support
+        privacyMode: session?.privacyMode || 'linked',
+        isActive: activeProfile ? p.id === activeProfile.id : p.isActive
+      })),
+      activeProfile: activeProfile ? {
+        id: activeProfile.id,
+        displayName: activeProfile.name, // Frontend expects 'displayName'
+        username: null,
+        avatarUrl: null,
+        privacyMode: session?.privacyMode || 'linked',
+        isActive: true
+      } : null,
       tokens: {
         accessToken,
-        refreshToken: newRefreshToken
-      }
+        refreshToken: newRefreshToken,
+        expiresIn
+      },
+      isNewUser: false, // Token refresh means not a new user
+      sessionId: session?.id || null,
+      privacyMode: session?.privacyMode || 'linked'
     });
   } catch (error) {
     logger.error('Token refresh error:', error);
@@ -701,11 +794,10 @@ const switchProfile = async (req, res, next) => {
       });
     }
 
-    // Update active profile in session
-    await prisma.accountSession.update({
-      where: { sessionToken: req.sessionToken },
-      data: { activeProfileId: profileId }
-    });
+    // Note: AccountSession doesn't store activeProfileId, it's managed in the JWT token
+    // We'll need to regenerate tokens with the new activeProfileId
+    // For now, just log the switch
+    logger.info(`Profile switch requested for session ${req.sessionToken} to profile ${profileId}`);
 
     // Update profile active status
     await smartProfileService.switchActiveProfile(profileId, targetProfile.userId);

@@ -68,3 +68,13 @@ if (isDevelopment) {
 } else {
   console.log('🛡️  Rate limiting enabled (Production mode)');
 }
+
+// CommonJS compatibility
+module.exports = {
+  apiRateLimit,
+  authRateLimit,
+  passwordResetRateLimit,
+  transactionRateLimit,
+  userRateLimit,
+  apiLimiter
+};

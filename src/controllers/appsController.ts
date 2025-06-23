@@ -9,7 +9,8 @@ export class AppsController {
    */
   async createApp(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.userId;
+      // Support both V1 (userId) and V2 (id) auth formats
+      const userId = req.user?.userId || (req.user as any)?.id;
       if (!userId) {
         res.status(401).json({
           success: false,
@@ -56,7 +57,8 @@ export class AppsController {
    */
   async getProfileApps(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.userId;
+      // Support both V1 (userId) and V2 (id) auth formats
+      const userId = req.user?.userId || (req.user as any)?.id;
       if (!userId) {
         res.status(401).json({
           success: false,
@@ -95,7 +97,8 @@ export class AppsController {
    */
   async getFolderApps(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.userId;
+      // Support both V1 (userId) and V2 (id) auth formats
+      const userId = req.user?.userId || (req.user as any)?.id;
       if (!userId) {
         res.status(401).json({
           success: false,
@@ -134,7 +137,8 @@ export class AppsController {
    */
   async getRootApps(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.userId;
+      // Support both V1 (userId) and V2 (id) auth formats
+      const userId = req.user?.userId || (req.user as any)?.id;
       if (!userId) {
         res.status(401).json({
           success: false,
@@ -173,7 +177,8 @@ export class AppsController {
    */
   async updateApp(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.userId;
+      // Support both V1 (userId) and V2 (id) auth formats
+      const userId = req.user?.userId || (req.user as any)?.id;
       if (!userId) {
         res.status(401).json({
           success: false,
@@ -220,7 +225,8 @@ export class AppsController {
    */
   async deleteApp(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.userId;
+      // Support both V1 (userId) and V2 (id) auth formats
+      const userId = req.user?.userId || (req.user as any)?.id;
       if (!userId) {
         res.status(401).json({
           success: false,
@@ -259,7 +265,8 @@ export class AppsController {
    */
   async reorderApps(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.userId;
+      // Support both V1 (userId) and V2 (id) auth formats
+      const userId = req.user?.userId || (req.user as any)?.id;
       if (!userId) {
         res.status(401).json({
           success: false,
@@ -300,7 +307,8 @@ export class AppsController {
    */
   async moveAppToFolder(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.userId;
+      // Support both V1 (userId) and V2 (id) auth formats
+      const userId = req.user?.userId || (req.user as any)?.id;
       if (!userId) {
         res.status(401).json({
           success: false,
@@ -341,7 +349,8 @@ export class AppsController {
    */
   async searchApps(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.userId;
+      // Support both V1 (userId) and V2 (id) auth formats
+      const userId = req.user?.userId || (req.user as any)?.id;
       if (!userId) {
         res.status(401).json({
           success: false,

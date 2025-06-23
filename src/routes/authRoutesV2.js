@@ -2,7 +2,7 @@ const express = require('express');
 const { body } = require('express-validator');
 const authControllerV2 = require('../controllers/authControllerV2');
 const { authenticateAccount } = require('../middleware/authMiddlewareV2');
-const { v2AuthRateLimit, v2UserRateLimit } = require('../middleware/rateLimiter');
+const { authRateLimit, userRateLimit } = require('../middleware/rateLimiter');
 
 const router = express.Router();
 
@@ -12,7 +12,7 @@ const router = express.Router();
  * @access  Public
  */
 router.post('/authenticate',
-  v2AuthRateLimit,
+  authRateLimit,
   [
     body('strategy').isIn(['email', 'wallet', 'google', 'apple', 'passkey', 'guest']).withMessage('Invalid authentication strategy'),
     // Email strategy validation
@@ -90,11 +90,38 @@ router.post('/switch-profile/:profileId',
  * @access  Public
  */
 router.post('/send-email-code',
-  v2AuthRateLimit,
+  authRateLimit,
   [
     body('email').isEmail().normalizeEmail()
   ],
   require('../controllers/emailAuthControllerV2').sendEmailCode
+);
+
+/**
+ * @route   POST /api/v2/auth/resend-email-code
+ * @desc    Resend email verification code
+ * @access  Public
+ */
+router.post('/resend-email-code',
+  authRateLimit,
+  [
+    body('email').isEmail().normalizeEmail()
+  ],
+  require('../controllers/emailAuthControllerV2').resendEmailCode
+);
+
+/**
+ * @route   POST /api/v2/auth/verify-email-code
+ * @desc    Verify email code (without authentication)
+ * @access  Public
+ */
+router.post('/verify-email-code',
+  authRateLimit,
+  [
+    body('email').isEmail().normalizeEmail(),
+    body('code').isLength({ min: 6, max: 6 })
+  ],
+  require('../controllers/emailAuthControllerV2').verifyEmailCode
 );
 
 /**
@@ -158,5 +185,17 @@ router.post('/logout',
     }
   }
 );
+
+// Development only routes
+if (process.env.NODE_ENV === 'development') {
+  /**
+   * @route   GET /api/v2/auth/dev/last-email-code
+   * @desc    Get last email code for development
+   * @access  Public (Dev only)
+   */
+  router.get('/dev/last-email-code',
+    require('../controllers/emailAuthControllerV2').getLastCodeForDevelopment
+  );
+}
 
 module.exports = router;
