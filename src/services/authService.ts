@@ -375,6 +375,74 @@ export class AuthService {
       }
     });
   }
+
+  async generateTokensForUser(
+    userId: string, 
+    deviceId: string, 
+    deviceName?: string, 
+    deviceType: string = 'web'
+  ): Promise<AuthTokens> {
+    return withTransaction(async (tx) => {
+      // Check if user exists
+      const user = await tx.user.findUnique({
+        where: { id: userId }
+      });
+
+      if (!user) {
+        throw new NotFoundError('User');
+      }
+
+      // Check if device is registered
+      const existingDevice = await tx.deviceRegistration.findUnique({
+        where: { deviceId }
+      });
+
+      if (!existingDevice) {
+        // Register new device
+        await tx.deviceRegistration.create({
+          data: {
+            userId,
+            deviceId,
+            deviceName: deviceName || 'Unknown Device',
+            deviceType,
+            isActive: true
+          }
+        });
+      } else {
+        // Update existing device
+        await tx.deviceRegistration.update({
+          where: { deviceId },
+          data: {
+            deviceName: deviceName || existingDevice.deviceName,
+            deviceType,
+            isActive: true,
+            lastActiveAt: new Date()
+          }
+        });
+      }
+
+      // Generate tokens with token family
+      const familyId = uuidv4();
+      const accessToken = generateAccessToken(userId, deviceId);
+      const refreshToken = generateRefreshToken(userId, deviceId);
+
+      // Store refresh token with family ID
+      await tx.refreshToken.create({
+        data: {
+          userId,
+          token: refreshToken,
+          familyId,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+        }
+      });
+
+      return {
+        accessToken,
+        refreshToken,
+        expiresIn: 15 * 60 // 15 minutes
+      };
+    });
+  }
 }
 
 export const authService = new AuthService();

@@ -12,9 +12,14 @@ const { logger } = require('./utils/logger');
 const authRoutes = require('./routes/authRoutes');
 const authRoutesV2 = require('./routes/authRoutesV2');
 const profileRoutes = require('./routes/profileRoutes');
+const profileRoutesV2 = require('./routes/profileRoutesV2');
 const userRoutes = require('./routes/userRoutes');
 const mpcRoutes = require('./routes/mpcRoutes');
 const orbyRoutes = require('./routes/orbyRoutes');
+const siweRoutes = require('./routes/siweRoutes').default;
+const wellKnownRoutes = require('./routes/wellKnownRoutes').default;
+const appsRoutes = require('./routes/appsRoutes').default;
+const foldersRoutes = require('./routes/foldersRoutes').default;
 
 // Create Express app
 const app = express();
@@ -64,6 +69,9 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Well-known routes (for app associations, passkeys, etc.)
+app.use('/.well-known', wellKnownRoutes);
+
 // API routes
 const apiV1Router = express.Router();
 const apiV2Router = express.Router();
@@ -74,12 +82,20 @@ apiV1Router.use('/profiles', profileRoutes);
 apiV1Router.use('/users', userRoutes);
 apiV1Router.use('/mpc', mpcRoutes);
 apiV1Router.use('/orby', orbyRoutes);
+apiV1Router.use('/siwe', siweRoutes);
+apiV1Router.use('/', appsRoutes); // Apps routes are mounted at root because they include /profiles/:id/apps
+apiV1Router.use('/', foldersRoutes); // Folders routes are mounted at root because they include /profiles/:id/folders
 
 // V2 Routes (Flat Identity Model)
 if (process.env.ENABLE_V2_API !== 'false') {
+  const userRoutesV2 = require('./routes/userRoutesV2');
+  
   apiV2Router.use('/auth', authRoutesV2);
-  apiV2Router.use('/profiles', profileRoutes); // Reuse with enhancements
-  apiV2Router.use('/users', userRoutes); // For backward compatibility
+  apiV2Router.use('/profiles', profileRoutesV2); // Use V2 profile routes
+  apiV2Router.use('/users', userRoutesV2); // Use V2 user routes
+  apiV2Router.use('/siwe', siweRoutes); // SIWE routes for v2
+  apiV2Router.use('/', appsRoutes); // Apps routes are mounted at root because they include /profiles/:id/apps
+  apiV2Router.use('/', foldersRoutes); // Folders routes are mounted at root because they include /profiles/:id/folders
   
   // Apply V2 routes
   app.use('/api/v2', rateLimiter.apiLimiter, apiV2Router);
