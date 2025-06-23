@@ -1,17 +1,88 @@
 import request from 'supertest';
-import app from '@/index';
-import { prisma } from '@/utils/database';
+import express from 'express';
 import { generateAccessToken } from '@/utils/jwt';
 import { mpcKeyShareService } from '@/services/mpcKeyShareService';
+import mpcRoutes from '@/routes/mpcRoutes';
+import { errorHandler } from '@/middleware/errorHandler';
 
-// Mock server startup to prevent conflicts
-jest.mock('@/index', () => {
-  const express = require('express');
-  const actualIndex = jest.requireActual('@/index');
-  return actualIndex.default || actualIndex;
-});
+// We need the real prisma for test setup
+const { prisma } = jest.requireActual('@/utils/database');
+
+// Mock authentication middleware for testing
+jest.mock('@/middleware/auth', () => ({
+  authenticate: (req: any, res: any, next: any) => {
+    // Extract user ID from token for test purposes
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.slice(7);
+      try {
+        const jwt = require('jsonwebtoken');
+        const payload = jwt.verify(token, process.env.JWT_SECRET || 'test-jwt-secret');
+        req.user = { userId: payload.userId, deviceId: payload.deviceId };
+        next();
+      } catch (err) {
+        res.status(401).json({ message: 'Invalid token' });
+      }
+    } else {
+      res.status(401).json({ message: 'No token provided' });
+    }
+  },
+  requireProfile: (req: any, res: any, next: any) => {
+    req.profile = { id: req.params.profileId };
+    next();
+  }
+}));
+
+// Mock rate limiting middleware for testing
+jest.mock('@/middleware/rateLimiter', () => ({
+  passwordResetRateLimit: (req: any, res: any, next: any) => next(),
+  transactionRateLimit: (req: any, res: any, next: any) => next(),
+  apiRateLimit: (req: any, res: any, next: any) => next()
+}));
+
+// Create a test app instance
+const app = express();
+app.use(express.json());
+app.use('/api/v1/mpc', mpcRoutes);
+app.use(errorHandler);
+
+// Set test environment
+process.env.NODE_ENV = 'test';
 
 jest.mock('@/services/mpcKeyShareService');
+jest.mock('@/services/smartProfileService', () => ({
+  smartProfileService: {
+    getProfileById: jest.fn().mockImplementation((profileId, userId) => {
+      // Simulate profile not found for certain tests
+      if (profileId === 'non-existent-profile') {
+        const error = new Error('Profile not found');
+        (error as any).statusCode = 404;
+        throw error;
+      }
+      return Promise.resolve({
+        id: profileId,
+        userId,
+        name: 'Test Profile',
+        sessionWalletAddress: '0x1234567890123456789012345678901234567890'
+      });
+    })
+  }
+}));
+jest.mock('@/services/twoFactorService', () => ({
+  twoFactorService: {
+    requireTwoFactor: jest.fn().mockResolvedValue(true)
+  }
+}));
+jest.mock('@/services/securityMonitoringService', () => ({
+  securityMonitoringService: {
+    checkMpcAbuse: jest.fn().mockResolvedValue(true)
+  }
+}));
+jest.mock('@/services/auditService', () => ({
+  auditService: {
+    log: jest.fn().mockResolvedValue(true)
+  }
+}));
 jest.mock('google-auth-library', () => ({
   GoogleAuth: jest.fn().mockImplementation(() => ({
     getIdTokenClient: jest.fn().mockResolvedValue({
@@ -58,12 +129,13 @@ describe('MPC API Integration Tests', () => {
     });
 
     // Generate auth token
-    authToken = generateAccessToken({ userId, deviceId: 'test-device' });
+    authToken = generateAccessToken(userId, 'test-device');
   });
 
   afterAll(async () => {
-    // Clean up
+    // Clean up in proper order to respect foreign key constraints
     await prisma.mpcKeyMapping.deleteMany();
+    await prisma.mpcKeyShare.deleteMany();
     await prisma.smartProfile.deleteMany();
     await prisma.user.deleteMany();
   });
@@ -229,6 +301,19 @@ describe('MPC API Integration Tests', () => {
     });
 
     it('should return hasKey false for profile without key', async () => {
+      // Ensure user still exists before creating profile
+      const userExists = await prisma.user.findUnique({ where: { id: userId } });
+      if (!userExists) {
+        // Re-create user if it was cleaned up
+        const user = await prisma.user.create({
+          data: {
+            email: 'mpc-test-no-key@example.com',
+            emailVerified: true
+          }
+        });
+        userId = user.id;
+      }
+
       // Create profile without key mapping
       const profileWithoutKey = await prisma.smartProfile.create({
         data: {

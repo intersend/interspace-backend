@@ -96,6 +96,8 @@ export async function cleanupTestData() {
   await prisma.bookmarkedApp.deleteMany();
   await prisma.folder.deleteMany();
   await prisma.linkedAccount.deleteMany();
+  await prisma.mpcKeyShare.deleteMany();
+  await prisma.mpcKeyMapping.deleteMany();
   await prisma.smartProfile.deleteMany();
   await prisma.refreshToken.deleteMany();
   await prisma.deviceRegistration.deleteMany();
