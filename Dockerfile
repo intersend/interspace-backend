@@ -23,6 +23,7 @@ RUN npm ci
 COPY src/ ./src/
 COPY prisma/ ./prisma/
 COPY scripts/ ./scripts/
+COPY public/ ./public/
 
 # Generate Prisma client and build
 RUN npm run prisma:generate
@@ -59,6 +60,9 @@ COPY --from=builder /usr/src/app/tsconfig.json ./tsconfig.json
 COPY scripts/start-prod.js ./scripts/
 COPY scripts/check-production-build.js ./scripts/
 COPY scripts/docker-healthcheck.sh ./scripts/
+
+# Copy public assets for passkeys
+COPY --from=builder /usr/src/app/public ./public
 
 # Set ownership and permissions
 RUN chown -R interspace:nodejs /usr/src/app

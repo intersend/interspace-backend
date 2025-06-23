@@ -61,7 +61,7 @@ export function createRateLimitMiddleware(
       res.set({
         'X-RateLimit-Limit': String(limiter.points),
         'X-RateLimit-Remaining': String(rateLimiterRes.remainingPoints),
-        'X-RateLimit-Reset': new Date(Date.now() + rateLimiterRes.msBeforeNext).toISOString()
+        'X-RateLimit-Reset': new Date(Date.now() + (rateLimiterRes.msBeforeNext || 60000)).toISOString()
       });
       
       next();
@@ -73,7 +73,7 @@ export function createRateLimitMiddleware(
         'Retry-After': String(retrySecs),
         'X-RateLimit-Limit': String(limiter.points),
         'X-RateLimit-Remaining': String(rateLimiterRes.remainingPoints || 0),
-        'X-RateLimit-Reset': new Date(Date.now() + rateLimiterRes.msBeforeNext).toISOString()
+        'X-RateLimit-Reset': new Date(Date.now() + (rateLimiterRes.msBeforeNext || 60000)).toISOString()
       });
       
       // Log rate limit violation
