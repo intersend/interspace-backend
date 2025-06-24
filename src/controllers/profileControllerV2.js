@@ -325,6 +325,75 @@ class ProfileControllerV2 {
       next(error);
     }
   }
+
+  /**
+   * Get linked accounts for a profile
+   */
+  async getProfileAccounts(req, res, next) {
+    try {
+      const { profileId } = req.params;
+      const accountId = req.account?.id || req.user?.accountId;
+      
+      if (!accountId) {
+        return res.status(401).json({
+          success: false,
+          error: 'Account ID required'
+        });
+      }
+
+      // Check if account has access to this profile
+      const profiles = await accountService.getAccessibleProfiles(accountId);
+      const profile = profiles.find(p => p.id === profileId);
+
+      if (!profile) {
+        return res.status(404).json({
+          success: false,
+          error: 'Profile not found or not accessible'
+        });
+      }
+
+      // Get accounts linked to this profile via ProfileAccount
+      const profileAccounts = await prisma.profileAccount.findMany({
+        where: {
+          profileId: profileId
+        },
+        include: {
+          account: true
+        }
+      });
+
+      // Filter only wallet accounts and transform to LinkedAccount format for iOS compatibility
+      const linkedAccounts = profileAccounts
+        .filter(pa => pa.account.type === 'wallet') // Only include wallet accounts
+        .map(pa => {
+          const account = pa.account;
+          // Format as LinkedAccount for iOS
+          return {
+            id: account.id,
+            userId: profile.userId,
+            profileId: profileId,
+            address: account.identifier, // For wallet accounts, identifier is the address
+            authStrategy: account.type,
+            walletType: account.metadata?.walletType || account.provider || 'unknown',
+            customName: account.metadata?.customName || null,
+            isPrimary: pa.isPrimary,
+            isActive: true,
+            chainId: account.metadata?.chainId || 1,
+            metadata: account.metadata,
+            createdAt: account.createdAt,
+            updatedAt: account.updatedAt
+          };
+        });
+
+      res.json({
+        success: true,
+        data: linkedAccounts
+      });
+    } catch (error) {
+      logger.error('Get profile accounts error:', error);
+      next(error);
+    }
+  }
 }
 
 module.exports = new ProfileControllerV2();

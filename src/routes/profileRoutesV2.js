@@ -110,4 +110,16 @@ router.post('/:profileId/activate',
   }
 );
 
+/**
+ * @route   GET /api/v2/profiles/:profileId/accounts
+ * @desc    Get linked accounts for a profile
+ * @access  Private
+ */
+router.get('/:profileId/accounts',
+  [
+    param('profileId').isString().notEmpty()
+  ],
+  profileControllerV2.getProfileAccounts
+);
+
 module.exports = router;

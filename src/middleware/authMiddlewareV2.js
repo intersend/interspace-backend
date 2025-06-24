@@ -149,16 +149,42 @@ const authenticateAccount = async (req, res, next) => {
       throw new AppError('Account not found', 401);
     }
 
+    // For V2 accounts, find the associated user for backward compatibility
+    let userId = decoded.userId; // From legacy tokens
+    if (!userId && account) {
+      // Try to find user associated with this account
+      const user = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { email: account.type === 'email' ? account.identifier : undefined },
+            { walletAddress: account.type === 'wallet' ? account.identifier : undefined }
+          ]
+        }
+      });
+      
+      if (user) {
+        userId = user.id;
+      } else {
+        // Log warning but don't fail - some V2 accounts might not have users
+        logger.warn('No user found for account:', {
+          accountId: account.id,
+          type: account.type,
+          identifier: account.identifier
+        });
+      }
+    }
+
     // Attach to request
     req.account = account;
     req.session = session;
     req.sessionToken = decoded.sessionToken;
-    req.user = { id: decoded.userId }; // For backward compatibility
+    req.user = { id: userId, userId: userId }; // For backward compatibility - provide both id and userId
 
     logger.info('AuthMiddlewareV2.authenticateAccount - Setting req.account:', {
       accountId: account.id,
       accountType: account.type,
-      hasSession: !!session
+      hasSession: !!session,
+      userId: userId
     });
 
     // Get active profile if available

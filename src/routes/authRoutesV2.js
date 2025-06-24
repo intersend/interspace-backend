@@ -151,7 +151,7 @@ router.post('/logout',
       if (req.sessionToken) {
         try {
           await prisma.accountSession.delete({
-            where: { sessionToken: req.sessionToken }
+            where: { sessionId: req.sessionToken }
           });
         } catch (error) {
           // Session might already be deleted or not exist

@@ -631,11 +631,48 @@ const linkAccounts = async (req, res, next) => {
       });
     }
 
+    // For email accounts, require verification before linking
+    if (targetType === 'email') {
+      // Check if email is verified in the request (from prior verification)
+      const { verificationCode } = req.body;
+      if (!verificationCode) {
+        return res.status(400).json({
+          success: false,
+          error: 'Email verification code required for linking email accounts'
+        });
+      }
+      
+      // Verify the email code
+      const verification = await prisma.emailVerification.findFirst({
+        where: {
+          email: targetIdentifier,
+          code: verificationCode,
+          expiresAt: { gte: new Date() }
+        }
+      });
+      
+      if (!verification) {
+        return res.status(401).json({
+          success: false,
+          error: 'Invalid or expired verification code'
+        });
+      }
+      
+      // Delete the verification record
+      await prisma.emailVerification.deleteMany({
+        where: { email: targetIdentifier }
+      });
+    }
+    
     // Find or create target account
     const targetAccount = await accountService.findOrCreateAccount({
       type: targetType,
       identifier: targetIdentifier,
-      provider: targetProvider
+      provider: targetProvider,
+      metadata: targetType === 'email' ? { 
+        emailVerified: "true",
+        verifiedAt: new Date().toISOString()
+      } : {}
     });
 
     // Check if accounts are already linked
@@ -689,6 +726,17 @@ const linkAccounts = async (req, res, next) => {
 
     // Get updated accessible profiles
     const profiles = await accountService.getAccessibleProfiles(currentAccountId);
+    
+    // Link the new account to all accessible profiles
+    // This ensures email accounts show up in profile accounts
+    for (const profile of profiles) {
+      try {
+        await accountService.linkProfileToAccount(targetAccount.id, profile.id);
+        logger.info(`Linked ${targetType} account ${targetAccount.id} to profile ${profile.id}`);
+      } catch (linkError) {
+        logger.warn(`Failed to link account to profile ${profile.id}:`, linkError);
+      }
+    }
 
     res.json({
       success: true,
@@ -804,11 +852,19 @@ const switchProfile = async (req, res, next) => {
 
     res.json({
       success: true,
-      activeProfile: {
+      data: {
         id: targetProfile.id,
         name: targetProfile.name,
-        sessionWalletAddress: targetProfile.sessionWalletAddress
-      }
+        sessionWalletAddress: targetProfile.sessionWalletAddress,
+        isActive: true,
+        linkedAccountsCount: 0,  // TODO: Add actual count
+        appsCount: 0,  // TODO: Add actual count
+        foldersCount: 0,  // TODO: Add actual count
+        isDevelopmentWallet: targetProfile.isDevelopmentWallet || true,
+        createdAt: targetProfile.createdAt,
+        updatedAt: targetProfile.updatedAt
+      },
+      message: 'Profile switched successfully'
     });
 
   } catch (error) {
