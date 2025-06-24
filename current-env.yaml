@@ -1,0 +1,53 @@
+spec:
+  template:
+    spec:
+      containers:
+      - env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: interspace-dev-database-url
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: interspace-jwt-secret
+        - name: JWT_REFRESH_SECRET
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: interspace-jwt-refresh-secret
+        - name: ENCRYPTION_SECRET
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: interspace-encryption-secret
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: interspace-dev-redis-url
+        - name: SILENCE_ADMIN_TOKEN
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: interspace-silence-admin-token
+        - name: ORBY_INSTANCE_PRIVATE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: interspace-orby-private-key
+        - name: ORBY_INSTANCE_PUBLIC_API_KEY
+          valueFrom:
+            secretKeyRef:
+              key: latest
+              name: interspace-orby-public-key
+        - name: NODE_ENV
+          value: development
+        - name: REDIS_ENABLED
+          value: 'true'
+        - name: DUO_NODE_URL
+          value: https://interspace-duo-node-dev-e67lrclhcq-uc.a.run.app
+        - name: SILENCE_NODE_URL
+          value: https://silence-labs-duo-server-dev-e67lrclhcq-uc.a.run.app

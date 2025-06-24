@@ -91,11 +91,11 @@ if (process.env.ENABLE_V2_API !== 'false') {
   const userRoutesV2 = require('./routes/userRoutesV2');
   
   apiV2Router.use('/auth', authRoutesV2);
+  apiV2Router.use('/', appsRoutes); // Apps routes mounted BEFORE profiles to avoid route conflicts
+  apiV2Router.use('/', foldersRoutes); // Folders routes mounted BEFORE profiles to avoid route conflicts
   apiV2Router.use('/profiles', profileRoutesV2); // Use V2 profile routes
   apiV2Router.use('/users', userRoutesV2); // Use V2 user routes
   apiV2Router.use('/siwe', siweRoutes); // SIWE routes for v2
-  apiV2Router.use('/', appsRoutes); // Apps routes are mounted at root because they include /profiles/:id/apps
-  apiV2Router.use('/', foldersRoutes); // Folders routes are mounted at root because they include /profiles/:id/folders
   
   // Apply V2 routes
   app.use('/api/v2', rateLimiter.apiLimiter, apiV2Router);

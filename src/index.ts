@@ -23,7 +23,7 @@ import linkedAccountRoutes from '@/routes/linkedAccountRoutes';
 import userRoutes from '@/routes/userRoutes';
 const userRoutesV2 = require('@/routes/userRoutesV2');
 import orbyRoutes from '@/routes/orbyRoutes';
-import mpcRoutes from '@/routes/mpcRoutes';
+import mpcRoutesV2 from '@/routes/mpcRoutesV2';
 import twoFactorRoutes from '@/routes/twoFactorRoutes';
 import siweRoutes from '@/routes/siweRoutes';
 import securityRoutes from '@/routes/securityRoutes';
@@ -357,7 +357,7 @@ class Application {
     this.app.use(`${apiV1Path}`, foldersRoutes); // Folders routes include profile paths
     this.app.use(`${apiV1Path}`, linkedAccountRoutes); // Account routes include profile paths
     this.app.use(`${apiV1Path}/orby`, orbyRoutes); // Orby chain abstraction routes
-    this.app.use(`${apiV1Path}/mpc`, mpcRoutes); // MPC key management routes
+    // MPC routes removed from v1 - now only available in v2
     this.app.use(`${apiV1Path}/2fa`, twoFactorRoutes); // Two-factor authentication routes
     this.app.use(`${apiV1Path}/siwe`, siweRoutes); // Sign-In with Ethereum routes
     this.app.use(`${apiV1Path}/security`, securityRoutes); // Security monitoring routes
@@ -369,6 +369,7 @@ class Application {
       this.app.use(`${apiV2Path}/profiles`, profileRoutesV2); // Use V2 profile routes with V2 auth
       this.app.use(`${apiV2Path}/users`, userRoutesV2); // Use V2 user routes with V2 middleware
       this.app.use(`${apiV2Path}/siwe`, siweRoutes); // SIWE routes for v2
+      this.app.use(`${apiV2Path}/mpc`, mpcRoutesV2); // MPC key management routes v2
       
       console.log('✅ V2 API endpoints enabled');
     }
@@ -424,7 +425,8 @@ Canonical: https://interspace.wallet/.well-known/security.txt
             auth: `/api/v2/auth`,
             users: `/api/v2/users`,
             profiles: `/api/v2/profiles`,
-            siwe: `/api/v2/siwe`
+            siwe: `/api/v2/siwe`,
+            mpc: `/api/v2/mpc`
           },
           features: {
             flatIdentity: true,

@@ -1,11 +1,11 @@
 steps:
   # Build the container image
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'gcr.io/$PROJECT_ID/interspace-backend:$COMMIT_SHA', '.']
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/interspace-backend:${BUILD_ID}', '-t', 'gcr.io/$PROJECT_ID/interspace-backend:latest', '.']
   
   # Push the container image to Container Registry
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'gcr.io/$PROJECT_ID/interspace-backend:$COMMIT_SHA']
+    args: ['push', '--all-tags', 'gcr.io/$PROJECT_ID/interspace-backend']
   
   # Deploy container image to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -13,9 +13,9 @@ steps:
     args:
       - 'run'
       - 'deploy'
-      - 'interspace-backend'
+      - 'interspace-backend-dev'
       - '--image'
-      - 'gcr.io/$PROJECT_ID/interspace-backend:$COMMIT_SHA'
+      - 'gcr.io/$PROJECT_ID/interspace-backend:${BUILD_ID}'
       - '--region'
       - 'us-central1'
       - '--platform'
@@ -36,9 +36,10 @@ steps:
       - '3000'
       - '--allow-unauthenticated'
       - '--set-env-vars'
-      - 'NODE_ENV=production,PORT=3000,REDIS_ENABLED=false'
+      - 'NODE_ENV=development,REDIS_ENABLED=true,DUO_NODE_URL=https://interspace-duo-node-dev-e67lrclhcq-uc.a.run.app'
 
 images:
-  - 'gcr.io/$PROJECT_ID/interspace-backend:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/interspace-backend:${BUILD_ID}'
+  - 'gcr.io/$PROJECT_ID/interspace-backend:latest'
 
 timeout: '1200s'

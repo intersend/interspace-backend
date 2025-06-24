@@ -1,0 +1,50 @@
+apiVersion: run.googleapis.com/v1
+kind: Job
+metadata:
+  name: test-duo-connectivity
+spec:
+  template:
+    spec:
+      template:
+        spec:
+          serviceAccountName: interspace-backend-dev@intersend.iam.gserviceaccount.com
+          containers:
+          - image: gcr.io/google.com/cloudsdktool/cloud-sdk:alpine
+            name: test
+            command:
+            - /bin/sh
+            - -c
+            - |
+              echo "=== Testing Duo Node Connectivity from within Google Cloud ==="
+              
+              # Get metadata server token
+              echo "1. Getting identity token from metadata server..."
+              TOKEN=$(curl -s -H "Metadata-Flavor: Google" \
+                "http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity?audience=https://interspace-duo-node-dev-784862970473-uc.a.run.app")
+              
+              echo "2. Testing duo-node health endpoint..."
+              curl -s -X GET "https://interspace-duo-node-dev-e67lrclhcq-uc.a.run.app/health" \
+                -H "Authorization: Bearer $TOKEN" \
+                -H "Content-Type: application/json"
+              
+              echo ""
+              echo "3. Testing Silence Labs connectivity through duo-node..."
+              curl -s -X GET "https://interspace-duo-node-dev-e67lrclhcq-uc.a.run.app/v3/status" \
+                -H "Authorization: Bearer $TOKEN" \
+                -H "Content-Type: application/json"
+              
+              echo ""
+              echo "4. Testing internal connectivity to Silence Labs server..."
+              # This should work within VPC
+              curl -s -X GET "https://silence-labs-duo-server-dev-e67lrclhcq-uc.a.run.app/v3/status" \
+                -H "Authorization: Bearer $TOKEN" \
+                -H "Content-Type: application/json" || echo "Direct access failed (expected)"
+              
+              echo ""
+              echo "=== Test Complete ==="
+            env:
+            - name: DUO_NODE_URL
+              value: https://interspace-duo-node-dev-e67lrclhcq-uc.a.run.app
+            - name: DUO_NODE_AUDIENCE_URL
+              value: https://interspace-duo-node-dev-784862970473-uc.a.run.app
+          restartPolicy: Never
