@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import { foldersService } from '@/services/foldersService';
 import { ApiResponse } from '@/types';
-const { getAuthorizationId, verifyProfileAccess } = require('@/utils/profileAccessV2');
 
 export class FoldersController {
   
@@ -10,9 +9,9 @@ export class FoldersController {
    */
   async createFolder(req: Request, res: Response): Promise<void> {
     try {
-      // Get authorization info supporting both V1 and V2
-      const authInfo = getAuthorizationId(req);
-      if (!authInfo) {
+      // Support both V1 (userId) and V2 (id) auth formats
+      const userId = req.user?.userId || (req.user as any)?.id;
+      if (!userId) {
         res.status(401).json({
           success: false,
           error: 'Authentication required'
@@ -31,17 +30,7 @@ export class FoldersController {
         return;
       }
 
-      // Verify access to profile
-      const { hasAccess } = await verifyProfileAccess(profileId, authInfo.id, authInfo.isV2);
-      if (!hasAccess) {
-        res.status(403).json({
-          success: false,
-          error: 'Access denied to this profile'
-        } as ApiResponse);
-        return;
-      }
-
-      const folder = await foldersService.createFolder(profileId, authInfo.userId || authInfo.id, {
+      const folder = await foldersService.createFolder(profileId, userId, {
         name,
         position,
         color
@@ -66,9 +55,9 @@ export class FoldersController {
    */
   async getProfileFolders(req: Request, res: Response): Promise<void> {
     try {
-      // Get authorization info supporting both V1 and V2
-      const authInfo = getAuthorizationId(req);
-      if (!authInfo) {
+      // Support both V1 (userId) and V2 (id) auth formats
+      const userId = req.user?.userId || (req.user as any)?.id;
+      if (!userId) {
         res.status(401).json({
           success: false,
           error: 'Authentication required'
@@ -86,17 +75,7 @@ export class FoldersController {
         return;
       }
 
-      // Verify access to profile
-      const { hasAccess } = await verifyProfileAccess(profileId, authInfo.id, authInfo.isV2);
-      if (!hasAccess) {
-        res.status(403).json({
-          success: false,
-          error: 'Access denied to this profile'
-        } as ApiResponse);
-        return;
-      }
-
-      const folders = await foldersService.getProfileFolders(profileId, authInfo.userId || authInfo.id);
+      const folders = await foldersService.getProfileFolders(profileId, userId);
 
       res.status(200).json({
         success: true,
@@ -116,9 +95,9 @@ export class FoldersController {
    */
   async getFolderById(req: Request, res: Response): Promise<void> {
     try {
-      // Get authorization info supporting both V1 and V2
-      const authInfo = getAuthorizationId(req);
-      if (!authInfo) {
+      // Support both V1 (userId) and V2 (id) auth formats
+      const userId = req.user?.userId || (req.user as any)?.id;
+      if (!userId) {
         res.status(401).json({
           success: false,
           error: 'Authentication required'
@@ -136,17 +115,7 @@ export class FoldersController {
         return;
       }
 
-      // Verify access to profile
-      const { hasAccess } = await verifyProfileAccess(profileId, authInfo.id, authInfo.isV2);
-      if (!hasAccess) {
-        res.status(403).json({
-          success: false,
-          error: 'Access denied to this profile'
-        } as ApiResponse);
-        return;
-      }
-
-      const folder = await foldersService.getFolderById(folderId, profileId, authInfo.userId || authInfo.id);
+      const folder = await foldersService.getFolderById(folderId, profileId, userId);
 
       res.status(200).json({
         success: true,
@@ -166,9 +135,9 @@ export class FoldersController {
    */
   async updateFolder(req: Request, res: Response): Promise<void> {
     try {
-      // Get authorization info supporting both V1 and V2
-      const authInfo = getAuthorizationId(req);
-      if (!authInfo) {
+      // Support both V1 (userId) and V2 (id) auth formats
+      const userId = req.user?.userId || (req.user as any)?.id;
+      if (!userId) {
         res.status(401).json({
           success: false,
           error: 'Authentication required'
@@ -177,7 +146,7 @@ export class FoldersController {
       }
 
       const { folderId } = req.params;
-      const { name, color } = req.body;
+      const { name, position, color, isPublic } = req.body;
 
       if (!folderId) {
         res.status(400).json({
@@ -187,9 +156,11 @@ export class FoldersController {
         return;
       }
 
-      const folder = await foldersService.updateFolder(folderId, authInfo.userId || authInfo.id, {
+      const folder = await foldersService.updateFolder(folderId, userId, {
         name,
-        color
+        position,
+        color,
+        isPublic
       });
 
       res.status(200).json({
@@ -211,9 +182,9 @@ export class FoldersController {
    */
   async deleteFolder(req: Request, res: Response): Promise<void> {
     try {
-      // Get authorization info supporting both V1 and V2
-      const authInfo = getAuthorizationId(req);
-      if (!authInfo) {
+      // Support both V1 (userId) and V2 (id) auth formats
+      const userId = req.user?.userId || (req.user as any)?.id;
+      if (!userId) {
         res.status(401).json({
           success: false,
           error: 'Authentication required'
@@ -231,7 +202,7 @@ export class FoldersController {
         return;
       }
 
-      await foldersService.deleteFolder(folderId, authInfo.userId || authInfo.id);
+      await foldersService.deleteFolder(folderId, userId);
 
       res.status(200).json({
         success: true,
@@ -251,9 +222,9 @@ export class FoldersController {
    */
   async reorderFolders(req: Request, res: Response): Promise<void> {
     try {
-      // Get authorization info supporting both V1 and V2
-      const authInfo = getAuthorizationId(req);
-      if (!authInfo) {
+      // Support both V1 (userId) and V2 (id) auth formats
+      const userId = req.user?.userId || (req.user as any)?.id;
+      if (!userId) {
         res.status(401).json({
           success: false,
           error: 'Authentication required'
@@ -262,30 +233,21 @@ export class FoldersController {
       }
 
       const { profileId } = req.params;
-      const { folderOrders } = req.body;
+      const { folderIds } = req.body;
 
-      if (!profileId || !folderOrders) {
+      if (!profileId || !folderIds || !Array.isArray(folderIds)) {
         res.status(400).json({
           success: false,
-          error: 'Profile ID and folder orders are required'
+          error: 'Profile ID and folderIds array are required'
         } as ApiResponse);
         return;
       }
 
-      // Verify access to profile
-      const { hasAccess } = await verifyProfileAccess(profileId, authInfo.id, authInfo.isV2);
-      if (!hasAccess) {
-        res.status(403).json({
-          success: false,
-          error: 'Access denied to this profile'
-        } as ApiResponse);
-        return;
-      }
-
-      await foldersService.reorderFolders(profileId, authInfo.userId || authInfo.id, folderOrders);
+      const folders = await foldersService.reorderFolders(profileId, userId, folderIds);
 
       res.status(200).json({
         success: true,
+        data: folders,
         message: 'Folders reordered successfully'
       } as ApiResponse);
     } catch (error: any) {
@@ -302,9 +264,9 @@ export class FoldersController {
    */
   async shareFolder(req: Request, res: Response): Promise<void> {
     try {
-      // Get authorization info supporting both V1 and V2
-      const authInfo = getAuthorizationId(req);
-      if (!authInfo) {
+      // Support both V1 (userId) and V2 (id) auth formats
+      const userId = req.user?.userId || (req.user as any)?.id;
+      if (!userId) {
         res.status(401).json({
           success: false,
           error: 'Authentication required'
@@ -322,11 +284,11 @@ export class FoldersController {
         return;
       }
 
-      const folder = await foldersService.shareFolder(folderId, authInfo.userId || authInfo.id);
+      const shareInfo = await foldersService.shareFolder(folderId, userId);
 
       res.status(200).json({
         success: true,
-        data: folder,
+        data: shareInfo,
         message: 'Folder shared successfully'
       } as ApiResponse);
     } catch (error: any) {
@@ -339,13 +301,13 @@ export class FoldersController {
   }
 
   /**
-   * Unshare a public folder
+   * Unshare a folder (make private)
    */
   async unshareFolder(req: Request, res: Response): Promise<void> {
     try {
-      // Get authorization info supporting both V1 and V2
-      const authInfo = getAuthorizationId(req);
-      if (!authInfo) {
+      // Support both V1 (userId) and V2 (id) auth formats
+      const userId = req.user?.userId || (req.user as any)?.id;
+      if (!userId) {
         res.status(401).json({
           success: false,
           error: 'Authentication required'
@@ -363,11 +325,10 @@ export class FoldersController {
         return;
       }
 
-      const folder = await foldersService.unshareFolder(folderId, authInfo.userId || authInfo.id);
+      await foldersService.unshareFolder(folderId, userId);
 
       res.status(200).json({
         success: true,
-        data: folder,
         message: 'Folder unshared successfully'
       } as ApiResponse);
     } catch (error: any) {
@@ -380,7 +341,7 @@ export class FoldersController {
   }
 
   /**
-   * Get shared folder contents (public access)
+   * Get a shared folder by shareable ID (public access)
    */
   async getSharedFolder(req: Request, res: Response): Promise<void> {
     try {
@@ -410,13 +371,13 @@ export class FoldersController {
   }
 
   /**
-   * Get folder contents with apps
+   * Get folder contents with pagination
    */
   async getFolderContents(req: Request, res: Response): Promise<void> {
     try {
-      // Get authorization info supporting both V1 and V2
-      const authInfo = getAuthorizationId(req);
-      if (!authInfo) {
+      // Support both V1 (userId) and V2 (id) auth formats
+      const userId = req.user?.userId || (req.user as any)?.id;
+      if (!userId) {
         res.status(401).json({
           success: false,
           error: 'Authentication required'
@@ -425,6 +386,8 @@ export class FoldersController {
       }
 
       const { folderId } = req.params;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = Math.min(parseInt(req.query.limit as string) || 20, 100);
 
       if (!folderId) {
         res.status(400).json({
@@ -434,11 +397,11 @@ export class FoldersController {
         return;
       }
 
-      const contents = await foldersService.getFolderContents(folderId, authInfo.userId || authInfo.id);
+      const result = await foldersService.getFolderContents(folderId, userId, page, limit);
 
       res.status(200).json({
         success: true,
-        data: contents
+        data: result
       } as ApiResponse);
     } catch (error: any) {
       console.error('Get folder contents error:', error);

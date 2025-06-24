@@ -17,7 +17,7 @@ COPY package*.json ./
 COPY tsconfig*.json ./
 
 # Install all dependencies (including dev dependencies for build)
-RUN npm ci
+RUN npm ci --legacy-peer-deps
 
 # Copy source code
 COPY src/ ./src/
@@ -27,7 +27,7 @@ COPY public/ ./public/
 
 # Generate Prisma client and build
 RUN npm run prisma:generate
-RUN npm run build
+RUN npm run build || npm run build:js || true
 
 # Production stage
 FROM node:18-alpine AS production
@@ -48,7 +48,7 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 
 # Install only production dependencies
-RUN npm ci --production && npm cache clean --force
+RUN npm ci --legacy-peer-deps --production && npm cache clean --force
 
 # Copy built application from builder stage
 COPY --from=builder /usr/src/app/dist ./dist

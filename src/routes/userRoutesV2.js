@@ -118,7 +118,7 @@ router.get('/me/social-accounts', async (req, res, next) => {
 
     res.json({
       success: true,
-      socialAccounts: socialAccounts.map(acc => ({
+      data: socialAccounts.map(acc => ({
         id: acc.id,
         type: acc.type,
         identifier: acc.identifier,

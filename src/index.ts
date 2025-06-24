@@ -366,6 +366,8 @@ class Application {
     if (process.env.ENABLE_V2_API !== 'false') {
       const apiV2Path = '/api/v2';
       this.app.use(`${apiV2Path}/auth`, authRoutesV2);
+      this.app.use(`${apiV2Path}`, appsRoutes); // Apps routes include profile paths
+      this.app.use(`${apiV2Path}`, foldersRoutes); // Folders routes include profile paths
       this.app.use(`${apiV2Path}/profiles`, profileRoutesV2); // Use V2 profile routes with V2 auth
       this.app.use(`${apiV2Path}/users`, userRoutesV2); // Use V2 user routes with V2 middleware
       this.app.use(`${apiV2Path}/siwe`, siweRoutes); // SIWE routes for v2

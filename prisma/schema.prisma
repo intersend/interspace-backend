@@ -26,7 +26,6 @@ model User {
   // Multi-device support
   devices          DeviceRegistration[]
   refreshTokens    RefreshToken[]
-  blacklistedTokens BlacklistedToken[]
 
   // Profiles owned by this user
   smartProfiles  SmartProfile[]
@@ -83,12 +82,12 @@ model BlacklistedToken {
   id         String   @id @default(cuid())
   token      String   @unique
   tokenType  String   // "access" or "refresh"
-  userId     String
+  accountId  String
   reason     String   // "logout", "rotation", "security", "password_change"
   expiresAt  DateTime // When the token would have expired naturally
   createdAt  DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   @@index([expiresAt])
   @@map("blacklisted_tokens")
@@ -465,10 +464,11 @@ model Account {
   updatedAt  DateTime @updatedAt
 
   // Relationships
-  identityLinksA  IdentityLink[]   @relation("AccountA")
-  identityLinksB  IdentityLink[]   @relation("AccountB")
-  profileAccounts ProfileAccount[]
-  sessions        AccountSession[]
+  identityLinksA    IdentityLink[]     @relation("AccountA")
+  identityLinksB    IdentityLink[]     @relation("AccountB")
+  profileAccounts   ProfileAccount[]
+  sessions          AccountSession[]
+  blacklistedTokens BlacklistedToken[]
 
   @@unique([type, identifier])
   @@map("accounts")

@@ -14,7 +14,7 @@ export class TokenBlacklistService {
   async blacklistToken(
     token: string,
     tokenType: 'access' | 'refresh',
-    userId: string,
+    accountId: string,
     reason: BlacklistReason
   ): Promise<void> {
     try {
@@ -26,15 +26,15 @@ export class TokenBlacklistService {
         data: {
           token,
           tokenType,
-          userId,
+          accountId,
           reason: reason.reason,
           expiresAt
         }
       });
 
-      logger.info('Token blacklisted', { tokenType, userId, reason: reason.reason });
+      logger.info('Token blacklisted', { tokenType, accountId, reason: reason.reason });
     } catch (error) {
-      logger.error('Failed to blacklist token', { error, tokenType, userId });
+      logger.error('Failed to blacklist token', { error, tokenType, accountId });
       throw error;
     }
   }
@@ -58,6 +58,7 @@ export class TokenBlacklistService {
 
   /**
    * Blacklist all tokens for a user (used for security events)
+   * Note: This is a V1 compatibility method. V2 uses account-based tokens.
    */
   async blacklistAllUserTokens(userId: string, reason: BlacklistReason): Promise<void> {
     try {
@@ -67,13 +68,43 @@ export class TokenBlacklistService {
           where: { userId }
         });
 
+        // Find the account associated with this user
+        const user = await tx.user.findUnique({
+          where: { id: userId },
+          select: { email: true, walletAddress: true }
+        });
+
+        if (!user) {
+          logger.warn('User not found for blacklisting tokens', { userId });
+          return;
+        }
+
+        // Find the account
+        const account = await tx.account.findFirst({
+          where: {
+            OR: [
+              user.email ? { type: 'email', identifier: user.email } : {},
+              user.walletAddress ? { type: 'wallet', identifier: user.walletAddress.toLowerCase() } : {}
+            ].filter(condition => Object.keys(condition).length > 0)
+          }
+        });
+
+        if (!account) {
+          logger.warn('No account found for user', { userId });
+          // Still delete refresh tokens
+          await tx.refreshToken.deleteMany({
+            where: { userId }
+          });
+          return;
+        }
+
         // Blacklist each token
         for (const refreshToken of refreshTokens) {
           await tx.blacklistedToken.create({
             data: {
               token: refreshToken.token,
               tokenType: 'refresh',
-              userId,
+              accountId: account.id,
               reason: reason.reason,
               expiresAt: refreshToken.expiresAt
             }
@@ -85,7 +116,7 @@ export class TokenBlacklistService {
           where: { userId }
         });
 
-        logger.info('All user tokens blacklisted', { userId, reason: reason.reason });
+        logger.info('All user tokens blacklisted', { userId, accountId: account.id, reason: reason.reason });
       });
     } catch (error) {
       logger.error('Failed to blacklist all user tokens', { error, userId });
