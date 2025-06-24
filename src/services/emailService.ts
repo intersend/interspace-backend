@@ -1,9 +1,11 @@
 import nodemailer from 'nodemailer';
+import sgMail from '@sendgrid/mail';
 import { logger } from '../utils/logger';
 
 // Email configuration
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@interspace.app';
 const FROM_NAME = process.env.FROM_NAME || 'Interspace';
+const EMAIL_SERVICE = process.env.EMAIL_SERVICE || 'smtp';
 
 export interface EmailOptions {
   to: string;
@@ -18,7 +20,7 @@ class EmailService {
   private devCodes: Map<string, { code: string; timestamp: number }> = new Map();
 
   constructor() {
-    this.initializeTransporter();
+    this.initializeEmailService();
     
     // Clean up old codes every 15 minutes
     if (process.env.NODE_ENV === 'development') {
@@ -30,6 +32,15 @@ class EmailService {
           }
         }
       }, 15 * 60 * 1000);
+    }
+  }
+
+  private initializeEmailService() {
+    if (EMAIL_SERVICE === 'sendgrid' && process.env.SENDGRID_API_KEY) {
+      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+      logger.info('SendGrid email service initialized');
+    } else {
+      this.initializeTransporter();
     }
   }
 
@@ -67,6 +78,30 @@ class EmailService {
   }
 
   async sendEmail(options: EmailOptions): Promise<void> {
+    // Use SendGrid if configured
+    if (EMAIL_SERVICE === 'sendgrid' && process.env.SENDGRID_API_KEY) {
+      try {
+        const msg = {
+          to: options.to,
+          from: {
+            email: FROM_EMAIL,
+            name: FROM_NAME
+          },
+          subject: options.subject,
+          text: options.text || this.stripHtml(options.html),
+          html: options.html,
+        };
+
+        await sgMail.send(msg);
+        logger.info(`Email sent successfully via SendGrid to: ${options.to}`);
+        return;
+      } catch (error) {
+        logger.error('Failed to send email via SendGrid:', error);
+        throw new Error('Failed to send email');
+      }
+    }
+
+    // Fall back to SMTP
     if (!this.transporter) {
       // In development, just log the email
       if (process.env.NODE_ENV === 'development') {
@@ -89,9 +124,9 @@ class EmailService {
       };
 
       const info = await this.transporter.sendMail(mailOptions);
-      logger.info(`Email sent successfully to: ${options.to}, messageId: ${info.messageId}`);
+      logger.info(`Email sent successfully via SMTP to: ${options.to}, messageId: ${info.messageId}`);
     } catch (error) {
-      logger.error('Failed to send email:', error);
+      logger.error('Failed to send email via SMTP:', error);
       throw new Error('Failed to send email');
     }
   }
@@ -109,107 +144,122 @@ class EmailService {
       this.devCodes.set(email, { code, timestamp: Date.now() });
     }
 
-    const subject = 'Your Interspace Verification Code';
+    const subject = 'Your Interspace verification code is ' + code;
     
     const html = `
-    <!DOCTYPE html>
-    <html>
+    <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+    <html xmlns="http://www.w3.org/1999/xhtml">
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta http-equiv="X-UA-Compatible" content="IE=edge">
       <title>Verification Code</title>
-      <style>
-        body {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-          background-color: #f5f5f7;
-          margin: 0;
-          padding: 0;
+      <style type="text/css">
+        /* Reset styles */
+        body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+        table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+        img { -ms-interpolation-mode: bicubic; }
+        
+        /* Remove default styling */
+        img { border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; }
+        table { border-collapse: collapse !important; }
+        body { height: 100% !important; margin: 0 !important; padding: 0 !important; width: 100% !important; }
+        
+        /* Mobile styles */
+        @media screen and (max-width: 600px) {
+          .mobile-padding { padding: 32px 20px !important; }
+          .mobile-center { text-align: center !important; }
         }
-        .container {
-          max-width: 600px;
-          margin: 0 auto;
-          padding: 40px 20px;
-        }
-        .card {
-          background-color: #ffffff;
-          border-radius: 18px;
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-          padding: 48px;
-          text-align: center;
-        }
-        .logo {
-          width: 80px;
-          height: 80px;
-          background: linear-gradient(135deg, #5856D6 0%, #7C7CFF 100%);
-          border-radius: 20px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin: 0 auto 32px;
-          font-size: 36px;
-          color: white;
-        }
-        h1 {
-          color: #1d1d1f;
-          font-size: 28px;
-          font-weight: 600;
-          margin: 0 0 16px;
-        }
-        .subtitle {
-          color: #86868b;
-          font-size: 17px;
-          line-height: 1.47;
-          margin: 0 0 32px;
-        }
-        .code-container {
-          background-color: #f5f5f7;
-          border-radius: 12px;
-          padding: 24px;
-          margin: 0 0 32px;
-        }
-        .code {
-          font-size: 36px;
-          font-weight: 600;
-          letter-spacing: 8px;
-          color: #1d1d1f;
-          font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
-        }
-        .expiry {
-          color: #86868b;
-          font-size: 15px;
-          margin: 32px 0 0;
-        }
-        .footer {
-          color: #86868b;
-          font-size: 13px;
-          margin-top: 48px;
-          line-height: 1.5;
-        }
-        .footer a {
-          color: #5856D6;
-          text-decoration: none;
+        
+        /* Apple Mail styles */
+        @media only screen and (min-device-width: 375px) and (max-device-width: 413px) {
+          .mobile-padding { padding: 32px 20px !important; }
         }
       </style>
     </head>
-    <body>
-      <div class="container">
-        <div class="card">
-          <div class="logo">✨</div>
-          <h1>Verify Your Email</h1>
-          <p class="subtitle">Enter this verification code in the Interspace app to continue:</p>
-          
-          <div class="code-container">
-            <div class="code">${code}</div>
-          </div>
-          
-          <p class="expiry">This code will expire in 10 minutes.</p>
-          
-          <div class="footer">
-            If you didn't request this code, you can safely ignore this email.<br>
-            Need help? Contact us at <a href="mailto:support@interspace.app">support@interspace.app</a>
-          </div>
-        </div>
-      </div>
+    <body style="margin: 0; padding: 0; background-color: #f2f2f7;">
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f2f2f7;">
+        <tr>
+          <td align="center" valign="top" style="padding: 40px 10px;">
+            <!-- Email Container -->
+            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 580px; background-color: #ffffff; border-radius: 10px; overflow: hidden;">
+              <!-- Header with logo -->
+              <tr>
+                <td align="center" valign="top" style="padding: 56px 20px 32px 20px;">
+                  <div style="width: 88px; height: 88px; background: linear-gradient(45deg, #007AFF, #5856D6); border-radius: 22px; display: inline-block;">
+                    <table width="88" height="88" border="0" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td align="center" valign="middle" style="font-size: 40px; color: #ffffff;">
+                          I
+                        </td>
+                      </tr>
+                    </table>
+                  </div>
+                </td>
+              </tr>
+              
+              <!-- Main content -->
+              <tr>
+                <td align="center" valign="top" style="padding: 0 50px 40px 50px;" class="mobile-padding">
+                  <!-- Title -->
+                  <h1 style="margin: 0 0 12px 0; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; font-size: 32px; font-weight: 700; color: #1c1c1e; line-height: 1.2; letter-spacing: -0.003em;">
+                    Sign in to Interspace
+                  </h1>
+                  
+                  <!-- Subtitle -->
+                  <p style="margin: 0 0 32px 0; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; font-size: 17px; font-weight: 400; color: #3c3c43; line-height: 1.47; letter-spacing: -0.022em;">
+                    Enter this code in the app
+                  </p>
+                  
+                  <!-- Code box -->
+                  <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin: 0 0 32px 0;">
+                    <tr>
+                      <td align="center" valign="middle" style="background-color: #f2f2f7; border-radius: 10px; padding: 28px 20px;">
+                        <div style="font-family: 'SF Mono', Monaco, Consolas, 'Courier New', monospace; font-size: 36px; font-weight: 700; letter-spacing: 0.1em; color: #1c1c1e; line-height: 1;">
+                          ${code}
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+                  
+                  <!-- Expiry notice -->
+                  <p style="margin: 0 0 40px 0; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; font-size: 15px; font-weight: 400; color: #8e8e93; line-height: 1.4; letter-spacing: -0.022em;">
+                    This code expires in 10 minutes
+                  </p>
+                  
+                  <!-- Security notice -->
+                  <table border="0" cellpadding="0" cellspacing="0" width="100%" style="border-top: 1px solid #d1d1d6; padding-top: 32px;">
+                    <tr>
+                      <td align="center" valign="top">
+                        <p style="margin: 0 0 16px 0; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; font-size: 13px; font-weight: 400; color: #8e8e93; line-height: 1.6; letter-spacing: -0.02em;">
+                          If you didn't request this code, you can safely ignore this email.<br>
+                          Someone might have typed your email address by mistake.
+                        </p>
+                        <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; font-size: 13px; font-weight: 400; color: #8e8e93; line-height: 1.6; letter-spacing: -0.02em;">
+                          Thanks,<br>
+                          The Interspace Team
+                        </p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
+            
+            <!-- Footer -->
+            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 580px;">
+              <tr>
+                <td align="center" valign="top" style="padding: 24px 20px;">
+                  <p style="margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; font-size: 12px; font-weight: 400; color: #8e8e93; line-height: 1.5; letter-spacing: -0.02em;">
+                    Interspace • Your digital identity<br>
+                    <a href="https://interspace.app" style="color: #007AFF; text-decoration: none;">interspace.app</a>
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
     </body>
     </html>
     `;
