@@ -1,0 +1,2 @@
+## Patch Scripts
+- There's a patch script at scripts/patch-orby.js that fixes a known CommonJS build issue in @orb-labs/orby-ethers6 where it incorrectly references ethers.ethers.JsonRpcProvider instead of ethers.JsonRpcProvider.

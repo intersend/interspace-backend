@@ -122,4 +122,22 @@ router.get('/:profileId/accounts',
   profileControllerV2.getProfileAccounts
 );
 
+/**
+ * @route   GET /api/v2/profiles/:profileId/balance
+ * @desc    Get unified balance for a profile
+ * @access  Private
+ */
+router.get('/:profileId/balance',
+  [
+    param('profileId').isString().notEmpty()
+  ],
+  async (req, res, next) => {
+    // Use the Orby controller but through the profile route
+    const { orbyController } = require('../controllers/orbyController');
+    // Map profileId to id for compatibility
+    req.params.id = req.params.profileId;
+    return orbyController.getUnifiedBalance(req, res, next);
+  }
+);
+
 module.exports = router;

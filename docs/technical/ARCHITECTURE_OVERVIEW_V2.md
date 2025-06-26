@@ -77,10 +77,11 @@ interface AccountSession {
 - **Framework**: Express.js with TypeScript
 - **Database**: PostgreSQL with Prisma ORM
 - **Authentication**: JWT with account-based sessions
-- **MPC Wallets**: Silence Labs two-party computation
-- **Chain Abstraction**: Orby integration
+- **MPC Wallets**: Silence Labs SDK via Duo Node proxy
+- **Chain Abstraction**: Orby API for multi-chain operations
 - **Real-time**: Socket.IO for live updates
 - **Security**: Helmet, CORS, rate limiting
+- **Blockchain**: Ethers v6, EIP-7702 delegation support
 
 ## API Structure
 
@@ -95,13 +96,27 @@ Base: `/api/v2`
 - `/profiles` – Access-controlled profile management
 - `/accounts` – Account management
 
-### V1 Endpoints (Legacy)
+### V1 Endpoints (Active)
 
 Base: `/api/v1`
 
+**Identity & Auth** (Legacy):
 - Still supported for backward compatibility
 - Mapped internally to V2 services
-- Will be deprecated in future releases
+
+**Blockchain Features** (Active):
+- `/profiles/:id/balance` – Unified multi-chain balance
+- `/profiles/:id/intent` – Build transfer/swap operations
+- `/profiles/:id/batch-intent` – Batch operations
+- `/operations/:id/submit` – Submit signed operations
+- `/operations/:id/status` – Operation status
+- `/profiles/:id/gas-tokens` – Gas payment options
+- `/profiles/:id/orby-rpc-url` – Virtual node RPC
+- `/profiles/:id/accounts/:accountId/delegate` – EIP-7702 delegation
+- `/profiles/:id/execute-delegated` – Gas-free execution
+- `/batch/:id/execute` – Execute batch operations
+- `/mpc/backup` – Backup MPC key shares
+- `/mpc/rotate-key` – Rotate MPC keys
 
 ## Data Flow Examples
 
@@ -141,6 +156,48 @@ sequenceDiagram
     API->>Client: Updated profile access
 ```
 
+### Cross-Chain Transfer
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API
+    participant OrbyService
+    participant MPC
+    participant Blockchain
+    
+    Client->>API: POST /profiles/:id/intent
+    API->>OrbyService: buildTransferOperation()
+    OrbyService->>API: Unsigned operations
+    API->>Client: Operations to sign
+    Client->>MPC: Sign with P1 share
+    MPC->>Client: Signatures
+    Client->>API: POST /operations/:id/submit
+    API->>Blockchain: Execute transaction
+    Blockchain->>API: Transaction hash
+    API->>Client: Success
+```
+
+### Gas-Free Delegation
+
+```mermaid
+sequenceDiagram
+    participant EOA
+    participant API
+    participant DelegationService
+    participant SessionWallet
+    
+    EOA->>API: POST /accounts/:id/delegate
+    API->>DelegationService: createAuthorization()
+    DelegationService->>EOA: Authorization to sign
+    EOA->>API: POST /delegate/confirm
+    API->>DelegationService: Store delegation
+    EOA->>API: POST /execute-delegated
+    API->>SessionWallet: Pay gas & execute
+    SessionWallet->>API: Transaction complete
+    API->>EOA: Success (no gas spent)
+```
+
 ## Database Schema (Key Tables)
 
 ### New Tables
@@ -173,7 +230,45 @@ account_sessions (
 -- SmartProfiles now linked to accounts
 smart_profiles (
   ...,
-  created_by_account_id  -- NEW
+  created_by_account_id,  -- NEW
+  orby_account_cluster_id -- Orby integration
+)
+```
+
+### Blockchain Tables
+
+```sql
+-- MPC key management
+mpc_key_shares (
+  profile_id, key_id, public_key, key_share, address
+)
+
+-- Orby integration
+orby_virtual_nodes (
+  profile_id, chain_id, rpc_url
+)
+
+orby_operations (
+  profile_id, operation_set_id, type, status, unsigned_payload
+)
+
+orby_transactions (
+  operation_id, hash, chain_id, status
+)
+
+-- Batch operations
+batch_operations (
+  profile_id, batch_id, status, operations, results
+)
+
+-- EIP-7702 delegations
+account_delegations (
+  linked_account_id, session_wallet, permissions, authorization_data
+)
+
+-- Gas preferences
+preferred_gas_tokens (
+  profile_id, chain_id, token_id
 )
 ```
 
@@ -197,14 +292,68 @@ smart_profiles (
    - Backward compatibility
 
 4. **SessionWalletService**
-   - MPC wallet creation
-   - Transaction signing
-   - No changes from V1
+   - MPC wallet creation with 2-of-2 threshold
+   - Transaction signing via distributed protocol
+   - Key rotation and backup support
+   - Integration with Duo Node proxy
 
 5. **OrbyService**
-   - Chain abstraction
-   - Gas sponsoring
-   - No changes from V1
+   - Account cluster management
+   - Virtual node RPC endpoints
+   - Unified balance across chains
+   - Gas abstraction with any token
+   - Cross-chain operation building
+
+6. **BatchOperationService** (New)
+   - Multi-operation batching
+   - Atomic/non-atomic execution
+   - Gas optimization
+   - Status tracking and retry
+
+7. **AccountDelegationService** (New)
+   - EIP-7702 delegation management
+   - Gas-free operation execution
+   - Permission enforcement
+   - Delegation lifecycle
+
+## Blockchain Architecture
+
+### MPC Wallet System
+```
+┌─────────────┐     ┌─────────────┐     ┌──────────────┐
+│   Client    │────▶│   Backend   │────▶│  Duo Node    │
+│  (P1 Share) │     │ (P2 Share)  │     │   (Proxy)    │
+└─────────────┘     └─────────────┘     └──────────────┘
+                                                 │
+                                                 ▼
+                                        ┌──────────────┐
+                                        │ Silence Labs │
+                                        │    Cloud     │
+                                        └──────────────┘
+```
+
+### Chain Abstraction Layer
+```
+┌─────────────┐     ┌─────────────┐     ┌──────────────┐
+│   Profile   │────▶│    Orby     │────▶│  Multiple    │
+│  (Cluster)  │     │   Service   │     │   Chains     │
+└─────────────┘     └─────────────┘     └──────────────┘
+        │                   │
+        ▼                   ▼
+┌─────────────┐     ┌─────────────┐
+│   Unified   │     │   Virtual   │
+│   Balance   │     │    Nodes    │
+└─────────────┘     └─────────────┘
+```
+
+### EIP-7702 Delegation Flow
+```
+┌─────────────┐     ┌─────────────┐     ┌──────────────┐
+│     EOA     │────▶│   Session   │────▶│ Transaction  │
+│ (Authorizes)│     │   Wallet    │     │  (Gas-free)  │
+└─────────────┘     │ (Pays Gas)  │     └──────────────┘
+                    └─────────────┘
+```
 
 ## Security Enhancements
 
@@ -212,16 +361,25 @@ smart_profiles (
 - No central "User" entity
 - Distributed identity across accounts
 - Resilient to account compromise
+- MPC prevents single key compromise
 
 ### 2. Privacy Controls
 - Granular linking permissions
 - Isolated account support
 - Audit trail for all operations
+- Encrypted key share storage
 
 ### 3. Session Security
 - Account-specific sessions
 - Privacy mode enforcement
 - Device tracking
+- MPC session management
+
+### 4. Blockchain Security
+- 2-of-2 threshold signatures
+- No single private key exposure
+- Delegation permission boundaries
+- Transaction validation
 
 ## Migration Strategy
 

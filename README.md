@@ -704,6 +704,27 @@ Target dApp Contract
 5. **Implement App Management**: iPhone-style bookmarking
 6. **WebSocket Integration**: Real-time profile sync
 
+## 📚 Documentation
+
+### Core Documentation
+- [API Documentation](./docs/technical/API_DOCUMENTATION.md) - Core API endpoints
+- [Blockchain API Documentation](./docs/technical/BLOCKCHAIN_API_DOCUMENTATION.md) - MPC, Orby, Batch, Delegation APIs
+- [Architecture Overview V2](./docs/technical/ARCHITECTURE_OVERVIEW_V2.md) - System architecture with blockchain features
+- [Fresh Start Guide](./docs/technical/FRESH_START_GUIDE.md) - Getting started quickly
+
+### API Sequence Diagrams
+- [Authentication Flows](./api-sequence/1-authentication-flows.md) - All auth strategies
+- [Profile Management](./api-sequence/2-profile-management.md) - Profile lifecycle
+- [MPC Operations](./api-sequence/7-mpc-operations.md) - Multi-party computation flows
+- [Orby Chain Abstraction](./api-sequence/8-orby-chain-abstraction.md) - Cross-chain operations
+- [Batch Operations](./api-sequence/9-batch-operations.md) - Multi-operation execution
+- [EIP-7702 Delegation](./api-sequence/10-delegation-eip7702.md) - Gas-free operations
+
+### Feature Documentation
+- [MPC Integration](./docs/features/MPC_INTEGRATION.md) - Silence Labs integration
+- [Orby Integration](./docs/features/ORBY_INTEGRATION.md) - Chain abstraction details
+- [Testing Strategy](./docs/technical/TESTING_STRATEGY.md) - Test coverage and strategies
+
 ## 🤝 Contributing
 
 ### Development Guidelines
