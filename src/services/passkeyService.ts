@@ -26,8 +26,18 @@ interface PasskeyAuthenticationOptions {
 
 class PasskeyService {
   private readonly rpName = 'Interspace';
-  private readonly rpID = config.PASSKEY_RP_ID || 'interspace.com';
-  private readonly origin = config.PASSKEY_ORIGIN || 'https://interspace.com';
+  private readonly rpID = config.PASSKEY_RP_ID || 'interspace.app';
+  private readonly origin = config.PASSKEY_ORIGIN || 'https://interspace.app';
+
+  constructor() {
+    if (!config.PASSKEY_RP_ID) {
+      console.warn('⚠️ PASSKEY_RP_ID not configured, using default: interspace.app');
+    }
+    if (!config.PASSKEY_ORIGIN) {
+      console.warn('⚠️ PASSKEY_ORIGIN not configured, using default: https://interspace.app');
+    }
+    console.log(`🔐 PasskeyService initialized with RP ID: ${this.rpID}, Origin: ${this.origin}`);
+  }
 
   /**
    * Generate registration options for creating a new passkey
