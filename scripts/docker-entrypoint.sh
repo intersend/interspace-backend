@@ -17,6 +17,10 @@ if [ ! -d "node_modules/express-validator" ] || [ ! -d "node_modules/@simpleweba
   npm install
 fi
 
+# Apply OrbyProvider patch
+echo "🔧 Applying OrbyProvider patch..."
+npm run patch:orby
+
 # Always regenerate Prisma client to ensure types are in sync
 echo "🔧 Regenerating Prisma client..."
 npm run prisma:generate
