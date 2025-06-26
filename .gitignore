@@ -116,3 +116,5 @@ Dockerfile.prod
 
 # GitHub workflows (commented out - we might want to add CI/CD later)
 # .github/workflows/test.yml
+.env.e2e
+.env.e2e.real
