@@ -50,7 +50,7 @@ services:
     container_name: interspace-adminer
     restart: unless-stopped
     ports:
-      - "8080:8080"
+      - "8090:8080"
     environment:
       ADMINER_DEFAULT_SERVER: postgres
     depends_on:
@@ -88,10 +88,10 @@ services:
       - SILENCE_NODE_URL=http://localhost:8080
       - DUO_NODE_URL=http://localhost:3001
       - DUO_NODE_AUDIENCE_URL=http://localhost:3001
-      - ORBY_INSTANCE_PRIVATE_API_KEY=local-orby-private
-      - ORBY_INSTANCE_PUBLIC_API_KEY=local-orby-public
+      - ORBY_INSTANCE_PRIVATE_API_KEY=c669420b-1cca-4a62-ab6c-a580fd06d575
+      - ORBY_INSTANCE_PUBLIC_API_KEY=aae1a17a-6c09-4649-827e-fe5b49eb67b3
       - ORBY_APP_NAME=interspace-local
-      - ORBY_PRIVATE_INSTANCE_URL=http://localhost:8545
+      - ORBY_PRIVATE_INSTANCE_URL=https://api-rpc-dev.orblabs.xyz/c669420b-1cca-4a62-ab6c-a580fd06d575
       - FRONTEND_URL=http://localhost:3000
       # V2 API Settings
       - ENABLE_V2_API=true

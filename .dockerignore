@@ -44,6 +44,7 @@ scripts/*
 !scripts/start-prod.js
 !scripts/check-production-build.js
 !scripts/docker-healthcheck.sh
+!scripts/patch-orby.js
 
 # Development files
 .editorconfig

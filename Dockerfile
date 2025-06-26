@@ -1,5 +1,5 @@
 # Multi-stage build for optimized production image
-FROM node:18-alpine AS builder
+FROM node:20-alpine AS builder
 
 # Install system dependencies
 RUN apk add --no-cache \
@@ -16,13 +16,15 @@ WORKDIR /usr/src/app
 COPY package*.json ./
 COPY tsconfig*.json ./
 
+# Copy scripts directory first (needed for postinstall)
+COPY scripts/ ./scripts/
+
 # Install all dependencies (including dev dependencies for build)
 RUN npm ci --legacy-peer-deps
 
 # Copy source code
 COPY src/ ./src/
 COPY prisma/ ./prisma/
-COPY scripts/ ./scripts/
 COPY public/ ./public/
 
 # Generate Prisma client and build
@@ -47,6 +49,9 @@ WORKDIR /usr/src/app
 # Copy package files
 COPY package*.json ./
 
+# Copy patch script needed for postinstall
+COPY scripts/patch-orby.js ./scripts/
+
 # Install only production dependencies
 RUN npm ci --legacy-peer-deps --production && npm cache clean --force
 
@@ -60,6 +65,7 @@ COPY --from=builder /usr/src/app/tsconfig.json ./tsconfig.json
 COPY scripts/start-prod.js ./scripts/
 COPY scripts/check-production-build.js ./scripts/
 COPY scripts/docker-healthcheck.sh ./scripts/
+COPY scripts/patch-orby.js ./scripts/
 
 # Copy public assets for passkeys
 COPY --from=builder /usr/src/app/public ./public
