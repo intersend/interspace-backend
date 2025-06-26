@@ -5,6 +5,7 @@ import { config } from '@/utils/config';
 import { AppError, NotFoundError } from '@/types';
 import type { SmartProfile, LinkedAccount } from '@prisma/client';
 import { ethers } from 'ethers';
+import { cacheService } from './cacheService';
 
 // Define the response type based on Orby SDK structure
 interface CreateOperationsResponse {
@@ -94,8 +95,8 @@ export class OrbyService {
   private getProvider(): OrbyProvider {
     if (!this.orbyProvider) {
       console.log('Initializing OrbyProvider...');
-      const orbyUrl = `${this.config.privateInstanceUrl}/${this.config.privateApiKey}`;
-      this.orbyProvider = new OrbyProvider(orbyUrl);
+      // The privateInstanceUrl already includes the API key for the dev environment
+      this.orbyProvider = new OrbyProvider(this.config.privateInstanceUrl);
     }
     return this.orbyProvider;
   }
@@ -125,7 +126,8 @@ export class OrbyService {
       Account.toAccount({
         vmType: 'EVM',
         address: profile.sessionWalletAddress,
-        accountType: 'EOA'
+        accountType: 'EOA',
+        chainId: 'EIP155-1' // Default to Ethereum mainnet (Orby format)
       })
     );
 
@@ -137,7 +139,8 @@ export class OrbyService {
             Account.toAccount({
               vmType: 'EVM',
               address: linkedAccount.address,
-              accountType: 'EOA'
+              accountType: 'EOA',
+              chainId: `EIP155-${linkedAccount.chainId || 1}` // Use linked account's chainId or default to mainnet (Orby format)
             })
           );
         }
@@ -272,19 +275,35 @@ export class OrbyService {
       throw new AppError('Profile does not have an Orby account cluster', 400);
     }
 
-    // Get virtual node for the chain
-    const virtualNode = await this.getVirtualNode(profile, chainId);
-
-    // Use virtual node to get portfolio
-    const portfolio = await virtualNode.getFungibleTokenPortfolio(
-      profileWithOrby.orbyAccountClusterId
-    );
-
-    if (!portfolio) {
-      throw new AppError('Failed to get token portfolio', 500);
+    // Check cache first
+    const cached = await cacheService.getCachedBalance(profile.id);
+    if (cached) {
+      return cached;
     }
 
-    return portfolio;
+    // Use request coalescing for concurrent requests
+    return cacheService.coalesceRequest(
+      `portfolio:${profile.id}:${chainId}`,
+      async () => {
+        // Get virtual node for the chain
+        const virtualNode = await this.getVirtualNode(profile, chainId);
+
+        // Use virtual node to get portfolio
+        const portfolio = await virtualNode.getFungibleTokenPortfolio(
+          profileWithOrby.orbyAccountClusterId!
+        );
+
+        if (!portfolio) {
+          throw new AppError('Failed to get token portfolio', 500);
+        }
+
+        // Cache the result
+        await cacheService.setCachedBalance(profile.id, portfolio);
+
+        return portfolio;
+      },
+      300 // 5 minute TTL
+    );
   }
 
   /**
@@ -293,18 +312,58 @@ export class OrbyService {
   async getStandardizedTokenIds(
     tokens: { chainId: number; tokenAddress: string }[]
   ): Promise<string[]> {
-    const tokenIds = await this.getProvider().getStandardizedTokenIds(
-      tokens.map(t => ({
-        chainId: BigInt(t.chainId),
-        tokenAddress: t.tokenAddress
-      }))
+    // Check cache for existing token IDs
+    const cachedTokenIds = await cacheService.getCachedTokenIds(
+      tokens.map(t => ({ chainId: BigInt(t.chainId), tokenAddress: t.tokenAddress }))
     );
 
-    if (!tokenIds) {
-      throw new AppError('Failed to get standardized token IDs', 500);
+    // Separate cached and uncached tokens
+    const uncachedTokens: { chainId: number; tokenAddress: string }[] = [];
+    const result: string[] = new Array(tokens.length);
+
+    tokens.forEach((token, index) => {
+      const cacheKey = `${token.chainId}:${token.tokenAddress}`;
+      const cachedId = cachedTokenIds.get(cacheKey);
+      
+      if (cachedId) {
+        result[index] = cachedId;
+      } else {
+        uncachedTokens.push(token);
+      }
+    });
+
+    // Fetch uncached tokens if any
+    if (uncachedTokens.length > 0) {
+      const tokenIds = await this.getProvider().getStandardizedTokenIds(
+        uncachedTokens.map(t => ({
+          chainId: BigInt(t.chainId),
+          tokenAddress: t.tokenAddress
+        }))
+      );
+
+      if (!tokenIds || tokenIds.length !== uncachedTokens.length) {
+        throw new AppError('Failed to get standardized token IDs', 500);
+      }
+
+      // Cache the new token IDs
+      const newTokenMap = new Map<string, string>();
+      uncachedTokens.forEach((token, idx) => {
+        const cacheKey = `${token.chainId}:${token.tokenAddress}`;
+        newTokenMap.set(cacheKey, tokenIds[idx]!);
+      });
+      
+      await cacheService.setCachedTokenIds(newTokenMap);
+
+      // Merge results
+      let uncachedIndex = 0;
+      tokens.forEach((token, index) => {
+        if (result[index] === undefined) {
+          result[index] = tokenIds[uncachedIndex++]!;
+        }
+      });
     }
 
-    return tokenIds;
+    return result;
   }
 
   /**
@@ -494,6 +553,8 @@ export class OrbyService {
       let status = operation.status;
       if (activity.overallStatus === ActivityStatus.SUCCESSFUL) {
         status = 'successful';
+        // Invalidate balance cache when transaction succeeds
+        await cacheService.invalidateProfileCaches(operation.profileId);
       } else if (activity.overallStatus === ActivityStatus.FAILED) {
         status = 'failed';
       }
@@ -556,6 +617,58 @@ export class OrbyService {
         gasUsed: tx.gasUsed
       }))
     };
+  }
+
+  /**
+   * Check Orby service health and connectivity
+   */
+  async checkHealth(): Promise<{
+    isHealthy: boolean;
+    privateInstanceUrl: string;
+    connectionStatus: 'connected' | 'disconnected' | 'error';
+    errorMessage?: string;
+    timestamp: string;
+  }> {
+    const healthStatus = {
+      isHealthy: false,
+      privateInstanceUrl: config.ORBY_PRIVATE_INSTANCE_URL,
+      connectionStatus: 'disconnected' as 'connected' | 'disconnected' | 'error',
+      errorMessage: undefined as string | undefined,
+      timestamp: new Date().toISOString()
+    };
+
+    try {
+      // Try to get the provider - this will test basic connectivity
+      const provider = this.getProvider();
+      
+      // Test a simple operation - try to get standardized token IDs for common tokens
+      const testTokens = [
+        { chainId: BigInt(1), tokenAddress: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' }, // USDC on Ethereum
+        { chainId: BigInt(137), tokenAddress: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174' } // USDC on Polygon
+      ];
+      
+      const standardizedIds = await provider.getStandardizedTokenIds(testTokens);
+      
+      if (standardizedIds && standardizedIds.length > 0) {
+        healthStatus.isHealthy = true;
+        healthStatus.connectionStatus = 'connected';
+      } else {
+        healthStatus.connectionStatus = 'error';
+        healthStatus.errorMessage = 'Failed to get standardized token IDs';
+      }
+    } catch (error) {
+      healthStatus.isHealthy = false;
+      healthStatus.connectionStatus = 'error';
+      healthStatus.errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      // Log the error for debugging
+      console.error('Orby health check failed:', {
+        error: error instanceof Error ? error.message : error,
+        stack: error instanceof Error ? error.stack : undefined
+      });
+    }
+
+    return healthStatus;
   }
 }
 

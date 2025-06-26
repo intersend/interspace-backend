@@ -1,6 +1,7 @@
 import { prisma } from "@/utils/database";
 import { orbyService } from "./orbyService";
 import { SmartProfile } from "@prisma/client";
+import { cacheService } from "./cacheService";
 
 interface GasTokenScore {
   tokenId: string;
@@ -27,7 +28,13 @@ export class GasTokenService {
     suggestedToken: GasTokenScore | null;
     nativeGasAvailable: { chainId: number; amount: string; symbol: string }[];
   }> {
-    // Get portfolio from Orby
+    // Check cache first
+    const cached = await cacheService.getCachedGasAnalysis(profile.id);
+    if (cached) {
+      return cached;
+    }
+
+    // Get portfolio from Orby (this is already cached)
     const portfolio = await orbyService.getFungibleTokenPortfolio(profile);
 
     const gasTokenScores: GasTokenScore[] = [];
@@ -104,11 +111,16 @@ export class GasTokenService {
       )!;
     }
 
-    return {
+    const result = {
       availableTokens: gasTokenScores,
       suggestedToken,
       nativeGasAvailable,
     };
+
+    // Cache the result
+    await cacheService.setCachedGasAnalysis(profile.id, result);
+
+    return result;
   }
 
   /**
@@ -134,6 +146,9 @@ export class GasTokenService {
         chainPreferences: JSON.stringify(chainPreferences || {}),
       },
     });
+
+    // Invalidate gas analysis cache when preference changes
+    await cacheService.invalidateGasAnalysisCache(profileId);
   }
 
   /**

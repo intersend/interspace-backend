@@ -173,6 +173,7 @@ export class SiweService {
       const parsedMessage = this.parseMessage(params.message);
       
       // Verify signature
+      // @ts-ignore
       const recoveredAddress = ethers.verifyMessage(params.message, params.signature);
       
       // Check address matches

@@ -513,6 +513,7 @@ export class LinkedAccountService {
         return result;
       } else {
         // Legacy simple message verification (for backward compatibility)
+        // @ts-ignore
         const recovered = ethers.verifyMessage(message, signature);
         const normalizedRecovered = recovered.toLowerCase();
         const normalizedAddress = address.toLowerCase();
