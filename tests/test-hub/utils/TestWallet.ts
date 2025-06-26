@@ -1,4 +1,4 @@
-import { ethers } from 'ethers';
+import { ethers, verifyMessage } from 'ethers';
 import { SiweMessage } from 'siwe';
 import crypto from 'crypto';
 
@@ -201,7 +201,7 @@ export class TestWallet {
     }> {
       try {
         const siweMessage = new SiweMessage(message);
-        const recovered = ethers.verifyMessage(message, signature);
+        const recovered = verifyMessage(message, signature);
         
         if (recovered.toLowerCase() !== siweMessage.address.toLowerCase()) {
           return { valid: false, error: 'Address mismatch' };

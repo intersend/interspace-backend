@@ -65,6 +65,25 @@ export class MockSessionWalletService {
       ]
     };
   }
+
+  async executeTransactionWithDelegation(
+    profileId: string,
+    delegatedEOA: string,
+    targetAddress: string,
+    value: string,
+    data: string,
+    chainId: number
+  ): Promise<string> {
+    // Mock implementation for development
+    console.log(`[MOCK] Executing delegated transaction from ${delegatedEOA} via session wallet`);
+    
+    const hashInput = `delegated-${profileId}-${delegatedEOA}-${targetAddress}-${value}-${data}-${chainId}-${this.txCounter++}`;
+    const txHash = crypto.createHash('sha256').update(hashInput).digest('hex');
+    
+    console.log(`[MOCK] Delegated transaction hash: 0x${txHash.slice(0, 64)}`);
+    
+    return '0x' + txHash.slice(0, 64);
+  }
 }
 
 export const mockSessionWalletService = new MockSessionWalletService();
