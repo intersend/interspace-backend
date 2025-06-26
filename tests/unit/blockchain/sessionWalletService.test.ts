@@ -9,7 +9,16 @@ import { OrbyProvider } from '@orb-labs/orby-ethers6';
 // Mock all dependencies
 jest.mock('@/services/mpcKeyShareService');
 jest.mock('@/services/orbyService');
-jest.mock('@/utils/database');
+jest.mock('@/utils/database', () => ({
+  prisma: {
+    smartProfile: {
+      findUnique: jest.fn()
+    },
+    transaction: {
+      create: jest.fn()
+    }
+  }
+}));
 jest.mock('@silencelaboratories/ecdsa-tss');
 jest.mock('@orb-labs/orby-ethers6');
 
@@ -153,7 +162,11 @@ describe('SessionWalletService', () => {
     it('should throw error if client share not loaded', async () => {
       const profileId = 'profile123';
       
-      (mpcKeyShareService.getKeyShare as jest.Mock).mockResolvedValue({ /* server share */ });
+      // Mock getKeyShare to return a valid server share with public_key
+      (mpcKeyShareService.getKeyShare as jest.Mock).mockResolvedValue({ 
+        public_key: '0x04' + '1'.repeat(128), // Valid public key format
+        // other server share properties
+      });
 
       await expect(service.rotateSessionWallet(profileId)).rejects.toThrow('Client share not loaded for this profile');
     });
@@ -250,8 +263,12 @@ describe('SessionWalletService', () => {
       (prisma.smartProfile.findUnique as jest.Mock).mockResolvedValue({ id: profileId });
       (prisma.transaction.create as jest.Mock).mockResolvedValue({});
 
-      // Mock signature generation
-      const mockSignature = '0x' + '1'.repeat(130);
+      // Mock signature generation with valid ECDSA signature format
+      // Format: r (32 bytes) + s (32 bytes) + v (1 byte)
+      const r = '1'.repeat(64);
+      const s = '2'.repeat(64);
+      const v = '1b'; // 27 in hex
+      const mockSignature = '0x' + r + s + v;
       jest.spyOn(service, 'signMessage').mockResolvedValue(mockSignature);
 
       const txHash = await service.executeTransaction(profileId, targetAddress, value, data, chainId);
@@ -277,15 +294,18 @@ describe('SessionWalletService', () => {
   describe('getSessionWalletAddress', () => {
     it('should return the wallet address for a profile', async () => {
       const profileId = 'profile123';
-      const expectedAddress = '0x1234567890123456789012345678901234567890';
+      // Use a public key that will generate the expected address
+      const publicKey = '0x04' + '0'.repeat(128);
 
       (mpcKeyShareService.getKeyShare as jest.Mock).mockResolvedValue({
-        public_key: '0x04' + '0'.repeat(128)
+        public_key: publicKey
       });
 
       const address = await service.getSessionWalletAddress(profileId);
 
-      expect(address).toBe(expectedAddress);
+      // The address should be derived from the public key
+      expect(address).toMatch(/^0x[a-fA-F0-9]{40}$/); // Valid Ethereum address format
+      expect(address).toBe('0x3f17f1962b36e491b30a40b2405849e597ba5fb5'); // Actual computed address
     });
 
     it('should throw error if key share not found', async () => {
