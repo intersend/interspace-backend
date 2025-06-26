@@ -283,7 +283,11 @@ const authenticateV2 = async (req, res, next) => {
 
       case 'apple':
         // Apple authentication requires ID token
-        if (!authData.idToken) {
+        // Handle both formats: idToken at root level or nested in appleAuth
+        const appleIdToken = authData.idToken || authData.appleAuth?.identityToken;
+        const appleAuthCode = authData.authorizationCode || authData.appleAuth?.authorizationCode;
+        
+        if (!appleIdToken) {
           return res.status(400).json({ 
             success: false, 
             error: 'Apple ID token required' 
@@ -293,7 +297,7 @@ const authenticateV2 = async (req, res, next) => {
         try {
           // Use socialAuthService to verify Apple token
           const authResult = await socialAuthService.authenticate({
-            authToken: authData.idToken,
+            authToken: appleIdToken,
             authStrategy: 'apple',
             deviceId: deviceInfo.deviceId,
             deviceName: authData.deviceName || 'Unknown Device',
@@ -304,19 +308,24 @@ const authenticateV2 = async (req, res, next) => {
           
           // Extract user info from the Apple token
           const { verifyIdToken } = require('apple-signin-auth');
-          const decodedToken = await verifyIdToken(authData.idToken, { 
+          const decodedToken = await verifyIdToken(appleIdToken, { 
             audience: process.env.APPLE_CLIENT_ID 
           });
           
           // Create or find account
+          // Use email from appleAuth if decodedToken doesn't have it (first sign in)
+          const email = decodedToken.email || authData.appleAuth?.user?.email;
+          
           account = await accountService.findOrCreateAccount({
             type: 'social',
             identifier: decodedToken.sub, // Apple user ID
             provider: 'apple',
             metadata: { 
-              email: decodedToken.email,
+              email: email,
               emailVerified: true, // Apple verifies emails
-              isPrivateEmail: decodedToken.is_private_email
+              isPrivateEmail: decodedToken.is_private_email,
+              firstName: authData.appleAuth?.user?.firstName,
+              lastName: authData.appleAuth?.user?.lastName
             }
           });
           
