@@ -114,6 +114,7 @@ model SmartProfile {
   preferredGasToken PreferredGasToken?
   orbyVirtualNodes  OrbyVirtualNode[]
   orbyOperations    OrbyOperation[]
+  batchOperations   BatchOperation[]
   mpcKeyShare       MpcKeyShare?
   mpcKeyMapping     MpcKeyMapping?
   profileAccounts   ProfileAccount[]   // V2 flat identity relation
@@ -138,6 +139,9 @@ model LinkedAccount {
 
   // Token allowances granted to session wallet
   allowances TokenAllowance[]
+  
+  // EIP-7702 delegations
+  delegations AccountDelegation[]
 
   user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   profile SmartProfile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
@@ -526,4 +530,50 @@ model AccountSession {
   account Account @relation(fields: [accountId], references: [id])
 
   @@map("account_sessions")
+}
+
+// EIP-7702 Account Delegations
+model AccountDelegation {
+  id                String    @id @default(cuid())
+  linkedAccountId   String
+  sessionWallet     String
+  chainId           Int
+  delegationType    String    @default("eip7702")
+  authorizationData Json      // Stores the signed authorization tuple
+  permissions       Json      // Allowed operations: ['transfer', 'swap', 'approve', 'all']
+  nonce             BigInt
+  expiresAt         DateTime?
+  isActive          Boolean   @default(true)
+  revokedAt         DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relationships
+  linkedAccount     LinkedAccount @relation(fields: [linkedAccountId], references: [id], onDelete: Cascade)
+  
+  @@index([linkedAccountId, sessionWallet, chainId])
+  @@index([isActive, expiresAt])
+  @@map("account_delegations")
+}
+
+// Batch Operations for multiple transactions
+model BatchOperation {
+  id              String    @id @default(cuid())
+  profileId       String
+  batchId         String    @unique // External batch ID for API
+  status          String    // 'created', 'submitted', 'partial', 'completed', 'failed'
+  operations      Json      // Array of operation intents
+  results         Json?     // Execution results for each operation
+  atomicExecution Boolean   @default(true)
+  metadata        Json?     // Additional metadata
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  completedAt     DateTime?
+  
+  // Relationships
+  profile SmartProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  @@index([profileId, status])
+  @@index([batchId])
+  @@map("batch_operations")
 }
