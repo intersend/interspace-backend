@@ -1,0 +1,191 @@
+services:
+  # PostgreSQL for test database
+  postgres-e2e:
+    image: postgres:15-alpine
+    container_name: interspace-postgres-e2e
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: interspace_e2e
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-e2e-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - e2e-network
+
+  # Redis for caching and rate limiting
+  redis-e2e:
+    image: redis:7-alpine
+    container_name: interspace-redis-e2e
+    ports:
+      - "6380:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis-e2e-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - e2e-network
+
+  # PostgreSQL for Sigpair
+  sigpair-db:
+    image: postgres:14
+    container_name: interspace-sigpair-db-e2e
+    environment:
+      POSTGRES_USER: sigpair
+      POSTGRES_PASSWORD: sigpair
+      POSTGRES_DB: sigpair
+    ports:
+      - "5434:5432"
+    volumes:
+      - sigpair-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sigpair"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - e2e-network
+
+  # Silence Labs Sigpair Server
+  sigpair:
+    image: ghcr.io/silence-laboratories/duo-server:v2-latest
+    container_name: interspace-sigpair-e2e
+    environment:
+      PGHOST: sigpair-db
+      PGUSER: sigpair
+      PGDATABASE: sigpair
+      PGPASSWORD: sigpair
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      sigpair-db:
+        condition: service_healthy
+    networks:
+      - e2e-network
+
+  # Interspace Duo Node (MPC proxy)
+  duo-node:
+    build:
+      context: ../interspace-duo-node
+      dockerfile: Dockerfile
+    container_name: interspace-duo-node-e2e
+    environment:
+      PORT: 3001
+      NODE_ENV: development
+      DUO_SERVER_URL: http://sigpair:8080
+      DUO_NODE_AUDIENCE_URL: ${DUO_NODE_AUDIENCE_URL:-http://localhost:3002}
+      LOG_LEVEL: debug
+      # Database for duo node state
+      DATABASE_URL: postgresql://postgres:postgres@postgres-e2e:5432/duo_node_e2e
+      # Redis for session management
+      REDIS_URL: redis://redis-e2e:6379
+      # Sigpair admin token for user management
+      SILENCE_ADMIN_TOKEN: ${SILENCE_ADMIN_TOKEN:-test-admin-token}
+    ports:
+      - "3002:3001"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      postgres-e2e:
+        condition: service_healthy
+      redis-e2e:
+        condition: service_healthy
+      sigpair:
+        condition: service_started
+    networks:
+      - e2e-network
+    restart: unless-stopped
+
+  # Optional: Local blockchain for testing
+  # Use --profile local-blockchain to include this service
+  hardhat-node:
+    image: hardhat/hardhat:latest
+    container_name: interspace-hardhat-e2e
+    command: node --network hardhat --hostname 0.0.0.0
+    ports:
+      - "8545:8545"
+    environment:
+      - HARDHAT_NETWORK=hardhat
+    networks:
+      - e2e-network
+    profiles:
+      - local-blockchain
+
+  # Backend service for full integration tests
+  # Use --profile full-stack to include this service
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NODE_ENV: test
+    container_name: interspace-backend-e2e
+    environment:
+      NODE_ENV: test
+      PORT: 3000
+      DATABASE_URL: postgresql://postgres:postgres@postgres-e2e:5432/interspace_e2e
+      REDIS_URL: redis://redis-e2e:6379
+      REDIS_ENABLED: "true"
+      # MPC Configuration
+      DUO_NODE_URL: http://duo-node:3001
+      DISABLE_MPC: "false"
+      # Orby Configuration
+      ORBY_API_KEY: ${ORBY_API_KEY}
+      ORBY_API_URL: ${ORBY_API_URL:-https://api.testnet.orby.network}
+      # Auth Configuration
+      JWT_SECRET: ${JWT_SECRET:-test-jwt-secret-e2e}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-test-jwt-refresh-secret-e2e}
+      # Test Configuration
+      BYPASS_LOGIN: "false"
+      LOG_LEVEL: debug
+      # Email (disabled for tests)
+      SMTP_HOST: "smtp.test.local"
+      SMTP_PORT: "587"
+      SMTP_USER: "test@test.local"
+      SMTP_PASS: "test"
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres-e2e:
+        condition: service_healthy
+      redis-e2e:
+        condition: service_healthy
+      duo-node:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - e2e-network
+    volumes:
+      - ./src:/app/src:ro
+      - ./tests:/app/tests:ro
+      - ./prisma:/app/prisma:ro
+    profiles:
+      - full-stack
+
+volumes:
+  postgres-e2e-data:
+  redis-e2e-data:
+  sigpair-db-data:
+
+networks:
+  e2e-network:
+    driver: bridge
+    name: interspace-e2e-network

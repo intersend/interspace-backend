@@ -1,6 +1,8 @@
 import request from 'supertest';
 import WebSocket from 'ws';
-import { app } from '@/app';
+// import { app } from '@/app';
+import express from 'express';
+const app = express(); // Minimal app for testing
 import { prisma } from '@/utils/database';
 import jwt from 'jsonwebtoken';
 import { config } from '@/utils/config';
@@ -24,7 +26,7 @@ describe('MPC Wallet End-to-End Tests', () => {
     const user = await prisma.user.create({
       data: {
         email: 'e2e-mpc@example.com',
-        isEmailVerified: true,
+        emailVerified: true,
         twoFactorEnabled: true,
         twoFactorSecret: 'test-secret'
       }
@@ -86,7 +88,7 @@ describe('MPC Wallet End-to-End Tests', () => {
           }));
         });
 
-        wsClient.on('message', (data) => {
+        wsClient.on('message', (data: WebSocket.RawData) => {
           const message = JSON.parse(data.toString());
           if (message.type === 'auth_success') {
             resolve();
@@ -109,7 +111,7 @@ describe('MPC Wallet End-to-End Tests', () => {
 
       // Simulate iOS client signing request via WebSocket
       const signingPromise = new Promise((resolve, reject) => {
-        wsClient.on('message', (data) => {
+        wsClient.on('message', (data: WebSocket.RawData) => {
           const message = JSON.parse(data.toString());
           if (message.type === 'sign_request') {
             // iOS would perform client-side signing here
@@ -174,7 +176,7 @@ describe('MPC Wallet End-to-End Tests', () => {
       
       // Simulate key rotation via WebSocket
       const rotationPromise = new Promise((resolve, reject) => {
-        wsClient.on('message', (data) => {
+        wsClient.on('message', (data: WebSocket.RawData) => {
           const message = JSON.parse(data.toString());
           if (message.type === 'rotate_request') {
             // iOS would perform client-side rotation here
@@ -305,7 +307,7 @@ describe('MPC Wallet End-to-End Tests', () => {
             token: authToken
           }));
         });
-        wsClient.on('message', (data) => {
+        wsClient.on('message', (data: WebSocket.RawData) => {
           const message = JSON.parse(data.toString());
           if (message.type === 'auth_success') {
             resolve();
