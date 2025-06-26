@@ -21,7 +21,6 @@ export interface Config {
   
 
   // Silence Labs MPC
-  DISABLE_MPC: boolean;
   BYPASS_LOGIN: boolean;
   SILENCE_ADMIN_TOKEN: string;
   SILENCE_NODE_URL: string;
@@ -70,6 +69,9 @@ export interface Config {
   ORBY_INSTANCE_PUBLIC_API_KEY: string;
   ORBY_APP_NAME: string;
   ORBY_PRIVATE_INSTANCE_URL: string;
+  
+  // MPC Webhook Configuration
+  MPC_WEBHOOK_SECRET?: string;
 
   // Frontend URL
   FRONTEND_URL: string;
@@ -143,7 +145,6 @@ export const config: Config = {
   JWT_REFRESH_EXPIRES_IN: getEnvVar('JWT_REFRESH_EXPIRES_IN', '7d'),
   ENCRYPTION_SECRET: getEnvVar('ENCRYPTION_SECRET'),
 
-  DISABLE_MPC: getEnvBoolean('DISABLE_MPC', false),
   BYPASS_LOGIN: getEnvBoolean('BYPASS_LOGIN', false),
 
   // Silence Labs MPC
@@ -196,6 +197,9 @@ export const config: Config = {
 
   // Frontend URL
   FRONTEND_URL: getEnvVar('FRONTEND_URL', 'http://localhost:3000'),
+  
+  // MPC Webhook Configuration
+  MPC_WEBHOOK_SECRET: process.env.MPC_WEBHOOK_SECRET || 'development-webhook-secret',
 
   // Google Cloud Platform (Optional)
   GOOGLE_CLOUD_PROJECT: process.env.GOOGLE_CLOUD_PROJECT,
@@ -223,9 +227,8 @@ export function validateConfig(): void {
     'FRONTEND_URL'
   ];
 
-  if (!config.DISABLE_MPC) {
-    requiredVars.push('SILENCE_ADMIN_TOKEN', 'SILENCE_NODE_URL', 'DUO_NODE_URL', 'DUO_NODE_AUDIENCE_URL');
-  }
+  // MPC is always enabled
+  requiredVars.push('SILENCE_ADMIN_TOKEN', 'SILENCE_NODE_URL', 'DUO_NODE_URL', 'DUO_NODE_AUDIENCE_URL');
 
   const missing = requiredVars.filter(varName => !process.env[varName]);
   
@@ -301,11 +304,9 @@ export function validateConfig(): void {
     }
 
     // Validate internal service URLs for MPC communication
-    if (!config.DISABLE_MPC) {
-      if (config.SILENCE_NODE_URL.includes('localhost') || config.DUO_NODE_URL.includes('localhost')) {
-        console.warn('⚠️  WARNING: MPC service URLs contain localhost in Cloud Run environment');
-        console.warn('   This may indicate incorrect configuration for internal service communication');
-      }
+    if (config.SILENCE_NODE_URL.includes('localhost') || config.DUO_NODE_URL.includes('localhost')) {
+      console.warn('⚠️  WARNING: MPC service URLs contain localhost in Cloud Run environment');
+      console.warn('   This may indicate incorrect configuration for internal service communication');
     }
 
     console.log('☁️  Cloud Run environment validations completed');

@@ -12,13 +12,16 @@ interface Challenge {
 class ChallengeService {
   private challenges: Map<string, Challenge> = new Map();
   private readonly challengeTTL = 5 * 60 * 1000; // 5 minutes
-  private cleanupInterval: NodeJS.Timeout;
+  private cleanupInterval?: NodeJS.Timeout;
 
   constructor() {
     // Clean up expired challenges every minute
-    this.cleanupInterval = setInterval(() => {
-      this.cleanupExpiredChallenges();
-    }, 60 * 1000);
+    // Only start cleanup interval if not in test environment
+    if (process.env.NODE_ENV !== 'test') {
+      this.cleanupInterval = setInterval(() => {
+        this.cleanupExpiredChallenges();
+      }, 60 * 1000);
+    }
   }
 
   /**
@@ -136,3 +139,10 @@ class ChallengeService {
 
 // Export singleton instance
 export const challengeService = new ChallengeService();
+
+// Cleanup function for tests
+export const cleanupChallengeService = () => {
+  if ((challengeService as any).cleanupInterval) {
+    clearInterval((challengeService as any).cleanupInterval);
+  }
+};

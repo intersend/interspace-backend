@@ -22,6 +22,39 @@ function getChainName(chainId: number): string {
 
 export class OrbyController {
   /**
+   * GET /api/v1/orby/health
+   * Check Orby service health and connectivity
+   */
+  async checkHealth(req: Request, res: Response): Promise<void> {
+    try {
+      const healthStatus = await orbyService.checkHealth();
+      
+      const response: ApiResponse = {
+        success: healthStatus.isHealthy,
+        data: {
+          status: healthStatus.isHealthy ? 'healthy' : 'unhealthy',
+          timestamp: new Date().toISOString(),
+          details: healthStatus
+        }
+      };
+
+      // Set appropriate HTTP status code
+      res.status(healthStatus.isHealthy ? 200 : 503).json(response);
+    } catch (error) {
+      const response: ApiResponse = {
+        success: false,
+        error: 'Failed to check Orby service health',
+        data: {
+          status: 'unhealthy',
+          timestamp: new Date().toISOString(),
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
+      };
+      res.status(503).json(response);
+    }
+  }
+
+  /**
    * GET /api/v1/profiles/:id/balance
    * Get unified balance across all accounts in the profile
    */

@@ -12,21 +12,20 @@ import { distributedApiRateLimit } from '@/middleware/distributedRateLimiter';
 import { scheduler } from '@/utils/scheduler';
 import { getRedisClient, closeRedisConnection } from '@/utils/redis';
 
-// Import routes
-import authRoutes from '@/routes/authRoutes';
+// Import V2 routes only
 const authRoutesV2 = require('@/routes/authRoutesV2');
-import profileRoutes from '@/routes/profileRoutes';
 const profileRoutesV2 = require('@/routes/profileRoutesV2');
 import appsRoutes from '@/routes/appsRoutes';
 import foldersRoutes from '@/routes/foldersRoutes';
-import linkedAccountRoutes from '@/routes/linkedAccountRoutes';
-import userRoutes from '@/routes/userRoutes';
 const userRoutesV2 = require('@/routes/userRoutesV2');
-import orbyRoutes from '@/routes/orbyRoutes';
+import orbyRoutesV2 from '@/routes/orbyRoutesV2';
 import mpcRoutesV2 from '@/routes/mpcRoutesV2';
-import twoFactorRoutes from '@/routes/twoFactorRoutes';
 import siweRoutes from '@/routes/siweRoutes';
-import securityRoutes from '@/routes/securityRoutes';
+import delegationRoutesV2 from '@/routes/delegationRoutesV2';
+import linkedAccountRoutesV2 from '@/routes/linkedAccountRoutesV2';
+import twoFactorRoutesV2 from '@/routes/twoFactorRoutesV2';
+import securityRoutesV2 from '@/routes/securityRoutesV2';
+import mpcWebhookRoutes from '@/routes/mpcWebhookRoutes';
 
 class Application {
   public app: express.Application;
@@ -257,23 +256,21 @@ class Application {
         };
       }
 
-      // Add MPC services check if not disabled
-      if (!config.DISABLE_MPC) {
-        const mpcStartTime = Date.now();
-        try {
-          // Simple connectivity test (if MPC services are accessible)
-          checks.mpc_services = {
-            status: 'healthy',
-            responseTime: `${Date.now() - mpcStartTime}ms`,
-            silenceNodeUrl: config.SILENCE_NODE_URL,
-            duoNodeUrl: config.DUO_NODE_URL
-          };
-        } catch (error) {
-          checks.mpc_services = {
-            status: 'unhealthy',
-            error: 'MPC services unreachable'
-          };
-        }
+      // Add MPC services check
+      const mpcStartTime = Date.now();
+      try {
+        // Simple connectivity test (if MPC services are accessible)
+        checks.mpc_services = {
+          status: 'healthy',
+          responseTime: `${Date.now() - mpcStartTime}ms`,
+          silenceNodeUrl: config.SILENCE_NODE_URL,
+          duoNodeUrl: config.DUO_NODE_URL
+        };
+      } catch (error) {
+        checks.mpc_services = {
+          status: 'unhealthy',
+          error: 'MPC services unreachable'
+        };
       }
 
       const allHealthy = Object.values(checks).every((check: any) => check.status === 'healthy');
@@ -306,14 +303,6 @@ class Application {
 
     // MPC services health check
     this.app.get("/health/mpc", (req, res) => {
-      if (config.DISABLE_MPC) {
-        return res.json({
-          status: 'disabled',
-          message: 'MPC services are disabled',
-          timestamp: new Date().toISOString()
-        });
-      }
-
       const startTime = Date.now();
       const responseTime = Date.now() - startTime;
 
@@ -335,6 +324,60 @@ class Application {
       });
     });
 
+    // Database tables health check
+    this.app.get('/health/db', async (req, res) => {
+      const checks = {
+        connection: false,
+        tables: {
+          users: false,
+          siwe_nonces: false,
+          blacklisted_tokens: false,
+          accounts: false,
+          account_sessions: false
+        }
+      };
+      
+      try {
+        const { PrismaClient } = require('@prisma/client');
+        const prisma = new PrismaClient();
+        
+        // Test connection
+        await prisma.$queryRaw`SELECT 1`;
+        checks.connection = true;
+        
+        // Test table access
+        const tables = await prisma.$queryRaw`
+          SELECT table_name 
+          FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name IN ('users', 'siwe_nonces', 'blacklisted_tokens', 'accounts', 'account_sessions')
+        `;
+        
+        tables.forEach((t: any) => {
+          if (checks.tables.hasOwnProperty(t.table_name)) {
+            checks.tables[t.table_name as keyof typeof checks.tables] = true;
+          }
+        });
+        
+        await prisma.$disconnect();
+        
+        const allTablesExist = Object.values(checks.tables).every(v => v);
+        
+        res.status(allTablesExist ? 200 : 503).json({ 
+          healthy: allTablesExist, 
+          checks,
+          timestamp: new Date().toISOString()
+        });
+      } catch (error: any) {
+        res.status(503).json({ 
+          healthy: false, 
+          checks, 
+          error: error.message,
+          timestamp: new Date().toISOString()
+        });
+      }
+    });
+
     // React Native connectivity test endpoint
     this.app.get('/ping', (req, res) => {
       res.json({
@@ -348,33 +391,27 @@ class Application {
   }
 
   private initializeRoutes(): void {
-    // V1 Routes (Legacy)
-    const apiV1Path = '/api/v1';
-    this.app.use(`${apiV1Path}/auth`, authRoutes);
-    this.app.use(`${apiV1Path}/users`, userRoutes); // User routes (social accounts)
-    this.app.use(`${apiV1Path}/profiles`, profileRoutes);
-    this.app.use(`${apiV1Path}`, appsRoutes); // Apps routes include profile paths
-    this.app.use(`${apiV1Path}`, foldersRoutes); // Folders routes include profile paths
-    this.app.use(`${apiV1Path}`, linkedAccountRoutes); // Account routes include profile paths
-    this.app.use(`${apiV1Path}/orby`, orbyRoutes); // Orby chain abstraction routes
-    // MPC routes removed from v1 - now only available in v2
-    this.app.use(`${apiV1Path}/2fa`, twoFactorRoutes); // Two-factor authentication routes
-    this.app.use(`${apiV1Path}/siwe`, siweRoutes); // Sign-In with Ethereum routes
-    this.app.use(`${apiV1Path}/security`, securityRoutes); // Security monitoring routes
-
-    // V2 Routes (Flat Identity Model)
-    if (process.env.ENABLE_V2_API !== 'false') {
-      const apiV2Path = '/api/v2';
-      this.app.use(`${apiV2Path}/auth`, authRoutesV2);
-      this.app.use(`${apiV2Path}`, appsRoutes); // Apps routes include profile paths
-      this.app.use(`${apiV2Path}`, foldersRoutes); // Folders routes include profile paths
-      this.app.use(`${apiV2Path}/profiles`, profileRoutesV2); // Use V2 profile routes with V2 auth
-      this.app.use(`${apiV2Path}/users`, userRoutesV2); // Use V2 user routes with V2 middleware
-      this.app.use(`${apiV2Path}/siwe`, siweRoutes); // SIWE routes for v2
-      this.app.use(`${apiV2Path}/mpc`, mpcRoutesV2); // MPC key management routes v2
-      
-      console.log('✅ V2 API endpoints enabled');
-    }
+    // V2 Routes Only - Frontend uses v2 exclusively
+    const apiV2Path = '/api/v2';
+    this.app.use(`${apiV2Path}/auth`, authRoutesV2);
+    this.app.use(`${apiV2Path}`, appsRoutes); // Apps routes include profile paths
+    this.app.use(`${apiV2Path}`, foldersRoutes); // Folders routes include profile paths
+    this.app.use(`${apiV2Path}/profiles`, profileRoutesV2); // Use V2 profile routes with V2 auth
+    this.app.use(`${apiV2Path}/users`, userRoutesV2); // Use V2 user routes with V2 middleware
+    this.app.use(`${apiV2Path}/siwe`, siweRoutes); // SIWE routes for v2
+    this.app.use(`${apiV2Path}/mpc`, mpcRoutesV2); // MPC key management routes v2
+    
+    // Blockchain routes
+    this.app.use(`${apiV2Path}/orby`, orbyRoutesV2); // Orby chain abstraction routes (v2 auth)
+    this.app.use(`${apiV2Path}`, delegationRoutesV2); // EIP-7702 delegation routes (v2 auth)
+    this.app.use(`${apiV2Path}`, linkedAccountRoutesV2); // Account routes include profile paths (v2 auth)
+    this.app.use(`${apiV2Path}/2fa`, twoFactorRoutesV2); // Two-factor authentication routes (v2 auth)
+    this.app.use(`${apiV2Path}/security`, securityRoutesV2); // Security monitoring routes (v2 auth)
+    
+    // Webhook routes (no auth middleware, uses webhook secret instead)
+    this.app.use('/api/webhooks/mpc', mpcWebhookRoutes); // MPC webhook routes
+    
+    console.log('✅ V2 API endpoints enabled - V1 routes removed');
 
     // Security.txt endpoint (before API routes)
     this.app.get('/.well-known/security.txt', (req, res) => {
@@ -389,67 +426,70 @@ Canonical: https://interspace.wallet/.well-known/security.txt
 `);
     });
 
-    // API info endpoints
-    this.app.get('/api/v1', (req, res) => {
+    // Redirect v1 to v2 with 410 Gone status
+    this.app.all('/api/v1/*', (req, res) => {
+      res.status(410).json({
+        error: 'Gone',
+        message: 'API v1 has been removed. Please use API v2.',
+        v2Endpoint: req.path.replace('/api/v1', '/api/v2')
+      });
+    });
+
+    // API v2 info endpoint
+    this.app.get('/api/v2', (req, res) => {
       res.json({
         success: true,
-        message: 'Interspace API v1 - Ready for React Native',
-        version: 'v1',
+        message: 'Interspace API v2 - Flat Identity Model with Blockchain Features',
+        version: 'v2',
         timestamp: new Date().toISOString(),
         environment: config.NODE_ENV,
         cors: config.CORS_ORIGINS,
         endpoints: {
-          auth: `/api/v1/auth`,
-          users: `/api/v1/users`,
-          profiles: `/api/v1/profiles`,
-          apps: `/api/v1/profiles/:profileId/apps`,
-          folders: `/api/v1/profiles/:profileId/folders`,
-          accounts: `/api/v1/profiles/:profileId/accounts`
+          // Identity & Auth
+          auth: `/api/v2/auth`,
+          users: `/api/v2/users`,
+          profiles: `/api/v2/profiles`,
+          siwe: `/api/v2/siwe`,
+          twoFactor: `/api/v2/2fa`,
+          
+          // Blockchain Features
+          mpc: `/api/v2/mpc`,
+          orby: `/api/v2/orby`,
+          delegation: `/api/v2/profiles/:profileId/accounts/:accountId/delegate`,
+          linkedAccounts: `/api/v2/profiles/:profileId/accounts`,
+          
+          // App Management
+          apps: `/api/v2/profiles/:profileId/apps`,
+          folders: `/api/v2/profiles/:profileId/folders`,
+          
+          // Security
+          security: `/api/v2/security`
         },
-        reactNative: {
-          baseUrl: `http://localhost:${config.PORT}/api/v1`,
-          websocket: `http://localhost:${config.PORT}`,
-          testEndpoint: `http://localhost:${config.PORT}/ping`
+        features: {
+          flatIdentity: true,
+          autoProfileCreation: true,
+          supportedAuthMethods: ['wallet', 'email', 'social', 'passkey', 'guest'],
+          mpcWallets: true,
+          chainAbstraction: true,
+          batchOperations: true,
+          eip7702Delegation: true
         }
       });
     });
-
-    if (process.env.ENABLE_V2_API !== 'false') {
-      this.app.get('/api/v2', (req, res) => {
-        res.json({
-          success: true,
-          message: 'Interspace API v2 - Flat Identity Model',
-          version: 'v2',
-          timestamp: new Date().toISOString(),
-          environment: config.NODE_ENV,
-          cors: config.CORS_ORIGINS,
-          endpoints: {
-            auth: `/api/v2/auth`,
-            users: `/api/v2/users`,
-            profiles: `/api/v2/profiles`,
-            siwe: `/api/v2/siwe`,
-            mpc: `/api/v2/mpc`
-          },
-          features: {
-            flatIdentity: true,
-            autoProfileCreation: true,
-            supportedAuthMethods: ['wallet', 'email', 'social', 'passkey', 'guest']
-          }
-        });
-      });
-    }
 
     // Root endpoint
     this.app.get('/', (req, res) => {
       res.json({
         success: true,
-        message: 'Interspace Backend API - Production Ready',
+        message: 'Interspace Backend API - V2 Only',
         version: process.env.npm_package_version || '1.0.0',
-        documentation: `${req.protocol}://${req.get('host')}/api/${config.API_VERSION}`,
+        documentation: `${req.protocol}://${req.get('host')}/api/v2`,
+        apiVersion: 'v2',
         status: {
-          tests: '39/39 passing',
-          thirdwebIntegration: 'removed',
-          realWalletsCreated: '9+ during testing',
+          v1Support: 'removed',
+          v2Only: true,
+          realMPCEnabled: true,
+          orbyIntegration: true,
           reactNativeReady: true
         }
       });
@@ -521,7 +561,7 @@ Canonical: https://interspace.wallet/.well-known/security.txt
         console.log('🚀 Interspace Backend started successfully!');
         console.log('=====================================');
         console.log(`📍 Server: http://localhost:${config.PORT}`);
-        console.log(`📡 API: http://localhost:${config.PORT}/api/${config.API_VERSION}`);
+        console.log(`📡 API: http://localhost:${config.PORT}/api/v2`);
         console.log(`🔌 WebSocket: ws://localhost:${config.PORT}`);
         console.log(`🧪 Health: http://localhost:${config.PORT}/health`);
         console.log(`📱 RN Test: http://localhost:${config.PORT}/ping`);
@@ -530,10 +570,10 @@ Canonical: https://interspace.wallet/.well-known/security.txt
         console.log(`🔐 CORS: ${config.CORS_ORIGINS.join(', ')}`);
         console.log(`💾 Database: Connected`);
         console.log(`🔗 MPC Wallet: Ready`);
-        console.log(`🧪 Tests: 33/33 Passing`);
+        console.log(`🧪 API Version: V2 Only`);
         console.log(`📱 React Native: Ready for Integration`);
         console.log('=====================================');
-        console.log('✅ Ready for first commit and RN development!');
+        console.log('✅ V2 API Only - No backward compatibility!');
       });
 
       // Graceful shutdown handlers
@@ -597,9 +637,13 @@ Canonical: https://interspace.wallet/.well-known/security.txt
   }
 }
 
-// Start the application
+// Create the application instance
 const app = new Application();
-app.start();
+
+// Only start if not in test environment or if running directly
+if (process.env.NODE_ENV !== 'test' || require.main === module) {
+  app.start();
+}
 
 // Export for testing
 export default app.app;

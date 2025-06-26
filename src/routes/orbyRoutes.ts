@@ -8,7 +8,10 @@ import Joi from 'joi';
 
 const router = Router();
 
-// All routes require authentication and standard rate limiting
+// Health check endpoint - no authentication required
+router.get('/health', asyncHandler(orbyController.checkHealth));
+
+// All other routes require authentication and standard rate limiting
 router.use(authenticate);
 router.use(userRateLimit);
 

@@ -57,8 +57,8 @@ export class SmartProfileService {
       try {
         let sessionWalletAddress: string;
 
-        // Use mock wallet if either DISABLE_MPC is true or developmentMode is requested
-        if (this.config.DISABLE_MPC || data.developmentMode) {
+        // Use mock wallet only if developmentMode is explicitly requested
+        if (data.developmentMode) {
           console.log('Using mock wallet service for development profile');
           isDevelopmentWallet = true;
           
@@ -73,11 +73,11 @@ export class SmartProfileService {
         } else {
           // Create real session wallet using the profile ID
           console.log(`Creating session wallet for profile ${profile.id}...`);
-          const result = await sessionWalletService.createSessionWallet(
-            profile.id,
-            data.clientShare
-          );
-          sessionWalletAddress = result.address;
+          // For now, generate a placeholder address until MPC keys are generated
+          // The actual session wallet will be created when MPC keys are generated via /api/v2/mpc/generate
+          const { ethers } = require('ethers');
+          sessionWalletAddress = ethers.Wallet.createRandom().address;
+          console.log(`Generated placeholder session wallet address: ${sessionWalletAddress}`);
         }
 
         // Update profile with actual or placeholder session wallet address
@@ -155,24 +155,48 @@ export class SmartProfileService {
     isDevelopmentWallet = profileData.isDevelopmentWallet;
     developmentClientShare = profileData.developmentClientShare;
 
-    // TEMPORARILY SKIP ORBY INTEGRATION TO FIX HANGING ISSUE
-    // TODO: Re-enable when Orby service is properly configured
-    console.log('Temporarily skipping Orby integration for all profiles');
-    
-    /*
     // Create Orby account cluster OUTSIDE the transaction
     // Skip Orby integration for development wallets
     if (!isDevelopmentWallet) {
       try {
         console.log(`Creating Orby cluster for profile ${updatedProfile.id}...`);
         
-        // Add timeout to prevent hanging
-        const orbyPromise = orbyService.createOrGetAccountCluster(updatedProfile);
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Orby cluster creation timeout')), 10000) // 10 second timeout
-        );
+        // Implement retry logic with exponential backoff
+        const createClusterWithRetry = async (maxRetries = 3): Promise<string> => {
+          for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+              // Add timeout to prevent hanging
+              const orbyPromise = orbyService.createOrGetAccountCluster(updatedProfile);
+              const timeoutPromise = new Promise<string>((_, reject) => 
+                setTimeout(() => reject(new Error('Orby cluster creation timeout')), 10000) // 10 second timeout
+              );
+              
+              const clusterId = await Promise.race([orbyPromise, timeoutPromise]);
+              return clusterId;
+            } catch (error) {
+              const isLastAttempt = attempt === maxRetries;
+              const errorMessage = error instanceof Error ? error.message : String(error);
+              
+              console.warn(`Orby cluster creation attempt ${attempt}/${maxRetries} failed:`, {
+                profileId: updatedProfile.id,
+                error: errorMessage,
+                isLastAttempt
+              });
+              
+              if (isLastAttempt) {
+                throw error;
+              }
+              
+              // Exponential backoff: 1s, 2s, 4s
+              const backoffDelay = Math.pow(2, attempt - 1) * 1000;
+              console.log(`Retrying Orby cluster creation in ${backoffDelay}ms...`);
+              await new Promise(resolve => setTimeout(resolve, backoffDelay));
+            }
+          }
+          throw new Error('Failed to create Orby cluster after all retries');
+        };
         
-        const clusterId = await Promise.race([orbyPromise, timeoutPromise]) as string;
+        const clusterId = await createClusterWithRetry();
         
         // Update profile with cluster ID
         await prisma.smartProfile.update({
@@ -183,6 +207,20 @@ export class SmartProfileService {
         updatedProfile.orbyAccountClusterId = clusterId;
         
         console.log(`Orby cluster created successfully: ${clusterId}`);
+        
+        // Create an audit log entry for successful Orby integration
+        await prisma.auditLog.create({
+          data: {
+            userId,
+            profileId: updatedProfile.id,
+            action: 'ORBY_CLUSTER_CREATED',
+            resource: 'OrbyAccountCluster',
+            details: JSON.stringify({
+              clusterId,
+              profileName: updatedProfile.name
+            })
+          }
+        });
       } catch (orbyError) {
         // Log detailed error for debugging
         console.error('Failed to create Orby cluster (non-blocking):', {
@@ -190,13 +228,28 @@ export class SmartProfileService {
           error: orbyError instanceof Error ? orbyError.message : orbyError,
           stack: orbyError instanceof Error ? orbyError.stack : undefined
         });
+        
+        // Create an audit log entry for failed Orby integration
+        await prisma.auditLog.create({
+          data: {
+            userId,
+            profileId: updatedProfile.id,
+            action: 'ORBY_CLUSTER_CREATION_FAILED',
+            resource: 'OrbyAccountCluster',
+            details: JSON.stringify({
+              error: orbyError instanceof Error ? orbyError.message : String(orbyError),
+              profileName: updatedProfile.name
+            })
+          }
+        });
+        
         // Don't fail profile creation if Orby fails
         // Profile can still function without Orby integration
+        // TODO: Consider adding a background job to retry cluster creation later
       }
     } else {
       console.log('Skipping Orby integration for development wallet');
     }
-    */
 
     const response = this.formatProfileResponse(updatedProfile);
     
