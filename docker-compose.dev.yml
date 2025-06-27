@@ -53,6 +53,8 @@ services:
       - JWT_REFRESH_SECRET=dev-refresh-secret-change-in-production
       - JWT_REFRESH_EXPIRES_IN=7d
       - ENCRYPTION_SECRET=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY}
+      - LOG_EMAIL_CODES=${LOG_EMAIL_CODES:-false}
       # V2 API Settings
       - ENABLE_V2_API=true
       - AUTO_CREATE_PROFILE=true

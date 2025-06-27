@@ -34,7 +34,8 @@
     "test:check-balances": "ts-node -r tsconfig-paths/register tests/e2e/scripts/check-testnet-balances.ts",
     "fund-wallets": "ts-node -r tsconfig-paths/register scripts/fund-test-wallets.ts",
     "patch:orby": "node scripts/patch-orby.js",
-    "postinstall": "node scripts/patch-orby.js"
+    "postinstall": "node scripts/patch-orby.js",
+    "test:sendgrid": "ts-node -r tsconfig-paths/register scripts/test-sendgrid.ts"
   },
   "keywords": [
     "web3",
@@ -54,6 +55,7 @@
     "@orb-labs/orby-ethers6": "^0.0.18",
     "@prisma/client": "^6.10.1",
     "@react-native-google-signin/google-signin": "^14.0.1",
+    "@sendgrid/mail": "^8.1.5",
     "@silencelaboratories/dkls-wasm-ll-node": "^1.2.0",
     "@silencelaboratories/ecdsa-tss": "^1.1.3",
     "@simplewebauthn/server": "^13.1.1",
@@ -78,7 +80,6 @@
     "joi": "^17.13.3",
     "jsdom": "^25.0.1",
     "jsonwebtoken": "^9.0.2",
-    "nodemailer": "^6.9.15",
     "otplib": "^12.0.1",
     "prisma": "^6.8.2",
     "qrcode": "^1.5.4",
@@ -95,7 +96,7 @@
     "@types/jest": "^29.5.12",
     "@types/jsdom": "^21.1.7",
     "@types/jsonwebtoken": "^9.0.9",
-    "@types/nodemailer": "^6.4.17",
+    "@types/sendgrid": "^2.0.31",
     "@types/supertest": "^6.0.2",
     "@types/uuid": "^10.0.0",
     "@types/ws": "^8.18.1",

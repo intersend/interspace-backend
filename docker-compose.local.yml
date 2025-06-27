@@ -93,6 +93,8 @@ services:
       - ORBY_APP_NAME=interspace-local
       - ORBY_PRIVATE_INSTANCE_URL=https://api-rpc-dev.orblabs.xyz/c669420b-1cca-4a62-ab6c-a580fd06d575
       - FRONTEND_URL=http://localhost:3000
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY}
+      - LOG_EMAIL_CODES=${LOG_EMAIL_CODES:-false}
       # V2 API Settings
       - ENABLE_V2_API=true
       - AUTO_CREATE_PROFILE=true
