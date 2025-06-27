@@ -382,6 +382,27 @@ class AccountService {
       throw error;
     }
   }
+
+  /**
+   * Find account by type and identifier
+   */
+  async findAccountByIdentifier({ type, identifier }) {
+    try {
+      const account = await prisma.account.findUnique({
+        where: {
+          type_identifier: {
+            type,
+            identifier: identifier.toLowerCase()
+          }
+        }
+      });
+
+      return account;
+    } catch (error) {
+      logger.error('Error in findAccountByIdentifier:', error);
+      throw error;
+    }
+  }
 }
 
 module.exports = new AccountService();

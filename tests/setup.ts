@@ -92,6 +92,13 @@ export async function cleanupTestData() {
   await prisma.tokenAllowance.deleteMany();
   await prisma.transaction.deleteMany();
   await prisma.auditLog.deleteMany();
+  // Delete flat identity tables first
+  await prisma.accountSession.deleteMany();
+  await prisma.identityLink.deleteMany();
+  await prisma.profileAccount.deleteMany();
+  await prisma.account.deleteMany();
+  
+  // Delete other tables
   await prisma.socialProfile.deleteMany();
   await prisma.bookmarkedApp.deleteMany();
   await prisma.folder.deleteMany();

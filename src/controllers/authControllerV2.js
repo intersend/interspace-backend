@@ -111,7 +111,8 @@ const authenticateV2 = async (req, res, next) => {
             
             return res.status(401).json({ 
               success: false, 
-              error: 'Invalid or expired verification code' 
+              error: 'Invalid or expired verification code. Please request a new code.',
+              errorCode: 'INVALID_VERIFICATION_CODE'
             });
           }
           
@@ -175,7 +176,8 @@ const authenticateV2 = async (req, res, next) => {
           
           return res.status(401).json({ 
             success: false, 
-            error: verifyResult.error || 'Invalid signature' 
+            error: verifyResult.error || 'Invalid wallet signature. Please try signing the message again.',
+            errorCode: 'INVALID_WALLET_SIGNATURE'
           });
         }
 
@@ -296,7 +298,7 @@ const authenticateV2 = async (req, res, next) => {
         }
         
         try {
-          // Use socialAuthService to verify Apple token
+          // Use socialAuthService to verify Apple token and get user info
           const authResult = await socialAuthService.authenticate({
             authToken: appleIdToken,
             authStrategy: 'apple',
@@ -307,26 +309,36 @@ const authenticateV2 = async (req, res, next) => {
             userAgent: deviceInfo.userAgent
           });
           
-          // Extract user info from the Apple token
-          const { verifyIdToken } = require('apple-signin-auth');
-          const decodedToken = await verifyIdToken(appleIdToken, { 
-            audience: process.env.APPLE_CLIENT_ID 
-          });
+          // socialAuthService already verified the token and extracted user info
+          // No need to verify again - just use the result
+          const decodedToken = authResult.tokenPayload || {};
           
           // Create or find account
           // Use email from appleAuth if decodedToken doesn't have it (first sign in)
           const email = decodedToken.email || authData.appleAuth?.user?.email;
           
+          // Log first-time user info for debugging
+          if (authData.appleAuth?.user) {
+            logger.info('Apple Sign In - First time user info:', {
+              firstName: authData.appleAuth.user.firstName,
+              lastName: authData.appleAuth.user.lastName,
+              email: authData.appleAuth.user.email
+            });
+          }
+          
           account = await accountService.findOrCreateAccount({
             type: 'social',
-            identifier: decodedToken.sub, // Apple user ID
+            identifier: authResult.userId || decodedToken.sub, // Apple user ID from auth result
             provider: 'apple',
             metadata: { 
               email: email,
               emailVerified: true, // Apple verifies emails
               isPrivateEmail: decodedToken.is_private_email,
               firstName: authData.appleAuth?.user?.firstName,
-              lastName: authData.appleAuth?.user?.lastName
+              lastName: authData.appleAuth?.user?.lastName,
+              name: authData.appleAuth?.user ? 
+                `${authData.appleAuth.user.firstName || ''} ${authData.appleAuth.user.lastName || ''}`.trim() : 
+                null
             }
           });
           
@@ -343,8 +355,8 @@ const authenticateV2 = async (req, res, next) => {
         break;
 
       case 'passkey':
-        // Passkey authentication/registration
-        const { passkeyResponse, challenge, username } = authData;
+        // Passkey authentication only - registration is handled separately
+        const { passkeyResponse, challenge } = authData;
         
         if (!passkeyResponse || !challenge) {
           return res.status(400).json({
@@ -354,90 +366,40 @@ const authenticateV2 = async (req, res, next) => {
         }
         
         try {
-          // Check if this is a registration or authentication based on attestationObject
-          const isRegistration = passkeyResponse.response.attestationObject && passkeyResponse.response.attestationObject !== '';
+          // Verify the passkey authentication
+          const verificationResult = await passkeyService.verifyAuthentication(
+            passkeyResponse,
+            challenge
+          );
           
-          if (isRegistration) {
-            // For registration, first create a temporary user ID for the account
-            const tempUserId = `passkey_temp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-            
-            // Verify the registration response
-            const verificationResult = await passkeyService.verifyRegistration(
-              tempUserId,
-              passkeyResponse,
-              challenge,
-              authData.deviceName || 'Unknown Device'
-            );
-            
-            if (!verificationResult.verified || !verificationResult.credentialId) {
-              return res.status(401).json({
-                success: false,
-                error: 'Passkey registration verification failed'
-              });
-            }
-            
-            // Create account with the verified credential ID
-            account = await accountService.findOrCreateAccount({
-              type: 'passkey',
-              identifier: verificationResult.credentialId,
-              provider: 'passkey',
-              email: username, // Username might be email
-              metadata: {
-                credentialId: verificationResult.credentialId,
-                deviceName: authData.deviceName,
-                createdAt: new Date().toISOString(),
-                userId: tempUserId
-              }
+          if (!verificationResult.verified || !verificationResult.credentialId) {
+            return res.status(401).json({
+              success: false,
+              error: 'Passkey verification failed'
             });
-            
-            // Update the passkey credential with the actual account ID
-            await prisma.passkeyCredential.updateMany({
-              where: { userId: tempUserId },
-              data: { userId: account.id }
-            });
-            
-            // Mark account as verified
-            await accountService.verifyAccount(account.id);
-            
-          } else {
-            // For authentication, verify the passkey
-            const verificationResult = await passkeyService.verifyAuthentication(
-              passkeyResponse,
-              challenge
-            );
-            
-            if (!verificationResult.verified || !verificationResult.userId) {
-              return res.status(401).json({
-                success: false,
-                error: 'Passkey verification failed'
-              });
-            }
-            
-            // Find the account by user ID from passkey credential
-            const passkeyCredential = await prisma.passkeyCredential.findFirst({
-              where: { userId: verificationResult.userId }
-            });
-            
-            if (!passkeyCredential) {
-              return res.status(401).json({
-                success: false,
-                error: 'Passkey credential not found'
-              });
-            }
-            
-            // Find the account by credential ID
-            account = await accountService.findAccountByIdentifier({
-              type: 'passkey',
-              identifier: passkeyCredential.credentialId
-            });
-            
-            if (!account) {
-              return res.status(401).json({
-                success: false,
-                error: 'Account not found for this passkey'
-              });
-            }
           }
+          
+          // Find the account by credential ID
+          account = await accountService.findAccountByIdentifier({
+            type: 'passkey',
+            identifier: verificationResult.credentialId
+          });
+          
+          if (!account) {
+            logger.warn('Passkey authentication failed - account not found', {
+              credentialId: verificationResult.credentialId,
+              ipAddress: deviceInfo.ipAddress
+            });
+            
+            return res.status(401).json({
+              success: false,
+              error: 'This passkey is not registered. Please sign in with your email or wallet first, then add this passkey in your account settings.',
+              errorCode: 'PASSKEY_NOT_REGISTERED'
+            });
+          }
+          
+          // Mark account as verified (passkey proves ownership)
+          await accountService.verifyAccount(account.id);
           
         } catch (error) {
           logger.error('Passkey auth error:', error);

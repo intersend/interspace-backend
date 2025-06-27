@@ -24,10 +24,19 @@ export class PasskeyController {
       // Fetch user details
       const userProfile = await userService.getUserProfile(userId);
 
+      let username = userProfile.email || userId;
+      let displayName = userProfile.name || userProfile.email || 'User';
+      
+      // For V2 flat identity, try to get email from account metadata
+      if (req.account?.metadata?.email) {
+        username = req.account.metadata.email;
+        displayName = req.account.metadata.name || username;
+      }
+      
       const options = await passkeyService.generateRegistrationOptions({
         userId,
-        username: userProfile.email || userId,
-        displayName: userProfile.email || 'User',
+        username,
+        displayName,
         deviceName
       });
 
@@ -50,7 +59,8 @@ export class PasskeyController {
   async verifyRegistration(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.user?.userId;
-      if (!userId) {
+      const accountId = req.account?.id; // V2 auth will have account
+      if (!userId && !accountId) {
         res.status(401).json({
           success: false,
           error: 'Authentication required'
@@ -69,18 +79,47 @@ export class PasskeyController {
       }
 
       const result = await passkeyService.verifyRegistration(
-        userId,
+        userId || '', // Will be updated in service to use account
         response,
         challenge,
         deviceName
       );
 
-      if (!result.verified) {
+      if (!result.verified || !result.credentialId) {
         res.status(400).json({
           success: false,
           error: 'Passkey registration failed'
         } as ApiResponse);
         return;
+      }
+
+      // Create passkey account for V2 flat identity model
+      if (accountId) {
+        const { accountService } = await import('@/services/accountService');
+        await accountService.findOrCreateAccount({
+          type: 'passkey',
+          identifier: result.credentialId,
+          metadata: {
+            deviceName: deviceName || 'Unknown Device',
+            createdAt: new Date().toISOString(),
+            primaryAccountId: accountId
+          }
+        });
+
+        // Link the passkey account to the current account
+        const passkeyAccount = await accountService.findAccountByIdentifier({
+          type: 'passkey',
+          identifier: result.credentialId
+        });
+
+        if (passkeyAccount) {
+          await accountService.linkAccounts(
+            accountId,
+            passkeyAccount.id,
+            'direct',
+            'linked'
+          );
+        }
       }
 
       res.status(200).json({

@@ -4,7 +4,8 @@ module.exports = {
   setupFiles: ['<rootDir>/tests/setupEnv.ts'],
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   testMatch: [
-    '<rootDir>/tests/**/*.test.ts'
+    '<rootDir>/tests/**/*.test.ts',
+    '<rootDir>/tests/**/*.test.js'
   ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
@@ -36,6 +37,9 @@ module.exports = {
       diagnostics: false
     }]
   },
+  transformIgnorePatterns: [
+    'node_modules/(?!(@silencelaboratories|@orb-labs)/)'
+  ],
   testTimeout: 30000,
   // Run tests sequentially to avoid database deadlocks
   maxWorkers: 1,
