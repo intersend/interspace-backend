@@ -403,3 +403,276 @@ All authentication attempts trigger audit logs:
   }
 }
 ```
+
+---
+
+## Additional Authentication Endpoints
+
+### Link Accounts
+
+Links two accounts together in the identity graph.
+
+#### Request
+```
+POST /api/v2/auth/link-accounts
+Authorization: Bearer <access_token>
+```
+
+```json
+{
+  "targetType": "email",  // "email" | "wallet" | "social"
+  "targetIdentifier": "user@example.com",
+  "targetProvider": "google",  // optional, for social accounts
+  "linkType": "direct",  // "direct" | "inferred", default: "direct"
+  "privacyMode": "linked"  // "linked" | "partial" | "isolated", default: "linked"
+}
+```
+
+#### Response
+```json
+{
+  "success": true,
+  "data": {
+    "sourceAccountId": "account123",
+    "targetAccountId": "account456",
+    "linkType": "direct",
+    "privacyMode": "linked",
+    "createdAt": "2024-01-01T00:00:00Z"
+  }
+}
+```
+
+---
+
+### Update Link Privacy Mode
+
+Updates the privacy mode for an existing account link.
+
+#### Request
+```
+PUT /api/v2/auth/link-privacy
+Authorization: Bearer <access_token>
+```
+
+```json
+{
+  "targetAccountId": "account456",
+  "privacyMode": "partial"  // "linked" | "partial" | "isolated"
+}
+```
+
+#### Response
+```json
+{
+  "success": true,
+  "message": "Privacy mode updated successfully"
+}
+```
+
+---
+
+### Get Identity Graph
+
+Retrieves the identity graph for the current account, showing all linked accounts and their relationships.
+
+#### Request
+```
+GET /api/v2/auth/identity-graph
+Authorization: Bearer <access_token>
+```
+
+#### Response
+```json
+{
+  "success": true,
+  "data": {
+    "accounts": [
+      {
+        "id": "account123",
+        "type": "email",
+        "identifier": "user@example.com",
+        "verified": true,
+        "createdAt": "2024-01-01T00:00:00Z"
+      },
+      {
+        "id": "account456",
+        "type": "wallet",
+        "identifier": "0x123...abc",
+        "verified": true,
+        "createdAt": "2024-01-02T00:00:00Z"
+      }
+    ],
+    "links": [
+      {
+        "sourceAccountId": "account123",
+        "targetAccountId": "account456",
+        "linkType": "direct",
+        "privacyMode": "linked",
+        "createdAt": "2024-01-03T00:00:00Z"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### Switch Profile
+
+Switches the active profile for the current session.
+
+#### Request
+```
+POST /api/v2/auth/switch-profile/:profileId
+Authorization: Bearer <access_token>
+```
+
+#### Response
+```json
+{
+  "success": true,
+  "data": {
+    "activeProfile": {
+      "id": "profile456",
+      "name": "Work Profile",
+      "sessionWalletAddress": "0x...",
+      "isActive": true
+    }
+  }
+}
+```
+
+---
+
+### Resend Email Code
+
+Resends the email verification code to the specified email address.
+
+#### Request
+```
+POST /api/v2/auth/resend-email-code
+```
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+#### Response
+```json
+{
+  "success": true,
+  "message": "Verification code resent successfully",
+  "expiresInMinutes": 10
+}
+```
+
+#### Rate Limiting
+- Same rate limits as send-email-code: 3 requests per hour per email
+
+---
+
+### Verify Email Code
+
+Verifies an email code without authenticating (useful for pre-validation).
+
+#### Request
+```
+POST /api/v2/auth/verify-email-code
+```
+
+```json
+{
+  "email": "user@example.com",
+  "code": "123456"
+}
+```
+
+#### Response
+```json
+{
+  "success": true,
+  "message": "Code verified successfully"
+}
+```
+
+---
+
+### Refresh Token
+
+Refreshes an expired access token using a valid refresh token.
+
+#### Request
+```
+POST /api/v2/auth/refresh
+```
+
+```json
+{
+  "refreshToken": "eyJ..."
+}
+```
+
+#### Response
+```json
+{
+  "success": true,
+  "tokens": {
+    "accessToken": "eyJ...",
+    "refreshToken": "eyJ..."
+  }
+}
+```
+
+---
+
+### Logout
+
+Invalidates the current session and blacklists tokens.
+
+#### Request
+```
+POST /api/v2/auth/logout
+Authorization: Bearer <access_token>
+```
+
+#### Response
+```json
+{
+  "success": true,
+  "message": "Logged out successfully"
+}
+```
+
+#### Effects
+- Deletes the current session from database
+- Blacklists the access token
+- Always returns success even if session already expired
+
+---
+
+### Development Endpoints
+
+#### Get Last Email Code (Development Only)
+
+Retrieves the last email verification code sent (for testing purposes).
+
+#### Request
+```
+GET /api/v2/auth/dev/last-email-code
+```
+
+#### Response
+```json
+{
+  "success": true,
+  "data": {
+    "email": "user@example.com",
+    "code": "123456",
+    "expiresAt": "2024-01-01T00:10:00Z"
+  }
+}
+```
+
+**Note**: This endpoint is only available when `NODE_ENV=development`
