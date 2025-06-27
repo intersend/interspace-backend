@@ -30,6 +30,8 @@ coverage/
 .nyc_output/
 junit.xml
 test-results/
+tests/test-hub/reports/generated/
+tests/test-hub/logs/
 
 # Logs
 logs/
@@ -103,6 +105,11 @@ Thumbs.db
 .tmp/
 .temp/
 temp/
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
 
 # PM2 logs
 .pm2/

@@ -1,9 +1,10 @@
-import nodemailer from 'nodemailer';
+const sgMail = require('@sendgrid/mail');
 import { logger } from '../utils/logger';
 
 // Email configuration
-const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@interspace.app';
+const FROM_EMAIL = 'hello@interspace.fi';  // Verified sender in SendGrid
 const FROM_NAME = process.env.FROM_NAME || 'Interspace';
+const LOG_EMAIL_CODES = process.env.LOG_EMAIL_CODES === 'true'; // Default is false
 
 export interface EmailOptions {
   to: string;
@@ -13,12 +14,11 @@ export interface EmailOptions {
 }
 
 class EmailService {
-  private transporter: any = null;
   // Development only: Store last sent codes
   private devCodes: Map<string, { code: string; timestamp: number }> = new Map();
 
   constructor() {
-    this.initializeTransporter();
+    this.initializeSendGrid();
     
     // Clean up old codes every 15 minutes
     if (process.env.NODE_ENV === 'development') {
@@ -33,41 +33,21 @@ class EmailService {
     }
   }
 
-  private initializeTransporter() {
-    // SMTP configuration
-    if (process.env.SMTP_HOST) {
-      this.transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT || '587'),
-        secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-        auth: {
-          user: process.env.SMTP_USER || '',
-          pass: process.env.SMTP_PASS || ''
-        },
-        tls: {
-          // Do not fail on invalid certificates in development
-          rejectUnauthorized: process.env.NODE_ENV === 'production'
-        }
-      });
-
-      // Verify connection configuration
-      this.transporter.verify((error: Error | null) => {
-        if (error) {
-          logger.error('SMTP connection error:', error);
-        } else {
-          logger.info('SMTP server is ready to send emails');
-        }
-      });
-    } else if (process.env.NODE_ENV === 'development') {
-      // Development mode - just log emails to console
-      logger.warn('SMTP not configured. Emails will be logged to console in development mode.');
+  private initializeSendGrid() {
+    const sendgridApiKey = process.env.SENDGRID_API_KEY;
+    
+    if (sendgridApiKey) {
+      sgMail.setApiKey(sendgridApiKey);
+      logger.info('SendGrid email service initialized successfully');
     } else {
-      logger.error('SMTP configuration missing in production!');
+      logger.error('SendGrid API key missing! Set SENDGRID_API_KEY environment variable.');
     }
   }
 
   async sendEmail(options: EmailOptions): Promise<void> {
-    if (!this.transporter) {
+    const sendgridApiKey = process.env.SENDGRID_API_KEY;
+    
+    if (!sendgridApiKey) {
       // In development, just log the email
       if (process.env.NODE_ENV === 'development') {
         logger.info('📧 [DEV MODE] Email would be sent:', {
@@ -76,36 +56,53 @@ class EmailService {
         });
         return;
       }
-      throw new Error('Email service not configured');
+      throw new Error('SendGrid API key not configured');
     }
 
     try {
-      const mailOptions = {
-        from: `"${FROM_NAME}" <${FROM_EMAIL}>`,
+      const msg = {
         to: options.to,
+        from: {
+          email: FROM_EMAIL,
+          name: FROM_NAME
+        },
         subject: options.subject,
         html: options.html,
         text: options.text || this.stripHtml(options.html),
       };
 
-      const info = await this.transporter.sendMail(mailOptions);
-      logger.info(`Email sent successfully to: ${options.to}, messageId: ${info.messageId}`);
-    } catch (error) {
-      logger.error('Failed to send email:', error);
+      await sgMail.send(msg);
+      logger.info(`Email sent successfully via SendGrid to: ${options.to}`);
+    } catch (error: any) {
+      logger.error('Failed to send email via SendGrid:', error);
+      
+      // Log SendGrid specific error details
+      if (error.response) {
+        logger.error('SendGrid error response:', {
+          statusCode: error.code,
+          body: error.response.body
+        });
+      }
+      
       throw new Error('Failed to send email');
     }
   }
 
   async sendVerificationCode(email: string, code: string): Promise<void> {
-    // In development, log the verification code for easy testing
+    // In development, optionally log the code based on configuration
     if (process.env.NODE_ENV === 'development') {
-      logger.info(`📧 [DEV MODE] Verification code for ${email}: ${code}`);
-      logger.info(`📧 [DEV MODE] ========================================`);
-      logger.info(`📧 [DEV MODE] Email: ${email}`);
-      logger.info(`📧 [DEV MODE] Code: ${code}`);
-      logger.info(`📧 [DEV MODE] ========================================`);
+      if (LOG_EMAIL_CODES) {
+        logger.info(`📧 [DEV MODE] Verification code for ${email}: ${code}`);
+        logger.info(`📧 [DEV MODE] ========================================`);
+        logger.info(`📧 [DEV MODE] Email: ${email}`);
+        logger.info(`📧 [DEV MODE] Code: ${code}`);
+        logger.info(`📧 [DEV MODE] ========================================`);
+      } else {
+        // Log that email was sent but don't show the code
+        logger.info(`📧 [DEV MODE] Verification email sent to: ${email}`);
+      }
       
-      // Store the code for development auto-fill feature
+      // Always store the code for development auto-fill feature (regardless of logging)
       this.devCodes.set(email, { code, timestamp: Date.now() });
     }
 

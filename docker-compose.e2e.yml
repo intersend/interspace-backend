@@ -152,6 +152,8 @@ services:
       # Test Configuration
       BYPASS_LOGIN: "false"
       LOG_LEVEL: debug
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY}
+      LOG_EMAIL_CODES: ${LOG_EMAIL_CODES:-false}
       # Email (disabled for tests)
       SMTP_HOST: "smtp.test.local"
       SMTP_PORT: "587"
