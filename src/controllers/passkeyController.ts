@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
-import { passkeyService } from '@/services/passkeyService';
-import { authService } from '@/services/authService';
-import { userService } from '@/services/userService';
-import { ApiResponse } from '@/types';
+import { passkeyService } from '../services/passkeyService';
+import { authService } from '../services/authService';
+import { userService } from '../services/userService';
+import { ApiResponse } from '../types';
 
 export class PasskeyController {
   /**
@@ -25,13 +25,11 @@ export class PasskeyController {
       const userProfile = await userService.getUserProfile(userId);
 
       let username = userProfile.email || userId;
-      let displayName = userProfile.name || userProfile.email || 'User';
+      let displayName = userProfile.email || 'User';
       
       // For V2 flat identity, try to get email from account metadata
-      if (req.account?.metadata?.email) {
-        username = req.account.metadata.email;
-        displayName = req.account.metadata.name || username;
-      }
+      // Note: req.account is only available for V2 authenticated requests
+      // For now, we'll use the user profile data from V1
       
       const options = await passkeyService.generateRegistrationOptions({
         userId,
@@ -59,7 +57,9 @@ export class PasskeyController {
   async verifyRegistration(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.user?.userId;
-      const accountId = req.account?.id; // V2 auth will have account
+      // Note: req.account is only available for V2 authenticated requests
+      // For now, we support both V1 (req.user) and V2 (req.account)
+      const accountId = (req as any).account?.id; // V2 auth will have account
       if (!userId && !accountId) {
         res.status(401).json({
           success: false,
@@ -95,8 +95,8 @@ export class PasskeyController {
 
       // Create passkey account for V2 flat identity model
       if (accountId) {
-        const { accountService } = await import('@/services/accountService');
-        await accountService.findOrCreateAccount({
+        const accountService = await import('../services/accountService');
+        await accountService.default.findOrCreateAccount({
           type: 'passkey',
           identifier: result.credentialId,
           metadata: {
@@ -107,13 +107,13 @@ export class PasskeyController {
         });
 
         // Link the passkey account to the current account
-        const passkeyAccount = await accountService.findAccountByIdentifier({
+        const passkeyAccount = await accountService.default.findAccountByIdentifier({
           type: 'passkey',
           identifier: result.credentialId
         });
 
         if (passkeyAccount) {
-          await accountService.linkAccounts(
+          await accountService.default.linkAccounts(
             accountId,
             passkeyAccount.id,
             'direct',
