@@ -7,6 +7,7 @@ const sessionWalletService = require('../services/sessionWalletService');
 const accountService = require('../services/accountService');
 const { smartProfileService } = require('../services/smartProfileService');
 const { siweService } = require('../services/siweService');
+const { passkeyService } = require('../services/passkeyService');
 const { generateTokens, verifyRefreshToken } = require('../utils/tokenUtils');
 const { prisma } = require('../utils/database');
 
@@ -353,37 +354,46 @@ const authenticateV2 = async (req, res, next) => {
         }
         
         try {
-          const { passkeyService } = require('../services/passkeyService');
-          
           // Check if this is a registration or authentication based on attestationObject
           const isRegistration = passkeyResponse.response.attestationObject && passkeyResponse.response.attestationObject !== '';
           
           if (isRegistration) {
-            // For registration, create a new account
-            // Generate a unique identifier for the passkey
-            const credentialId = passkeyResponse.id;
+            // For registration, first create a temporary user ID for the account
+            const tempUserId = `passkey_temp_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
             
-            // Create account with passkey
+            // Verify the registration response
+            const verificationResult = await passkeyService.verifyRegistration(
+              tempUserId,
+              passkeyResponse,
+              challenge,
+              authData.deviceName || 'Unknown Device'
+            );
+            
+            if (!verificationResult.verified || !verificationResult.credentialId) {
+              return res.status(401).json({
+                success: false,
+                error: 'Passkey registration verification failed'
+              });
+            }
+            
+            // Create account with the verified credential ID
             account = await accountService.findOrCreateAccount({
               type: 'passkey',
-              identifier: credentialId,
+              identifier: verificationResult.credentialId,
               provider: 'passkey',
               email: username, // Username might be email
               metadata: {
-                credentialId,
+                credentialId: verificationResult.credentialId,
                 deviceName: authData.deviceName,
-                createdAt: new Date().toISOString()
+                createdAt: new Date().toISOString(),
+                userId: tempUserId
               }
             });
             
-            // Store the passkey credential
-            await passkeyService.storeCredential({
-              userId: account.id,
-              credentialId,
-              publicKey: passkeyResponse.response.publicKey || '',
-              counter: 0,
-              deviceType: authData.deviceType || 'unknown',
-              deviceName: authData.deviceName
+            // Update the passkey credential with the actual account ID
+            await prisma.passkeyCredential.updateMany({
+              where: { userId: tempUserId },
+              data: { userId: account.id }
             });
             
             // Mark account as verified
@@ -403,10 +413,22 @@ const authenticateV2 = async (req, res, next) => {
               });
             }
             
+            // Find the account by user ID from passkey credential
+            const passkeyCredential = await prisma.passkeyCredential.findFirst({
+              where: { userId: verificationResult.userId }
+            });
+            
+            if (!passkeyCredential) {
+              return res.status(401).json({
+                success: false,
+                error: 'Passkey credential not found'
+              });
+            }
+            
             // Find the account by credential ID
             account = await accountService.findAccountByIdentifier({
               type: 'passkey',
-              identifier: passkeyResponse.id
+              identifier: passkeyCredential.credentialId
             });
             
             if (!account) {
