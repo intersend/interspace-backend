@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { validationResult } = require('express-validator');
 const { logger } = require('../utils/logger');
-const socialAuthService = require('../services/socialAuthService');
+const { socialAuthService } = require('../services/socialAuthService');
 const { auditService } = require('../services/auditService');
 const sessionWalletService = require('../services/sessionWalletService');
 const accountService = require('../services/accountService');
@@ -337,6 +337,91 @@ const authenticateV2 = async (req, res, next) => {
           return res.status(401).json({ 
             success: false, 
             error: 'Apple authentication failed' 
+          });
+        }
+        break;
+
+      case 'passkey':
+        // Passkey authentication/registration
+        const { passkeyResponse, challenge, username } = authData;
+        
+        if (!passkeyResponse || !challenge) {
+          return res.status(400).json({
+            success: false,
+            error: 'Passkey response and challenge required'
+          });
+        }
+        
+        try {
+          const { passkeyService } = require('../services/passkeyService');
+          
+          // Check if this is a registration or authentication based on attestationObject
+          const isRegistration = passkeyResponse.response.attestationObject && passkeyResponse.response.attestationObject !== '';
+          
+          if (isRegistration) {
+            // For registration, create a new account
+            // Generate a unique identifier for the passkey
+            const credentialId = passkeyResponse.id;
+            
+            // Create account with passkey
+            account = await accountService.findOrCreateAccount({
+              type: 'passkey',
+              identifier: credentialId,
+              provider: 'passkey',
+              email: username, // Username might be email
+              metadata: {
+                credentialId,
+                deviceName: authData.deviceName,
+                createdAt: new Date().toISOString()
+              }
+            });
+            
+            // Store the passkey credential
+            await passkeyService.storeCredential({
+              userId: account.id,
+              credentialId,
+              publicKey: passkeyResponse.response.publicKey || '',
+              counter: 0,
+              deviceType: authData.deviceType || 'unknown',
+              deviceName: authData.deviceName
+            });
+            
+            // Mark account as verified
+            await accountService.verifyAccount(account.id);
+            
+          } else {
+            // For authentication, verify the passkey
+            const verificationResult = await passkeyService.verifyAuthentication(
+              passkeyResponse,
+              challenge
+            );
+            
+            if (!verificationResult.verified || !verificationResult.userId) {
+              return res.status(401).json({
+                success: false,
+                error: 'Passkey verification failed'
+              });
+            }
+            
+            // Find the account by credential ID
+            account = await accountService.findAccountByIdentifier({
+              type: 'passkey',
+              identifier: passkeyResponse.id
+            });
+            
+            if (!account) {
+              return res.status(401).json({
+                success: false,
+                error: 'Account not found for this passkey'
+              });
+            }
+          }
+          
+        } catch (error) {
+          logger.error('Passkey auth error:', error);
+          return res.status(401).json({
+            success: false,
+            error: 'Passkey authentication failed'
           });
         }
         break;
