@@ -26,6 +26,7 @@ import linkedAccountRoutesV2 from '@/routes/linkedAccountRoutesV2';
 import twoFactorRoutesV2 from '@/routes/twoFactorRoutesV2';
 import securityRoutesV2 from '@/routes/securityRoutesV2';
 import mpcWebhookRoutes from '@/routes/mpcWebhookRoutes';
+import wellKnownRoutes from '@/routes/wellKnownRoutes';
 
 class Application {
   public app: express.Application;
@@ -391,6 +392,9 @@ class Application {
   }
 
   private initializeRoutes(): void {
+    // Well-known routes (must be before API routes for proper routing)
+    this.app.use('/.well-known', wellKnownRoutes);
+    
     // V2 Routes Only - Frontend uses v2 exclusively
     const apiV2Path = '/api/v2';
     this.app.use(`${apiV2Path}/auth`, authRoutesV2);

@@ -10,7 +10,12 @@ const router = Router();
  * @access  Public
  */
 router.get('/apple-app-site-association', (req: Request, res: Response) => {
-  const filePath = path.join(__dirname, '../../../public/.well-known/apple-app-site-association');
+  // In development with ts-node, __dirname is src/routes
+  // In production with compiled JS, __dirname would be dist/routes
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const filePath = isDevelopment 
+    ? path.join(__dirname, '../../public/.well-known/apple-app-site-association')
+    : path.join(__dirname, '../../../public/.well-known/apple-app-site-association');
   
   // Check if file exists
   if (!fs.existsSync(filePath)) {
