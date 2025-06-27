@@ -3,8 +3,12 @@ const { body } = require('express-validator');
 const authControllerV2 = require('../controllers/authControllerV2');
 const { authenticateAccount } = require('../middleware/authMiddlewareV2');
 const { authRateLimit, userRateLimit } = require('../middleware/rateLimiter');
+const passkeyRoutes = require('./passkeyRoutes').default;
 
 const router = express.Router();
+
+// Passkey authentication routes
+router.use('/passkey', passkeyRoutes);
 
 /**
  * @route   POST /api/v2/auth/authenticate
@@ -24,7 +28,17 @@ router.post('/authenticate',
     body('message').if(body('strategy').equals('wallet')).notEmpty(),
     body('walletType').if(body('strategy').equals('wallet')).optional().isString(),
     // Social strategy validation
-    body('idToken').if(body('strategy').isIn(['google', 'apple'])).notEmpty(),
+    body('idToken').if(body('strategy').equals('google')).notEmpty(),
+    // Apple can have idToken at root or nested in appleAuth
+    body().custom((value, { req }) => {
+      if (req.body.strategy === 'apple') {
+        // Accept either format: idToken at root or appleAuth.identityToken
+        if (!req.body.idToken && !req.body.appleAuth?.identityToken) {
+          throw new Error('Apple ID token required');
+        }
+      }
+      return true;
+    }),
     // Privacy mode
     body('privacyMode').optional().isIn(['linked', 'partial', 'isolated']),
     // Device info
