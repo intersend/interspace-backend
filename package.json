@@ -35,7 +35,9 @@
     "fund-wallets": "ts-node -r tsconfig-paths/register scripts/fund-test-wallets.ts",
     "patch:orby": "node scripts/patch-orby.js",
     "postinstall": "node scripts/patch-orby.js",
-    "test:sendgrid": "ts-node -r tsconfig-paths/register scripts/test-sendgrid.ts"
+    "test:sendgrid": "ts-node -r tsconfig-paths/register scripts/test-sendgrid.ts",
+    "test:flat-identity": "./scripts/test-flat-identity.sh",
+    "test:flat-identity:coverage": "NODE_ENV=test jest --config jest.config.js --coverage --testPathPattern='(flatIdentityModel|accountService)'"
   },
   "keywords": [
     "web3",
