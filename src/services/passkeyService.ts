@@ -13,14 +13,14 @@ import { config } from '@/utils/config';
 import { AuthenticationError, NotFoundError } from '@/types';
 
 interface PasskeyRegistrationOptions {
-  userId: string;
+  accountId: string; // Changed from userId to accountId for V2
   username: string;
   displayName?: string;
   deviceName?: string;
 }
 
 interface PasskeyAuthenticationOptions {
-  userId?: string;
+  accountId?: string;
   username?: string;
 }
 
@@ -43,58 +43,79 @@ class PasskeyService {
    * Generate registration options for creating a new passkey
    */
   async generateRegistrationOptions(options: PasskeyRegistrationOptions): Promise<PublicKeyCredentialCreationOptionsJSON> {
-    const { userId, username, displayName, deviceName } = options;
+    const { accountId, username, displayName, deviceName } = options;
 
-    // Get existing credentials for this user to exclude
-    const existingCredentials = await prisma.passkeyCredential.findMany({
-      where: { userId },
-      select: { credentialId: true, transports: true }
+    // Get existing passkey accounts linked to this account to exclude
+    const linkedAccounts = await prisma.identityLink.findMany({
+      where: {
+        OR: [
+          { accountAId: accountId },
+          { accountBId: accountId }
+        ]
+      },
+      include: {
+        accountA: true,
+        accountB: true
+      }
     });
 
-    const excludeCredentials = existingCredentials.map(cred => ({
-      id: cred.credentialId,
-      transports: cred.transports ? JSON.parse(cred.transports) : undefined
+    // Extract passkey accounts
+    const passkeyAccounts: any[] = [];
+    linkedAccounts.forEach(link => {
+      if (link.accountA.type === 'passkey' && link.accountA.id !== accountId) {
+        passkeyAccounts.push(link.accountA);
+      }
+      if (link.accountB.type === 'passkey' && link.accountB.id !== accountId) {
+        passkeyAccounts.push(link.accountB);
+      }
+    });
+
+    // Also check if the current account itself is a passkey
+    const currentAccount = await prisma.account.findUnique({
+      where: { id: accountId }
+    });
+    if (currentAccount?.type === 'passkey') {
+      passkeyAccounts.push(currentAccount);
+    }
+
+    const excludeCredentials = passkeyAccounts.map(account => ({
+      id: account.identifier,
+      transports: (account.metadata as any)?.transports || []
     }));
 
-    // Generate a challenge
-    const challenge = challengeService.generateChallenge(userId, 'registration');
+    const challenge = challengeService.generateChallenge(accountId, 'registration');
 
     const registrationOptions = await generateRegistrationOptions({
       rpName: this.rpName,
       rpID: this.rpID,
-      userID: Buffer.from(userId),
+      userID: Buffer.from(accountId),
       userName: username,
       userDisplayName: displayName || username,
       challenge,
       excludeCredentials,
       authenticatorSelection: {
         authenticatorAttachment: 'platform',
-        userVerification: 'preferred',
+        requireResidentKey: false,
         residentKey: 'preferred',
-        requireResidentKey: false
+        userVerification: 'preferred'
       },
       supportedAlgorithmIDs: [-7, -257], // ES256, RS256
-      timeout: 60000 // 60 seconds
+      timeout: 60000,
+      attestationType: 'none'
     });
 
     return registrationOptions;
   }
 
   /**
-   * Verify registration response and save credential
+   * Verify registration response and store the credential
    */
   async verifyRegistration(
-    userId: string,
     response: any,
     expectedChallenge: string,
-    deviceName?: string
+    options: PasskeyRegistrationOptions
   ): Promise<{ verified: boolean; credentialId?: string }> {
     try {
-      // Verify the challenge
-      if (!challengeService.verifyChallenge(expectedChallenge, userId, 'registration')) {
-        throw new AuthenticationError('Invalid or expired challenge');
-      }
-
       const verification = await verifyRegistrationResponse({
         response,
         expectedChallenge,
@@ -104,39 +125,43 @@ class PasskeyService {
       });
 
       if (!verification.verified || !verification.registrationInfo) {
-        return { verified: false };
+        throw new AuthenticationError('Passkey registration failed');
       }
 
-      const { credential, credentialDeviceType, credentialBackedUp } = verification.registrationInfo;
+      const { credential: verifiedCredential, credentialType } = verification.registrationInfo;
+      const { id: credentialID, publicKey: credentialPublicKey, counter } = verifiedCredential;
+      const credentialData = {
+        id: Buffer.from(credentialID).toString('base64url'),
+        publicKey: Buffer.from(credentialPublicKey).toString('base64url'),
+        counter
+      };
 
-      // Save credential to database
+      // Log for debugging
+      console.log(`📝 Storing passkey credential: ${credentialData.id} (length: ${credentialData.id.length})`);
+
+      // Store as an Account in V2 model
       await withTransaction(async (tx) => {
-        // Check if user exists
-        const user = await tx.user.findUnique({
-          where: { id: userId }
-        });
-
-        if (!user) {
-          throw new NotFoundError('User');
-        }
-
-        // Save passkey credential
-        await tx.passkeyCredential.create({
+        // Create the passkey account
+        await tx.account.create({
           data: {
-            userId,
-            credentialId: credential.id,
-            publicKey: Buffer.from(credential.publicKey).toString('base64url'),
-            username: user.email || 'user',
-            counter: credential.counter,
-            deviceName: deviceName || credentialDeviceType || 'Unknown Device',
-            transports: JSON.stringify(response.transports || [])
+            type: 'passkey',
+            identifier: credentialData.id,
+            verified: true,
+            metadata: {
+              publicKey: credentialData.publicKey,
+              username: options.username,
+              counter: credentialData.counter,
+              deviceName: options.deviceName || 'Unknown Device',
+              transports: response.transports || [],
+              createdAt: new Date().toISOString()
+            }
           }
         });
       });
 
       return {
         verified: true,
-        credentialId: credential.id
+        credentialId: credentialData.id
       };
     } catch (error) {
       console.error('Passkey registration error:', error);
@@ -148,45 +173,66 @@ class PasskeyService {
    * Generate authentication options for signing in with a passkey
    */
   async generateAuthenticationOptions(options: PasskeyAuthenticationOptions = {}): Promise<PublicKeyCredentialRequestOptionsJSON> {
-    const { userId, username } = options;
+    const { accountId, username } = options;
 
     let allowCredentials: any[] = [];
 
-    if (userId) {
-      // Get credentials for specific user
-      const userCredentials = await prisma.passkeyCredential.findMany({
-        where: { userId },
-        select: { credentialId: true, transports: true }
+    if (accountId) {
+      // Get passkey accounts linked to this account
+      const linkedAccounts = await prisma.identityLink.findMany({
+        where: {
+          OR: [
+            { accountAId: accountId },
+            { accountBId: accountId }
+          ]
+        },
+        include: {
+          accountA: true,
+          accountB: true
+        }
       });
 
-      allowCredentials = userCredentials.map(cred => ({
-        id: Buffer.from(cred.credentialId, 'base64url'),
-        type: 'public-key' as const,
-        transports: cred.transports ? JSON.parse(cred.transports) : undefined
-      }));
+      // Extract passkey accounts
+      linkedAccounts.forEach(link => {
+        if (link.accountA.type === 'passkey') {
+          allowCredentials.push({
+            id: link.accountA.identifier,
+            transports: (link.accountA.metadata as any)?.transports || undefined
+          });
+        }
+        if (link.accountB.type === 'passkey') {
+          allowCredentials.push({
+            id: link.accountB.identifier,
+            transports: (link.accountB.metadata as any)?.transports || undefined
+          });
+        }
+      });
     } else if (username) {
-      // Get credentials by username (email)
-      const userCredentials = await prisma.passkeyCredential.findMany({
-        where: { username },
-        select: { credentialId: true, transports: true }
+      // Find passkey accounts by username in metadata
+      const passkeyAccounts = await prisma.account.findMany({
+        where: {
+          type: 'passkey',
+          metadata: {
+            path: ['username'],
+            equals: username
+          }
+        }
       });
 
-      allowCredentials = userCredentials.map(cred => ({
-        id: Buffer.from(cred.credentialId, 'base64url'),
-        type: 'public-key' as const,
-        transports: cred.transports ? JSON.parse(cred.transports) : undefined
+      allowCredentials = passkeyAccounts.map(account => ({
+        id: account.identifier,
+        transports: (account.metadata as any)?.transports || undefined
       }));
     }
 
-    // Generate a challenge
-    const challenge = challengeService.generateChallenge(userId, 'authentication');
+    const challenge = challengeService.generateChallenge(accountId, 'authentication');
 
     const authenticationOptions = await generateAuthenticationOptions({
       rpID: this.rpID,
       challenge,
       allowCredentials: allowCredentials.length > 0 ? allowCredentials : undefined,
       userVerification: 'preferred',
-      timeout: 60000 // 60 seconds
+      timeout: 60000
     });
 
     return authenticationOptions;
@@ -198,20 +244,51 @@ class PasskeyService {
   async verifyAuthentication(
     response: any,
     expectedChallenge: string
-  ): Promise<{ verified: boolean; userId?: string; credentialId?: string }> {
+  ): Promise<{ verified: boolean; accountId?: string; credentialId?: string }> {
     try {
-      // First, find the credential
-      const credential = await prisma.passkeyCredential.findUnique({
-        where: { credentialId: response.id },
-        include: { user: true }
+      console.log(`🔐 Passkey authentication attempt with credential: ${response.id} (length: ${response.id?.length})`);
+
+      // The response.id and response.rawId are base64url encoded strings
+      // We need to use the same format that was stored during registration
+      const credentialId = response.id;
+
+      // First, find the credential account
+      // Note: Passkey credential IDs are case-sensitive base64url strings
+      const account = await prisma.account.findUnique({
+        where: {
+          type_identifier: {
+            type: 'passkey',
+            identifier: credentialId
+          }
+        }
       });
 
-      if (!credential) {
-        throw new AuthenticationError('Credential not found');
+      if (!account) {
+        // Debug: check if it's a case sensitivity issue
+        const passkeyAccounts = await prisma.account.findMany({
+          where: { type: 'passkey' },
+          select: { identifier: true }
+        });
+        
+        const matchingAccount = passkeyAccounts.find(a => 
+          a.identifier.toLowerCase() === response.id.toLowerCase()
+        );
+        
+        if (matchingAccount) {
+          throw new AuthenticationError(`Credential found but with different case. Expected: ${matchingAccount.identifier}, Got: ${response.id}`);
+        }
+        
+        throw new AuthenticationError(`Credential not found: ${response.id}`);
       }
 
-      // Verify the challenge
-      if (!challengeService.verifyChallenge(expectedChallenge, credential.userId, 'authentication')) {
+      // Extract credential data from metadata
+      const metadata = account.metadata as any;
+      if (!metadata?.publicKey) {
+        throw new AuthenticationError('Invalid credential data');
+      }
+
+      // Verify the challenge (V2 doesn't tie challenges to userId)
+      if (!challengeService.verifyChallenge(expectedChallenge, account.id, 'authentication')) {
         throw new AuthenticationError('Invalid or expired challenge');
       }
 
@@ -221,73 +298,63 @@ class PasskeyService {
         expectedOrigin: this.origin,
         expectedRPID: this.rpID,
         credential: {
-          id: credential.credentialId,
-          publicKey: Buffer.from(credential.publicKey, 'base64url'),
-          counter: credential.counter,
-          transports: credential.transports ? JSON.parse(credential.transports) : undefined
+          id: account.identifier,
+          publicKey: Buffer.from(metadata.publicKey, 'base64url'),
+          counter: metadata.counter || 0,
+          transports: metadata.transports || undefined
         },
         requireUserVerification: false
       });
 
-      if (!verification.verified || !verification.authenticationInfo) {
-        return { verified: false };
+      if (!verification.verified) {
+        throw new AuthenticationError('Authentication failed');
       }
 
-      // Update credential counter and last used
-      await prisma.passkeyCredential.update({
-        where: { credentialId: credential.credentialId },
+      // Update counter and last used
+      await prisma.account.update({
+        where: { id: account.id },
         data: {
-          counter: verification.authenticationInfo.newCounter,
-          lastUsedAt: new Date()
+          metadata: {
+            ...metadata,
+            counter: verification.authenticationInfo.newCounter,
+            lastUsedAt: new Date().toISOString()
+          }
         }
       });
 
+      // Find the primary account this passkey is linked to
+      const identityLink = await prisma.identityLink.findFirst({
+        where: {
+          OR: [
+            { accountAId: account.id },
+            { accountBId: account.id }
+          ]
+        },
+        include: {
+          accountA: true,
+          accountB: true
+        }
+      });
+
+      let primaryAccountId = account.id;
+      if (identityLink) {
+        // Return the non-passkey account as the primary
+        if (identityLink.accountA.id === account.id && identityLink.accountB.type !== 'passkey') {
+          primaryAccountId = identityLink.accountB.id;
+        } else if (identityLink.accountB.id === account.id && identityLink.accountA.type !== 'passkey') {
+          primaryAccountId = identityLink.accountA.id;
+        }
+      }
+
       return {
         verified: true,
-        userId: credential.userId,
-        credentialId: credential.credentialId
+        accountId: primaryAccountId,
+        credentialId: account.identifier
       };
     } catch (error) {
       console.error('Passkey authentication error:', error);
       throw error;
     }
-  }
-
-  /**
-   * Get all passkeys for a user
-   */
-  async getUserPasskeys(userId: string) {
-    return prisma.passkeyCredential.findMany({
-      where: { userId },
-      select: {
-        id: true,
-        credentialId: true,
-        deviceName: true,
-        createdAt: true,
-        lastUsedAt: true
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-  }
-
-  /**
-   * Delete a passkey
-   */
-  async deletePasskey(userId: string, credentialId: string) {
-    const credential = await prisma.passkeyCredential.findFirst({
-      where: {
-        credentialId,
-        userId
-      }
-    });
-
-    if (!credential) {
-      throw new NotFoundError('Passkey credential');
-    }
-
-    await prisma.passkeyCredential.delete({
-      where: { id: credential.id }
-    });
   }
 }
 

@@ -3,6 +3,8 @@ import { passkeyService } from '@/services/passkeyService';
 import { authService } from '@/services/authService';
 import { userService } from '@/services/userService';
 import { ApiResponse } from '@/types';
+const { generateTokens } = require('@/utils/tokenUtils');
+const { v4: uuidv4 } = require('uuid');
 
 export class PasskeyController {
   /**
@@ -10,8 +12,9 @@ export class PasskeyController {
    */
   async generateRegistrationOptions(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.userId;
-      if (!userId) {
+      // V2 uses account-based authentication
+      const accountId = req.account?.id;
+      if (!accountId) {
         res.status(401).json({
           success: false,
           error: 'Authentication required'
@@ -21,20 +24,12 @@ export class PasskeyController {
 
       const { deviceName } = req.body;
       
-      // Fetch user details
-      const userProfile = await userService.getUserProfile(userId);
-
-      let username = userProfile.email || userId;
-      let displayName = userProfile.name || userProfile.email || 'User';
-      
-      // For V2 flat identity, try to get email from account metadata
-      if (req.account?.metadata?.email) {
-        username = req.account.metadata.email;
-        displayName = req.account.metadata.name || username;
-      }
+      // Extract user info from account metadata
+      let username = req.account.metadata?.email || req.account.identifier;
+      let displayName = req.account.metadata?.name || req.account.metadata?.email || 'User';
       
       const options = await passkeyService.generateRegistrationOptions({
-        userId,
+        accountId,
         username,
         displayName,
         deviceName
@@ -58,9 +53,9 @@ export class PasskeyController {
    */
   async verifyRegistration(req: Request, res: Response): Promise<void> {
     try {
-      const userId = req.user?.userId;
-      const accountId = req.account?.id; // V2 auth will have account
-      if (!userId && !accountId) {
+      // V2 uses account-based authentication
+      const accountId = req.account?.id;
+      if (!accountId) {
         res.status(401).json({
           success: false,
           error: 'Authentication required'
@@ -78,11 +73,19 @@ export class PasskeyController {
         return;
       }
 
+      // Extract user info from account metadata
+      const username = req.account.metadata?.email || req.account.identifier;
+      const displayName = req.account.metadata?.name || req.account.metadata?.email || 'User';
+
       const result = await passkeyService.verifyRegistration(
-        userId || '', // Will be updated in service to use account
         response,
         challenge,
-        deviceName
+        {
+          accountId,
+          username,
+          displayName,
+          deviceName
+        }
       );
 
       if (!result.verified || !result.credentialId) {
@@ -93,33 +96,24 @@ export class PasskeyController {
         return;
       }
 
-      // Create passkey account for V2 flat identity model
-      if (accountId) {
-        const { accountService } = await import('@/services/accountService');
-        await accountService.findOrCreateAccount({
-          type: 'passkey',
-          identifier: result.credentialId,
-          metadata: {
-            deviceName: deviceName || 'Unknown Device',
-            createdAt: new Date().toISOString(),
-            primaryAccountId: accountId
-          }
-        });
+      // The passkey account is already created in passkeyService.verifyRegistration
+      // Now we just need to link it to the current account
+      const accountService = await import('@/services/accountService');
+      const passkeyAccount = await accountService.default.findAccountByIdentifier({
+        type: 'passkey',
+        identifier: result.credentialId
+      });
 
-        // Link the passkey account to the current account
-        const passkeyAccount = await accountService.findAccountByIdentifier({
-          type: 'passkey',
-          identifier: result.credentialId
-        });
-
-        if (passkeyAccount) {
-          await accountService.linkAccounts(
-            accountId,
-            passkeyAccount.id,
-            'direct',
-            'linked'
-          );
-        }
+      if (passkeyAccount) {
+        await accountService.default.linkAccounts(
+          accountId,
+          passkeyAccount.id,
+          'direct',
+          'linked'
+        );
+        console.log(`✅ Passkey account ${passkeyAccount.id} linked to account ${accountId}`);
+      } else {
+        console.error(`❌ Passkey account not found for credential: ${result.credentialId}`);
       }
 
       res.status(200).json({
@@ -170,6 +164,7 @@ export class PasskeyController {
     try {
       const { response, challenge, deviceId, deviceName, deviceType } = req.body;
 
+
       if (!response || !challenge) {
         res.status(400).json({
           success: false,
@@ -183,7 +178,7 @@ export class PasskeyController {
         challenge
       );
 
-      if (!result.verified || !result.userId) {
+      if (!result.verified || !result.accountId) {
         res.status(400).json({
           success: false,
           error: 'Passkey authentication failed'
@@ -191,13 +186,27 @@ export class PasskeyController {
         return;
       }
 
-      // Generate tokens
-      const tokens = await authService.generateTokensForUser(
-        result.userId,
-        deviceId || 'unknown',
-        deviceName,
-        deviceType || 'web'
-      );
+      // Create session for V2
+      const accountService = await import('@/services/accountService');
+      const session = await accountService.default.createSession(result.accountId, {
+        deviceId: deviceId || 'unknown',
+        userAgent: req.headers['user-agent'],
+        ipAddress: req.ip
+      });
+
+      // Generate V2 tokens
+      const { accessToken, refreshToken, expiresIn } = await generateTokens({
+        accountId: result.accountId,
+        sessionToken: session.sessionToken,
+        deviceId: deviceId || 'unknown'
+      });
+      
+      const tokens = {
+        accessToken,
+        refreshToken,
+        expiresIn,
+        tokenType: 'Bearer'
+      };
 
       res.status(200).json({
         success: true,
@@ -227,11 +236,12 @@ export class PasskeyController {
         return;
       }
 
-      const passkeys = await passkeyService.getUserPasskeys(userId);
+      // V2: Passkeys are managed through the account system
+      throw new Error('This method is not supported in V2. Use account management APIs.');
 
       res.status(200).json({
         success: true,
-        data: passkeys
+        data: []  // V2: Passkeys are managed through the account system
       } as ApiResponse);
     } catch (error: any) {
       console.error('Get user passkeys error:', error);
@@ -266,7 +276,8 @@ export class PasskeyController {
         return;
       }
 
-      await passkeyService.deletePasskey(userId, credentialId);
+      // V2: Passkeys are managed through the account system
+      throw new Error('This method is not supported in V2. Use account management APIs.');
 
       res.status(200).json({
         success: true,

@@ -451,6 +451,7 @@ declare global {
   namespace Express {
     interface Request {
       user?: RequestContext;
+      account?: any; // Account type from Prisma
     }
   }
 }

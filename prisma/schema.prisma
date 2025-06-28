@@ -41,8 +41,7 @@ model User {
   twoFactorBackupCodes String? // Encrypted JSON array of backup codes
   twoFactorEnabledAt   DateTime?
 
-  // Passkey credentials
-  passkeyCredentials PasskeyCredential[]
+  // Passkeys are now stored as Account entries with type='passkey' in V2
 
   @@map("users")
 }
@@ -374,24 +373,7 @@ model OrbyTransaction {
   @@map("orby_transactions")
 }
 
-model PasskeyCredential {
-  id           String   @id @default(cuid())
-  userId       String
-  credentialId String   @unique
-  publicKey    String
-  username     String
-  counter      Int
-  deviceName   String?
-  transports   String?  // JSON array of transport types
-  lastUsedAt   DateTime?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, credentialId])
-  @@map("passkey_credentials")
-}
+// PasskeyCredential model removed - passkeys are now stored as Account entries with type='passkey' in V2
 
 model MpcKeyShare {
   id          String   @id @default(cuid())

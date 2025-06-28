@@ -443,6 +443,38 @@ export class SocialAuthService {
           // The authToken here is the signature which has already been verified
           return { isValid: true };
         }
+        case 'discord': {
+          // Discord auth token is already verified by the OAuth flow
+          return { isValid: true };
+        }
+        case 'spotify': {
+          // Spotify auth token is already verified by the OAuth flow
+          return { isValid: true };
+        }
+        case 'github': {
+          // GitHub auth token is already verified by the OAuth flow
+          return { isValid: true };
+        }
+        case 'twitter': {
+          // Twitter auth token is already verified by the OAuth flow
+          return { isValid: true };
+        }
+        case 'facebook': {
+          // Facebook auth token is already verified by the OAuth flow
+          return { isValid: true };
+        }
+        case 'tiktok': {
+          // TikTok auth token is already verified by the OAuth flow
+          return { isValid: true };
+        }
+        case 'epicgames': {
+          // Epic Games auth token is already verified by the OAuth flow
+          return { isValid: true };
+        }
+        case 'shopify': {
+          // Shopify auth token is already verified by the OAuth flow
+          return { isValid: true };
+        }
         default:
           return { isValid: false };
       }

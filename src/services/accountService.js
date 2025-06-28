@@ -26,12 +26,23 @@ class AccountService {
    */
   async findOrCreateAccount({ type, identifier, provider = null, metadata = {} }) {
     try {
+      // Validate required parameters
+      if (!type || !identifier) {
+        throw new Error(`Missing required parameters: type=${type}, identifier=${identifier}`);
+      }
+      
+      // Ensure identifier is a string
+      // For passkey accounts, preserve case as credential IDs are case-sensitive base64url strings
+      const normalizedIdentifier = type === 'passkey' 
+        ? String(identifier) 
+        : String(identifier).toLowerCase();
+      
       // First, try to find existing account
       let account = await prisma.account.findUnique({
         where: {
           type_identifier: {
             type,
-            identifier: identifier.toLowerCase()
+            identifier: normalizedIdentifier
           }
         }
       });
@@ -41,7 +52,7 @@ class AccountService {
         account = await prisma.account.create({
           data: {
             type,
-            identifier: identifier.toLowerCase(),
+            identifier: normalizedIdentifier,
             provider,
             metadata,
             verified: type === 'wallet' // Wallets are verified by signature
@@ -388,11 +399,16 @@ class AccountService {
    */
   async findAccountByIdentifier({ type, identifier }) {
     try {
+      // For passkey accounts, preserve case as credential IDs are case-sensitive base64url strings
+      const normalizedIdentifier = type === 'passkey' 
+        ? String(identifier) 
+        : String(identifier).toLowerCase();
+
       const account = await prisma.account.findUnique({
         where: {
           type_identifier: {
             type,
-            identifier: identifier.toLowerCase()
+            identifier: normalizedIdentifier
           }
         }
       });
