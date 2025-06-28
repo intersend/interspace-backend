@@ -216,7 +216,7 @@ const authenticateV2 = async (req, res, next) => {
             userAgent: deviceInfo.userAgent
           });
           
-          // Extract user info from the Google token
+          // Decode and verify Google token
           const { OAuth2Client } = require('google-auth-library');
           const client = new OAuth2Client();
           const ticket = await client.verifyIdToken({ 
@@ -228,20 +228,18 @@ const authenticateV2 = async (req, res, next) => {
           // Create or find account
           account = await accountService.findOrCreateAccount({
             type: 'social',
-            identifier: payload.sub, // Google user ID
+            identifier: payload?.sub, // Google user ID
             provider: 'google',
             metadata: { 
-              email: payload.email,
-              emailVerified: payload.email_verified,
-              name: payload.name,
-              picture: payload.picture
+              email: payload?.email,
+              emailVerified: payload?.email_verified,
+              name: payload?.name,
+              picture: payload?.picture
             }
           });
           
-          // Mark account as verified if email is verified by Google
-          if (payload.email_verified) {
-            await accountService.verifyAccount(account.id);
-          }
+          // Google accounts are always verified
+          await accountService.verifyAccount(account.id);
           
         } catch (error) {
           logger.error('Google auth error:', error);
@@ -284,6 +282,59 @@ const authenticateV2 = async (req, res, next) => {
         }
         break;
 
+      case 'discord':
+        // Discord authentication requires access token
+        if (!authData.accessToken) {
+          return res.status(400).json({ 
+            success: false, 
+            error: 'Discord access token required' 
+          });
+        }
+        
+        try {
+          // Use socialAuthService to verify Discord token and get user info
+          const authResult = await socialAuthService.authenticate({
+            authToken: authData.accessToken,
+            authStrategy: 'discord',
+            deviceId: deviceInfo.deviceId,
+            deviceName: authData.deviceName || 'Unknown Device',
+            deviceType: authData.deviceType || 'web',
+            ipAddress: deviceInfo.ipAddress,
+            userAgent: deviceInfo.userAgent
+          });
+          
+          // Use the standardized pattern
+          const userData = authResult.userData;
+          
+          // Create or find account
+          account = await accountService.findOrCreateAccount({
+            type: 'social',
+            identifier: userData?.providerId || authResult.userId, // Discord user ID from auth result
+            provider: 'discord',
+            metadata: { 
+              email: userData?.email,
+              emailVerified: userData?.emailVerified || false,
+              name: userData?.displayName,
+              username: userData?.username,
+              avatar: userData?.avatarUrl,
+              discriminator: userData?.discriminator
+            }
+          });
+          
+          // Mark account as verified if email is verified by Discord
+          if (userData?.emailVerified) {
+            await accountService.verifyAccount(account.id);
+          }
+          
+        } catch (error) {
+          logger.error('Discord auth error:', error);
+          return res.status(401).json({ 
+            success: false, 
+            error: 'Discord authentication failed' 
+          });
+        }
+        break;
+
       case 'apple':
         // Apple authentication requires ID token
         // Handle both formats: idToken at root level or nested in appleAuth
@@ -298,7 +349,27 @@ const authenticateV2 = async (req, res, next) => {
         }
         
         try {
-          // Use socialAuthService to verify Apple token and get user info
+          // First decode the Apple token to get user info
+          const jwt = require('jsonwebtoken');
+          const decodedToken = jwt.decode(appleIdToken);
+          
+          if (!decodedToken || !decodedToken.sub) {
+            logger.error('Invalid Apple token - missing sub claim', { decodedToken });
+            return res.status(401).json({ 
+              success: false, 
+              error: 'Invalid Apple token' 
+            });
+          }
+          
+          // Log the decoded token for debugging
+          logger.info('Apple token decoded:', {
+            sub: decodedToken.sub,
+            email: decodedToken.email,
+            email_verified: decodedToken.email_verified,
+            is_private_email: decodedToken.is_private_email
+          });
+          
+          // Verify the token with socialAuthService
           const authResult = await socialAuthService.authenticate({
             authToken: appleIdToken,
             authStrategy: 'apple',
@@ -309,12 +380,7 @@ const authenticateV2 = async (req, res, next) => {
             userAgent: deviceInfo.userAgent
           });
           
-          // socialAuthService already verified the token and extracted user info
-          // No need to verify again - just use the result
-          const decodedToken = authResult.tokenPayload || {};
-          
-          // Create or find account
-          // Use email from appleAuth if decodedToken doesn't have it (first sign in)
+          // Extract email - Apple may provide it in the token or in the user object (first sign in)
           const email = decodedToken.email || authData.appleAuth?.user?.email;
           
           // Log first-time user info for debugging
@@ -328,7 +394,7 @@ const authenticateV2 = async (req, res, next) => {
           
           account = await accountService.findOrCreateAccount({
             type: 'social',
-            identifier: authResult.userId || decodedToken.sub, // Apple user ID from auth result
+            identifier: decodedToken.sub, // Apple user ID from decoded token
             provider: 'apple',
             metadata: { 
               email: email,
@@ -350,6 +416,371 @@ const authenticateV2 = async (req, res, next) => {
           return res.status(401).json({ 
             success: false, 
             error: 'Apple authentication failed' 
+          });
+        }
+        break;
+
+      case 'spotify':
+        // Spotify OAuth authentication
+        if (!authData.accessToken) {
+          return res.status(400).json({ 
+            success: false, 
+            error: 'Spotify access token required' 
+          });
+        }
+        
+        try {
+          // Verify token and get user info from Spotify
+          const spotifyResponse = await fetch('https://api.spotify.com/v1/me', {
+            headers: {
+              'Authorization': `Bearer ${authData.accessToken}`
+            }
+          });
+          
+          if (!spotifyResponse.ok) {
+            throw new Error('Invalid Spotify token');
+          }
+          
+          const spotifyUser = await spotifyResponse.json();
+          
+          // Create or find account
+          account = await accountService.findOrCreateAccount({
+            type: 'social',
+            identifier: spotifyUser.id,
+            provider: 'spotify',
+            metadata: { 
+              email: spotifyUser.email,
+              emailVerified: true,
+              displayName: spotifyUser.display_name,
+              country: spotifyUser.country,
+              product: spotifyUser.product,
+              images: spotifyUser.images
+            }
+          });
+          
+          // Mark account as verified
+          await accountService.verifyAccount(account.id);
+          
+        } catch (error) {
+          logger.error('Spotify auth error:', error);
+          return res.status(401).json({ 
+            success: false, 
+            error: 'Spotify authentication failed' 
+          });
+        }
+        break;
+
+      case 'github':
+        // GitHub OAuth authentication
+        if (!authData.accessToken) {
+          return res.status(400).json({ 
+            success: false, 
+            error: 'GitHub access token required' 
+          });
+        }
+        
+        try {
+          // Get user info from GitHub
+          const githubResponse = await fetch('https://api.github.com/user', {
+            headers: {
+              'Authorization': `Bearer ${authData.accessToken}`,
+              'Accept': 'application/vnd.github.v3+json'
+            }
+          });
+          
+          if (!githubResponse.ok) {
+            throw new Error('Invalid GitHub token');
+          }
+          
+          const githubUser = await githubResponse.json();
+          
+          // Get primary email if available
+          const emailsResponse = await fetch('https://api.github.com/user/emails', {
+            headers: {
+              'Authorization': `Bearer ${authData.accessToken}`,
+              'Accept': 'application/vnd.github.v3+json'
+            }
+          });
+          
+          let primaryEmail = githubUser.email;
+          if (emailsResponse.ok) {
+            const emails = await emailsResponse.json();
+            const primary = emails.find(e => e.primary && e.verified);
+            if (primary) {
+              primaryEmail = primary.email;
+            }
+          }
+          
+          // Create or find account
+          account = await accountService.findOrCreateAccount({
+            type: 'social',
+            identifier: githubUser.id.toString(),
+            provider: 'github',
+            metadata: { 
+              email: primaryEmail,
+              emailVerified: true,
+              login: githubUser.login,
+              name: githubUser.name,
+              avatar_url: githubUser.avatar_url,
+              bio: githubUser.bio,
+              company: githubUser.company,
+              location: githubUser.location
+            }
+          });
+          
+          // Mark account as verified
+          await accountService.verifyAccount(account.id);
+          
+        } catch (error) {
+          logger.error('GitHub auth error:', error);
+          return res.status(401).json({ 
+            success: false, 
+            error: 'GitHub authentication failed' 
+          });
+        }
+        break;
+
+      case 'twitter':
+        // Twitter/X OAuth authentication
+        if (!authData.accessToken) {
+          return res.status(400).json({ 
+            success: false, 
+            error: 'Twitter access token required' 
+          });
+        }
+        
+        try {
+          // Get user info from Twitter API v2
+          const twitterResponse = await fetch('https://api.twitter.com/2/users/me?user.fields=profile_image_url,description,created_at,verified', {
+            headers: {
+              'Authorization': `Bearer ${authData.accessToken}`
+            }
+          });
+          
+          if (!twitterResponse.ok) {
+            throw new Error('Invalid Twitter token');
+          }
+          
+          const twitterData = await twitterResponse.json();
+          const twitterUser = twitterData.data;
+          
+          // Create or find account
+          account = await accountService.findOrCreateAccount({
+            type: 'social',
+            identifier: twitterUser.id,
+            provider: 'twitter',
+            metadata: { 
+              username: twitterUser.username,
+              name: twitterUser.name,
+              profile_image_url: twitterUser.profile_image_url,
+              description: twitterUser.description,
+              verified: twitterUser.verified
+            }
+          });
+          
+          // Mark account as verified
+          await accountService.verifyAccount(account.id);
+          
+        } catch (error) {
+          logger.error('Twitter auth error:', error);
+          return res.status(401).json({ 
+            success: false, 
+            error: 'Twitter authentication failed' 
+          });
+        }
+        break;
+
+      case 'facebook':
+        // Facebook OAuth authentication
+        if (!authData.accessToken) {
+          return res.status(400).json({ 
+            success: false, 
+            error: 'Facebook access token required' 
+          });
+        }
+        
+        try {
+          // Get user info from Facebook Graph API
+          const fbResponse = await fetch(`https://graph.facebook.com/v18.0/me?fields=id,name,email,picture&access_token=${authData.accessToken}`);
+          
+          if (!fbResponse.ok) {
+            throw new Error('Invalid Facebook token');
+          }
+          
+          const fbUser = await fbResponse.json();
+          
+          // Create or find account
+          account = await accountService.findOrCreateAccount({
+            type: 'social',
+            identifier: fbUser.id,
+            provider: 'facebook',
+            metadata: { 
+              email: fbUser.email,
+              name: fbUser.name,
+              picture: fbUser.picture?.data?.url
+            }
+          });
+          
+          // Mark account as verified if email is available
+          if (fbUser.email) {
+            await accountService.verifyAccount(account.id);
+          }
+          
+        } catch (error) {
+          logger.error('Facebook auth error:', error);
+          return res.status(401).json({ 
+            success: false, 
+            error: 'Facebook authentication failed' 
+          });
+        }
+        break;
+
+      case 'tiktok':
+        // TikTok OAuth authentication
+        if (!authData.accessToken) {
+          return res.status(400).json({ 
+            success: false, 
+            error: 'TikTok access token required' 
+          });
+        }
+        
+        try {
+          // Get user info from TikTok API
+          const tiktokResponse = await fetch('https://open.tiktokapis.com/v2/user/info/', {
+            headers: {
+              'Authorization': `Bearer ${authData.accessToken}`
+            }
+          });
+          
+          if (!tiktokResponse.ok) {
+            throw new Error('Invalid TikTok token');
+          }
+          
+          const tiktokData = await tiktokResponse.json();
+          const tiktokUser = tiktokData.data.user;
+          
+          // Create or find account
+          account = await accountService.findOrCreateAccount({
+            type: 'social',
+            identifier: tiktokUser.open_id,
+            provider: 'tiktok',
+            metadata: { 
+              union_id: tiktokUser.union_id,
+              avatar_url: tiktokUser.avatar_url,
+              display_name: tiktokUser.display_name
+            }
+          });
+          
+          // Mark account as verified
+          await accountService.verifyAccount(account.id);
+          
+        } catch (error) {
+          logger.error('TikTok auth error:', error);
+          return res.status(401).json({ 
+            success: false, 
+            error: 'TikTok authentication failed' 
+          });
+        }
+        break;
+
+      case 'epicgames':
+        // Epic Games OAuth authentication
+        if (!authData.accessToken) {
+          return res.status(400).json({ 
+            success: false, 
+            error: 'Epic Games access token required' 
+          });
+        }
+        
+        try {
+          // Get user info from Epic Games API
+          const epicResponse = await fetch('https://api.epicgames.dev/epic/oauth/v2/userInfo', {
+            headers: {
+              'Authorization': `Bearer ${authData.accessToken}`
+            }
+          });
+          
+          if (!epicResponse.ok) {
+            throw new Error('Invalid Epic Games token');
+          }
+          
+          const epicUser = await epicResponse.json();
+          
+          // Create or find account
+          account = await accountService.findOrCreateAccount({
+            type: 'social',
+            identifier: epicUser.sub,
+            provider: 'epicgames',
+            metadata: { 
+              email: epicUser.email,
+              emailVerified: epicUser.email_verified,
+              displayName: epicUser.preferred_username || epicUser.name,
+              name: epicUser.name
+            }
+          });
+          
+          // Mark account as verified if email is verified
+          if (epicUser.email_verified) {
+            await accountService.verifyAccount(account.id);
+          }
+          
+        } catch (error) {
+          logger.error('Epic Games auth error:', error);
+          return res.status(401).json({ 
+            success: false, 
+            error: 'Epic Games authentication failed' 
+          });
+        }
+        break;
+
+      case 'shopify':
+        // Shopify OAuth authentication
+        if (!authData.accessToken || !authData.shopDomain) {
+          return res.status(400).json({ 
+            success: false, 
+            error: 'Shopify access token and shop domain required' 
+          });
+        }
+        
+        try {
+          // Get shop info from Shopify Admin API
+          const shopifyResponse = await fetch(`https://${authData.shopDomain}/admin/api/2024-01/shop.json`, {
+            headers: {
+              'X-Shopify-Access-Token': authData.accessToken
+            }
+          });
+          
+          if (!shopifyResponse.ok) {
+            throw new Error('Invalid Shopify token');
+          }
+          
+          const shopifyData = await shopifyResponse.json();
+          const shop = shopifyData.shop;
+          
+          // Create or find account
+          account = await accountService.findOrCreateAccount({
+            type: 'social',
+            identifier: shop.id.toString(),
+            provider: 'shopify',
+            metadata: { 
+              email: shop.email,
+              domain: shop.domain,
+              name: shop.name,
+              shop_owner: shop.shop_owner,
+              timezone: shop.timezone,
+              currency: shop.currency,
+              country_name: shop.country_name
+            }
+          });
+          
+          // Mark account as verified
+          await accountService.verifyAccount(account.id);
+          
+        } catch (error) {
+          logger.error('Shopify auth error:', error);
+          return res.status(401).json({ 
+            success: false, 
+            error: 'Shopify authentication failed' 
           });
         }
         break;
