@@ -12,7 +12,7 @@ const router = Router();
 
 // All routes require authentication
 router.use(authenticateAccount);
-router.use(v2AuthAdapter); // Adapt v2 auth for v1 controllers
+router.use(asyncHandler(v2AuthAdapter)); // Adapt v2 auth for v1 controllers
 router.use(userRateLimit);
 
 // Validation schemas

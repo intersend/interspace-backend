@@ -35,6 +35,13 @@ const authenticateAccount = async (req, res, next) => {
     // Get token from header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      logger.warn('AuthMiddlewareV2.authenticateAccount - No valid authorization header', {
+        hasAuthHeader: !!authHeader,
+        authHeaderValue: authHeader ? '[REDACTED]' : 'undefined',
+        userAgent: req.headers['user-agent'],
+        method: req.method,
+        path: req.path
+      });
       throw new AppError('No token provided', 401);
     }
 

@@ -11,8 +11,10 @@ import {
   AccountSearchResponse,
   NotFoundError,
   ConflictError,
-  AuthorizationError 
+  AuthorizationError, 
+  AppError
 } from '@/types';
+import { logger } from '@/utils/logger';
 
 export class LinkedAccountService {
   
@@ -116,7 +118,15 @@ export class LinkedAccountService {
       try {
         await orbyService.updateAccountCluster(profileId, tx);
       } catch (err) {
-        console.error('Failed to update Orby cluster after linking account:', err);
+        logger.error('Failed to update Orby cluster after linking account:', err);
+        // Throw the error to rollback the transaction
+        throw new AppError(
+          'Failed to update account cluster. Please try again.',
+          500,
+          'ORBY_CLUSTER_UPDATE_FAILED',
+          //@ts-ignore
+          { originalError: err.message }
+        );
       }
 
       return this.formatLinkedAccountResponse(linkedAccount);
@@ -261,6 +271,22 @@ export class LinkedAccountService {
    */
   async unlinkAccount(accountId: string, userId: string): Promise<void> {
     return withTransaction(async (tx) => {
+      console.log('Attempting to unlink account:', { accountId, userId });
+      
+      // First, try to find the account by ID only to debug
+      const accountCheck = await tx.linkedAccount.findUnique({
+        where: { id: accountId }
+      });
+      
+      if (accountCheck) {
+        console.log('Found account in DB:', {
+          id: accountCheck.id,
+          dbUserId: accountCheck.userId,
+          requestUserId: userId,
+          match: accountCheck.userId === userId
+        });
+      }
+      
       // Verify account ownership
       const account = await tx.linkedAccount.findFirst({
         where: { 
@@ -359,7 +385,15 @@ export class LinkedAccountService {
       try {
         await orbyService.updateAccountCluster(account.profileId!, tx);
       } catch (err) {
-        console.error('Failed to update Orby cluster after unlinking account:', err);
+        logger.error('Failed to update Orby cluster after unlinking account:', err);
+        // Throw the error to rollback the transaction
+        throw new AppError(
+          'Failed to update account cluster. Please try again.',
+          500,
+          'ORBY_CLUSTER_UPDATE_FAILED',
+          //@ts-ignore
+          { originalError: err.message }
+        );
       }
     });
   }

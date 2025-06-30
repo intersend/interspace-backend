@@ -1,6 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const { logger } = require('../utils/logger');
 const { PrismaClient } = require('@prisma/client');
+const { withTransaction } = require('../utils/database');
 
 // Create a singleton instance of PrismaClient
 const prismaClientSingleton = () => {
@@ -189,60 +190,128 @@ class AccountService {
    * Create automatic profile for new user
    */
   async createAutomaticProfile(account, sessionWallet = null, profileId = null) {
-    try {
-      // For backward compatibility, we still need a user record
-      // In future, this can be removed
-      let user = await prisma.user.findFirst({
-        where: {
-          OR: [
-            { email: account.type === 'email' ? account.identifier : undefined },
-            { walletAddress: account.type === 'wallet' ? account.identifier : undefined }
-          ]
-        }
-      });
-
-      if (!user) {
-        // Create a minimal user record for backward compatibility
-        user = await prisma.user.create({
-          data: {
-            id: uuidv4(),
-            email: account.type === 'email' ? account.identifier : null,
-            walletAddress: account.type === 'wallet' ? account.identifier : null,
-            isGuest: false,
-            authStrategies: account.type
+    return withTransaction(async (tx) => {
+      try {
+        // For backward compatibility, we still need a user record
+        // In future, this can be removed
+        let user = await tx.user.findFirst({
+          where: {
+            OR: [
+              { email: account.type === 'email' ? account.identifier : undefined },
+              { walletAddress: account.type === 'wallet' ? account.identifier : undefined }
+            ]
           }
         });
+
+        if (!user) {
+          // Create a minimal user record for backward compatibility
+          user = await tx.user.create({
+            data: {
+              id: uuidv4(),
+              email: account.type === 'email' ? account.identifier : null,
+              walletAddress: account.type === 'wallet' ? account.identifier : null,
+              isGuest: false,
+              authStrategies: account.type
+            }
+          });
+        }
+
+        // Create the profile
+        const profile = await tx.smartProfile.create({
+          data: {
+            id: profileId || undefined, // Use provided ID or let Prisma generate one
+            name: 'My Smartprofile',
+            user: {
+              connect: { id: user.id }
+            },
+            sessionWalletAddress: sessionWallet?.address || '0x' + '0'.repeat(40), // Fallback address for edge cases
+            isActive: true,
+            isDevelopmentWallet: sessionWallet?.isDevelopment || false
+          }
+        });
+
+        // Link account to profile
+        await tx.profileAccount.create({
+          data: {
+            profileId: profile.id,
+            accountId: account.id,
+            isPrimary: true
+          }
+        });
+
+        // Auto-link wallet accounts as LinkedAccounts for transaction capabilities
+        if (account.type === 'wallet') {
+          await tx.linkedAccount.create({
+            data: {
+              userId: user.id,
+              profileId: profile.id,
+              address: account.identifier.toLowerCase(),
+              authStrategy: 'wallet',
+              walletType: account.metadata?.walletType || 'external',
+              customName: account.metadata?.customName || null,
+              isPrimary: true, // First wallet is primary
+              isActive: true,
+              chainId: account.metadata?.chainId || 1,
+              metadata: JSON.stringify(account.metadata || {})
+            }
+          });
+          
+          logger.info(`Auto-linked wallet ${account.identifier} to profile ${profile.id}`);
+        }
+
+        // Auto-link MPC/session wallet as LinkedAccount
+        if (sessionWallet?.address && sessionWallet.address !== '0x' + '0'.repeat(40)) {
+          await tx.linkedAccount.create({
+            data: {
+              userId: user.id,
+              profileId: profile.id,
+              address: sessionWallet.address.toLowerCase(),
+              authStrategy: 'mpc',
+              walletType: 'mpc',
+              customName: 'Session Wallet',
+              isPrimary: false, // MPC wallet is not primary
+              isActive: true,
+              chainId: 1, // Default to mainnet, can be updated later
+              metadata: JSON.stringify({
+                isDevelopment: sessionWallet.isDevelopment || false,
+                createdAt: new Date().toISOString()
+              })
+            }
+          });
+          
+          logger.info(`Auto-linked MPC wallet ${sessionWallet.address} to profile ${profile.id}`);
+        }
+
+        // Update Orby cluster after linking all accounts
+        const { orbyService } = require('./orbyService');
+        try {
+          await orbyService.updateAccountCluster(profile.id, tx);
+        } catch (error) {
+          // Don't fail profile creation if Orby update fails
+          logger.error(`Failed to update Orby cluster during profile creation:`, error);
+        }
+
+        logger.info(`Created automatic profile for account ${account.id}: ${profile.id}`);
+        
+        // Fetch the complete profile with linkedAccounts
+        const completeProfile = await tx.smartProfile.findUnique({
+          where: { id: profile.id },
+          include: {
+            linkedAccounts: true,
+            folders: {
+              include: {
+                apps: true
+              }
+            }
+          }
+        });
+        
+        return completeProfile;
+      } catch (error) {
+        logger.error('Error in createAutomaticProfile:', error);
+        throw error;
       }
-
-      // Create the profile
-      const profile = await prisma.smartProfile.create({
-        data: {
-          id: profileId || undefined, // Use provided ID or let Prisma generate one
-          name: 'My Smartprofile',
-          user: {
-            connect: { id: user.id }
-          },
-          sessionWalletAddress: sessionWallet?.address || '0x' + '0'.repeat(40), // Fallback address for edge cases
-          isActive: true,
-          isDevelopmentWallet: sessionWallet?.isDevelopment || false
-        }
-      });
-
-      // Link account to profile
-      await prisma.profileAccount.create({
-        data: {
-          profileId: profile.id,
-          accountId: account.id,
-          isPrimary: true
-        }
-      });
-
-      logger.info(`Created automatic profile for account ${account.id}: ${profile.id}`);
-      return profile;
-    } catch (error) {
-      logger.error('Error in createAutomaticProfile:', error);
-      throw error;
-    }
+    });
   }
 
   /**

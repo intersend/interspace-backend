@@ -352,42 +352,38 @@ class ProfileControllerV2 {
         });
       }
 
-      // Get accounts linked to this profile via ProfileAccount
-      const profileAccounts = await prisma.profileAccount.findMany({
+      // Get linked accounts from the linked_accounts table for this profile
+      const linkedAccounts = await prisma.linkedAccount.findMany({
         where: {
-          profileId: profileId
+          profileId: profileId,
+          isActive: true
         },
-        include: {
-          account: true
-        }
+        orderBy: [
+          { isPrimary: 'desc' },
+          { createdAt: 'asc' }
+        ]
       });
 
-      // Filter only wallet accounts and transform to LinkedAccount format for iOS compatibility
-      const linkedAccounts = profileAccounts
-        .filter(pa => pa.account.type === 'wallet') // Only include wallet accounts
-        .map(pa => {
-          const account = pa.account;
-          // Format as LinkedAccount for iOS
-          return {
-            id: account.id,
-            userId: profile.userId,
-            profileId: profileId,
-            address: account.identifier, // For wallet accounts, identifier is the address
-            authStrategy: account.type,
-            walletType: account.metadata?.walletType || account.provider || 'unknown',
-            customName: account.metadata?.customName || null,
-            isPrimary: pa.isPrimary,
-            isActive: true,
-            chainId: account.metadata?.chainId || 1,
-            metadata: account.metadata,
-            createdAt: account.createdAt,
-            updatedAt: account.updatedAt
-          };
-        });
+      // Return the actual LinkedAccount records with their correct IDs
+      const formattedAccounts = linkedAccounts.map(account => ({
+        id: account.id, // This is the LinkedAccount ID
+        userId: account.userId,
+        profileId: account.profileId,
+        address: account.address,
+        authStrategy: account.authStrategy,
+        walletType: account.walletType,
+        customName: account.customName,
+        isPrimary: account.isPrimary,
+        isActive: account.isActive,
+        chainId: account.chainId,
+        metadata: account.metadata,
+        createdAt: account.createdAt,
+        updatedAt: account.updatedAt
+      }));
 
       res.json({
         success: true,
-        data: linkedAccounts
+        data: formattedAccounts
       });
     } catch (error) {
       logger.error('Get profile accounts error:', error);

@@ -1,7 +1,9 @@
 const request = require('supertest');
 const { PrismaClient } = require('@prisma/client');
-const app = require('../../src/app'); // Assuming app is exported
-const { generateTokens } = require('../../src/utils/tokenUtils');
+const app = require('@/index').default; // Import the default export
+const { generateTokens } = require('@/utils/tokenUtils');
+const { siweService } = require('@/services/siweService');
+const sessionWalletService = require('@/services/sessionWalletService');
 
 const prisma = new PrismaClient();
 
@@ -49,17 +51,14 @@ describe('V2 Authentication Flow Integration Tests', () => {
       const message = 'Sign this message to authenticate with Interspace';
 
       // Mock wallet signature verification
-      jest.spyOn(require('../../src/services/socialAuthService'), 'authenticateWithWallet')
+      jest.spyOn(siweService, 'verifyMessage')
         .mockResolvedValueOnce({
-          user: {
-            id: 'usr_new',
-            walletAddress,
-            isGuest: false
-          }
+          valid: true,
+          address: walletAddress
         });
 
       // Mock session wallet creation
-      jest.spyOn(require('../../src/services/sessionWalletService'), 'createSessionWallet')
+      jest.spyOn(sessionWalletService, 'createSessionWallet')
         .mockResolvedValueOnce({
           address: '0xsession123',
           isDevelopment: false
@@ -76,16 +75,17 @@ describe('V2 Authentication Flow Integration Tests', () => {
         })
         .expect(200);
 
+      console.log('Response body:', JSON.stringify(response.body, null, 2));
+
       expect(response.body).toMatchObject({
         success: true,
         account: {
-          type: 'wallet',
-          identifier: walletAddress.toLowerCase(),
-          verified: true
+          strategy: 'wallet',
+          identifier: walletAddress.toLowerCase()
         },
         profiles: [
           {
-            name: 'My Smartprofile',
+            displayName: 'My Smartprofile',
             isActive: true
           }
         ],
@@ -104,37 +104,51 @@ describe('V2 Authentication Flow Integration Tests', () => {
       });
       expect(account).toBeTruthy();
 
-      const profiles = await prisma.smartProfile.findMany({
-        where: { createdByAccountId: account.id }
+      // Find profiles linked to this account through ProfileAccount
+      const profileAccounts = await prisma.profileAccount.findMany({
+        where: { accountId: account.id },
+        include: { profile: true }
       });
-      expect(profiles).toHaveLength(1);
-      expect(profiles[0].name).toBe('My Smartprofile');
+      expect(profileAccounts).toHaveLength(1);
+      const profile = profileAccounts[0].profile;
+      expect(profile.name).toBe('My Smartprofile');
 
-      const profileAccount = await prisma.profileAccount.findFirst({
-        where: {
-          accountId: account.id,
-          profileId: profiles[0].id
-        }
-      });
+      const profileAccount = profileAccounts[0];
       expect(profileAccount).toBeTruthy();
       expect(profileAccount.isPrimary).toBe(true);
+
+      // Verify that wallet account was automatically linked
+      const linkedAccount = await prisma.linkedAccount.findFirst({
+        where: {
+          profileId: profile.id,
+          address: walletAddress.toLowerCase()
+        }
+      });
+      expect(linkedAccount).toBeTruthy();
+      expect(linkedAccount.authStrategy).toBe('wallet');
+      expect(linkedAccount.walletType).toBe('metamask');
+      expect(linkedAccount.isPrimary).toBe(true);
+      expect(linkedAccount.isActive).toBe(true);
     });
 
     it('should create account for email authentication', async () => {
       const email = 'test@example.com';
       const verificationCode = '123456';
 
-      // Mock email verification
-      jest.spyOn(require('../../src/services/socialAuthService'), 'authenticateWithEmail')
-        .mockResolvedValueOnce({
-          user: {
-            id: 'usr_email',
-            email,
-            isGuest: false
-          }
-        });
+      // Mock email verification - need to mock the database query for email verification
+      jest.spyOn(prisma.emailVerification, 'findMany')
+        .mockResolvedValueOnce([{
+          email: email.toLowerCase(),
+          code: '$2a$10$validhashedcode', // Mock bcrypt hash
+          expiresAt: new Date(Date.now() + 3600000),
+          attempts: 0
+        }]);
+        
+      // Mock bcrypt comparison
+      const bcrypt = require('bcryptjs');
+      jest.spyOn(bcrypt, 'compare').mockResolvedValueOnce(true);
 
-      jest.spyOn(require('../../src/services/sessionWalletService'), 'createSessionWallet')
+      jest.spyOn(sessionWalletService, 'createSessionWallet')
         .mockResolvedValueOnce({
           address: '0xsession456',
           isDevelopment: false

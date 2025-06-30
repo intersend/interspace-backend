@@ -6,6 +6,7 @@ import { AppError, NotFoundError } from '@/types';
 import type { SmartProfile, LinkedAccount } from '@prisma/client';
 import { ethers } from 'ethers';
 import { cacheService } from './cacheService';
+import { logger } from '@/utils/logger';
 
 // Define the response type based on Orby SDK structure
 interface CreateOperationsResponse {
@@ -191,6 +192,18 @@ export class OrbyService {
     });
 
     await this.createOrGetAccountCluster(profileWithOrby, tx);
+    
+    // Invalidate balance cache since account cluster has changed
+    await cacheService.invalidateProfileCaches(profileId);
+    logger.info(`Invalidated balance cache for profile ${profileId} after cluster update`);
+  }
+
+  /**
+   * Invalidate balance cache for a profile
+   */
+  async invalidateBalanceCache(profileId: string): Promise<void> {
+    await cacheService.invalidateProfileCaches(profileId);
+    logger.info(`Invalidated balance cache for profile ${profileId}`);
   }
 
   /**

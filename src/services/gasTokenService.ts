@@ -36,6 +36,17 @@ export class GasTokenService {
 
     // Get portfolio from Orby (this is already cached)
     const portfolio = await orbyService.getFungibleTokenPortfolio(profile);
+    
+    // Debug logging to understand the structure
+    if (portfolio.length > 0 && portfolio[0]) {
+      const firstItem = portfolio[0];
+      console.log('Portfolio item structure:', {
+        hasTotal: 'total' in firstItem,
+        totalType: typeof firstItem.total,
+        totalValue: firstItem.total,
+        hasToRawAmount: firstItem.total && typeof firstItem.total.toRawAmount === 'function'
+      });
+    }
 
     const gasTokenScores: GasTokenScore[] = [];
     const nativeGasAvailable: {
@@ -46,7 +57,19 @@ export class GasTokenService {
 
     // Determine total balance for weighting
     const totalBalance = portfolio.reduce(
-      (acc, sb) => acc + BigInt(sb.total.toRawAmount()),
+      (acc, sb) => {
+        // Handle different possible structures of total
+        let rawAmount: string;
+        if (typeof sb.total === 'object' && sb.total && typeof sb.total.toRawAmount === 'function') {
+          rawAmount = String(sb.total.toRawAmount());
+        } else if (typeof sb.total === 'string' || typeof sb.total === 'number') {
+          rawAmount = String(sb.total);
+        } else {
+          console.warn('Unexpected total structure:', sb.total);
+          rawAmount = '0';
+        }
+        return acc + BigInt(rawAmount);
+      },
       0n,
     );
 
@@ -58,7 +81,18 @@ export class GasTokenService {
       const token = tokenBalances[0]?.token;
       if (!token) continue;
 
-      const balanceRaw = BigInt(total.toRawAmount());
+      // Handle different possible structures of total
+      let rawAmount: string;
+      if (typeof total === 'object' && total && typeof total.toRawAmount === 'function') {
+        rawAmount = String(total.toRawAmount());
+      } else if (typeof total === 'string' || typeof total === 'number') {
+        rawAmount = String(total);
+      } else {
+        console.warn('Unexpected total structure in loop:', total);
+        rawAmount = '0';
+      }
+      
+      const balanceRaw = BigInt(rawAmount);
       if (balanceRaw === 0n) continue;
 
       const isNative = this.isNativeToken(token);
@@ -81,7 +115,7 @@ export class GasTokenService {
         symbol: token.symbol || "Unknown",
         name: token.name || "Unknown",
         score,
-        totalBalance: total.toRawAmount().toString(),
+        totalBalance: rawAmount,
         totalUsdValue: "0",
         availableChains,
         isNative,

@@ -92,13 +92,19 @@ export class OrbyController {
           standardizedTokenId: item.standardizedTokenId,
           symbol: item.tokenBalances[0]?.token.symbol || 'Unknown',
           name: item.tokenBalances[0]?.token.name || 'Unknown',
-          totalAmount: item.total.toRawAmount().toString(),
+          // Handle both CurrencyAmount instances and plain objects from cache
+          totalAmount: typeof item.total.toRawAmount === 'function' 
+            ? item.total.toRawAmount().toString()
+            : item.total.numerator?.toString() || '0',
           totalUsdValue: '0',
           decimals: item.tokenBalances[0]?.token.decimals || 18,
           balancesPerChain: item.tokenBalances.map(tb => ({
             chainId: Number(tb.token.chainId),
             chainName: getChainName(Number(tb.token.chainId)),
-            amount: tb.toRawAmount().toString(),
+            // Handle both FungibleTokenAmount instances and plain objects from cache
+            amount: typeof tb.toRawAmount === 'function'
+              ? tb.toRawAmount().toString()
+              : tb.numerator?.toString() || '0',
             tokenAddress: tb.token.address,
             isNative: tb.token.address === '0x0000000000000000000000000000000000000000'
           }))

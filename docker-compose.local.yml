@@ -80,7 +80,7 @@ services:
       - JWT_REFRESH_SECRET=local-refresh-secret-change-in-production
       - JWT_REFRESH_EXPIRES_IN=7d
       - ENCRYPTION_SECRET=0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
-      - DISABLE_MPC=true
+      - DISABLE_MPC=false
       - BYPASS_LOGIN=false
       - CORS_ORIGINS=http://localhost:3000,http://localhost:19006,http://localhost:3001
       # Required MPC/Orby settings

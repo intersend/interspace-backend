@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { twoFactorController } from '@/controllers/twoFactorController';
+import { asyncHandler } from '@/middleware/errorHandler';
 import { validateRequest } from '@/middleware/validation';
 import { authRateLimit } from '@/middleware/rateLimiter';
 import { v2AuthAdapter } from '@/middleware/v2AuthAdapter';
@@ -24,7 +25,7 @@ const regenerateBackupCodesSchema = Joi.object({
 
 // All 2FA routes require authentication
 router.use(authenticateAccount);
-router.use(v2AuthAdapter); // Adapt v2 auth for v1 controllers
+router.use(asyncHandler(v2AuthAdapter)); // Adapt v2 auth for v1 controllers
 router.use(authRateLimit);
 
 // Get 2FA status

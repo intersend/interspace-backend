@@ -114,7 +114,8 @@ export type WalletType =
   | 'ledger' 
   | 'safe' 
   | 'magic' 
-  | 'web3auth';
+  | 'web3auth'
+  | 'mpc';
 
 export interface LinkedAccountResponse {
   id: string;

@@ -320,6 +320,16 @@ export class LinkedAccountController {
   async unlinkAccount(req: Request, res: Response): Promise<void> {
     try {
       const userId = req.user?.userId;
+      
+      // Debug logging
+      console.log('UnlinkAccount request:', {
+        userId,
+        accountId: req.params.accountId,
+        isV2Auth: (req as any).isV2Auth,
+        v2Account: (req as any).v2Account?.id,
+        user: req.user
+      });
+      
       if (!userId) {
         res.status(401).json({
           success: false,

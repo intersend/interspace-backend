@@ -25,11 +25,62 @@ export class MpcWebhookController {
       // Update the profile with the actual MPC wallet address
       const updatedProfile = await prisma.smartProfile.update({
         where: { id: profileId },
-        data: { sessionWalletAddress: address }
+        data: { sessionWalletAddress: address },
+        include: { user: true }
       });
 
       // Create key mapping
       await mpcKeyShareService.createKeyMapping(profileId, keyId, publicKey, 'ecdsa');
+
+      // Create or update LinkedAccount for the MPC wallet
+      try {
+        const existingLinkedAccount = await prisma.linkedAccount.findFirst({
+          where: {
+            profileId: profileId,
+            walletType: 'mpc'
+          }
+        });
+
+        if (existingLinkedAccount) {
+          // Update existing MPC linked account with new address
+          await prisma.linkedAccount.update({
+            where: { id: existingLinkedAccount.id },
+            data: {
+              address: address.toLowerCase(),
+              isActive: true,
+              metadata: JSON.stringify({
+                keyId,
+                publicKey: publicKey.substring(0, 64),
+                updatedAt: new Date().toISOString()
+              })
+            }
+          });
+          logger.info('Updated existing MPC LinkedAccount', { profileId, address });
+        } else {
+          // Create new LinkedAccount for MPC wallet
+          await prisma.linkedAccount.create({
+            data: {
+              userId: updatedProfile.userId,
+              profileId: profileId,
+              address: address.toLowerCase(),
+              authStrategy: 'mpc',
+              walletType: 'mpc',
+              customName: 'Session Wallet',
+              isPrimary: false,
+              isActive: true,
+              chainId: 1, // Default to mainnet
+              metadata: JSON.stringify({
+                keyId,
+                publicKey: publicKey.substring(0, 64),
+                createdAt: new Date().toISOString()
+              })
+            }
+          });
+          logger.info('Created new MPC LinkedAccount', { profileId, address });
+        }
+      } catch (error) {
+        logger.error('Failed to create/update MPC LinkedAccount', { profileId, error });
+      }
 
       // Update Orby cluster with the new wallet address
       try {

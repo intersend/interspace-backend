@@ -5,6 +5,7 @@ const { socialAuthService } = require('../services/socialAuthService');
 const { auditService } = require('../services/auditService');
 const sessionWalletService = require('../services/sessionWalletService');
 const accountService = require('../services/accountService');
+const { accountLinkingService } = require('../services/accountLinkingService');
 const { smartProfileService } = require('../services/smartProfileService');
 const { siweService } = require('../services/siweService');
 const { passkeyService } = require('../services/passkeyService');
@@ -187,7 +188,7 @@ const authenticateV2 = async (req, res, next) => {
           identifier: verifyResult.address.toLowerCase(),
           metadata: { 
             walletType: authData.walletType,
-            chainId: authData.chainId || 1
+            chainId: String(authData.chainId || 1)
           }
         });
         
@@ -868,6 +869,7 @@ const authenticateV2 = async (req, res, next) => {
       const sessionWallet = await sessionWalletService.createSessionWallet(profileId);
       
       // Create automatic profile with session wallet
+      // This now includes auto-linking wallet accounts
       activeProfile = await accountService.createAutomaticProfile(account, sessionWallet, profileId);
       
       // Add to profiles array
@@ -877,6 +879,28 @@ const authenticateV2 = async (req, res, next) => {
     } else {
       // Use the most recently active profile
       activeProfile = profiles.find(p => p.isActive) || profiles[0];
+      
+      // For existing users, ensure their auth account is auto-linked to the profile
+      // This is especially important for wallet accounts that need transaction capabilities
+      if (activeProfile) {
+        try {
+          await accountLinkingService.autoLinkAccountToProfile(account, activeProfile);
+          logger.info(`Ensured account ${account.id} (${account.type}) is properly linked to profile ${activeProfile.id}`);
+          
+          // Refresh the profile data to include the newly linked account
+          const updatedProfiles = await accountService.getAccessibleProfiles(account.id);
+          const updatedActiveProfile = updatedProfiles.find(p => p.id === activeProfile.id);
+          if (updatedActiveProfile) {
+            activeProfile = updatedActiveProfile;
+            // Update the profiles array with refreshed data
+            profiles.length = 0;
+            profiles.push(...updatedProfiles);
+          }
+        } catch (error) {
+          // Don't fail authentication if auto-linking fails
+          logger.error(`Failed to auto-link account for existing user:`, error);
+        }
+      }
     }
 
     // Step 4: Create session
@@ -952,7 +976,10 @@ const authenticateV2 = async (req, res, next) => {
         username: null, // TODO: Add username support
         avatarUrl: null, // TODO: Add avatar support
         privacyMode: session.privacyMode,
-        isActive: p.id === activeProfile.id
+        isActive: p.id === activeProfile.id,
+        linkedAccountsCount: p.linkedAccounts?.length || 0,
+        appsCount: p.folders?.reduce((total, folder) => total + (folder.apps?.length || 0), 0) || 0,
+        foldersCount: p.folders?.length || 0
       })),
       activeProfile: {
         id: activeProfile.id,
@@ -960,7 +987,10 @@ const authenticateV2 = async (req, res, next) => {
         username: null,
         avatarUrl: null,
         privacyMode: session.privacyMode,
-        isActive: true
+        isActive: true,
+        linkedAccountsCount: activeProfile.linkedAccounts?.length || 0,
+        appsCount: activeProfile.folders?.reduce((total, folder) => total + (folder.apps?.length || 0), 0) || 0,
+        foldersCount: activeProfile.folders?.length || 0
       },
       tokens: {
         accessToken,
@@ -1074,7 +1104,10 @@ const refreshTokenV2 = async (req, res, next) => {
         username: null, // TODO: Add username support
         avatarUrl: null, // TODO: Add avatar support
         privacyMode: session?.privacyMode || 'linked',
-        isActive: activeProfile ? p.id === activeProfile.id : p.isActive
+        isActive: activeProfile ? p.id === activeProfile.id : p.isActive,
+        linkedAccountsCount: p.linkedAccounts?.length || 0,
+        appsCount: p.folders?.reduce((total, folder) => total + (folder.apps?.length || 0), 0) || 0,
+        foldersCount: p.folders?.length || 0
       })),
       activeProfile: activeProfile ? {
         id: activeProfile.id,
@@ -1082,7 +1115,10 @@ const refreshTokenV2 = async (req, res, next) => {
         username: null,
         avatarUrl: null,
         privacyMode: session?.privacyMode || 'linked',
-        isActive: true
+        isActive: true,
+        linkedAccountsCount: activeProfile.linkedAccounts?.length || 0,
+        appsCount: activeProfile.folders?.reduce((total, folder) => total + (folder.apps?.length || 0), 0) || 0,
+        foldersCount: activeProfile.folders?.length || 0
       } : null,
       tokens: {
         accessToken,
@@ -1309,6 +1345,25 @@ const getIdentityGraph = async (req, res, next) => {
       where: { id: { in: linkedAccountIds } }
     });
 
+    // Transform accounts to ensure chainId is a string in metadata
+    const transformedAccounts = accounts.map(account => {
+      if (account.metadata && typeof account.metadata === 'object') {
+        // Create a copy to avoid mutating the original
+        const transformedMetadata = { ...account.metadata };
+        
+        // Convert chainId to string if it exists and is a number
+        if (typeof transformedMetadata.chainId === 'number') {
+          transformedMetadata.chainId = transformedMetadata.chainId.toString();
+        }
+        
+        return {
+          ...account,
+          metadata: transformedMetadata
+        };
+      }
+      return account;
+    });
+
     // Get all links
     const links = await prisma.identityLink.findMany({
       where: {
@@ -1321,7 +1376,7 @@ const getIdentityGraph = async (req, res, next) => {
 
     res.json({
       success: true,
-      accounts,
+      accounts: transformedAccounts,
       links,
       currentAccountId: accountId
     });
@@ -1366,9 +1421,9 @@ const switchProfile = async (req, res, next) => {
         name: targetProfile.name,
         sessionWalletAddress: targetProfile.sessionWalletAddress,
         isActive: true,
-        linkedAccountsCount: 0,  // TODO: Add actual count
-        appsCount: 0,  // TODO: Add actual count
-        foldersCount: 0,  // TODO: Add actual count
+        linkedAccountsCount: targetProfile.linkedAccounts?.length || 0,
+        appsCount: targetProfile.folders?.reduce((total, folder) => total + (folder.apps?.length || 0), 0) || 0,
+        foldersCount: targetProfile.folders?.length || 0,
         isDevelopmentWallet: targetProfile.isDevelopmentWallet || true,
         createdAt: targetProfile.createdAt,
         updatedAt: targetProfile.updatedAt

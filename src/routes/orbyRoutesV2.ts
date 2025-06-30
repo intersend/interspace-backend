@@ -15,7 +15,7 @@ router.get('/health', asyncHandler(orbyController.checkHealth));
 
 // All other routes require authentication and standard rate limiting
 router.use(authenticateAccount);
-router.use(v2AuthAdapter); // Adapt v2 auth for v1 controllers
+router.use(asyncHandler(v2AuthAdapter)); // Adapt v2 auth for v1 controllers
 router.use(userRateLimit);
 
 // Validation schemas
