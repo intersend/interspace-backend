@@ -28,10 +28,10 @@ router.post('/',
       .trim()
       .isLength({ min: 1, max: 50 })
       .withMessage('Profile name must be between 1 and 50 characters'),
-    body('isDevelopmentWallet')
+    body('developmentMode')
       .optional()
       .isBoolean()
-      .withMessage('isDevelopmentWallet must be a boolean'),
+      .withMessage('developmentMode must be a boolean'),
     body('clientShare')
       .optional()
       .isString()

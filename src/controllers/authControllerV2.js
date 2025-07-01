@@ -880,27 +880,10 @@ const authenticateV2 = async (req, res, next) => {
       // Use the most recently active profile
       activeProfile = profiles.find(p => p.isActive) || profiles[0];
       
-      // For existing users, ensure their auth account is auto-linked to the profile
-      // This is especially important for wallet accounts that need transaction capabilities
-      if (activeProfile) {
-        try {
-          await accountLinkingService.autoLinkAccountToProfile(account, activeProfile);
-          logger.info(`Ensured account ${account.id} (${account.type}) is properly linked to profile ${activeProfile.id}`);
-          
-          // Refresh the profile data to include the newly linked account
-          const updatedProfiles = await accountService.getAccessibleProfiles(account.id);
-          const updatedActiveProfile = updatedProfiles.find(p => p.id === activeProfile.id);
-          if (updatedActiveProfile) {
-            activeProfile = updatedActiveProfile;
-            // Update the profiles array with refreshed data
-            profiles.length = 0;
-            profiles.push(...updatedProfiles);
-          }
-        } catch (error) {
-          // Don't fail authentication if auto-linking fails
-          logger.error(`Failed to auto-link account for existing user:`, error);
-        }
-      }
+      // REMOVED: Auto-linking for existing users
+      // Auto-linking should only happen for new users during their first profile creation
+      // Existing users who create new profiles should have clean profiles with only MPC wallets
+      logger.info(`Existing user detected with ${profiles.length} profiles. Using active profile: ${activeProfile?.id}`);
     }
 
     // Step 4: Create session
@@ -1424,7 +1407,7 @@ const switchProfile = async (req, res, next) => {
         linkedAccountsCount: targetProfile.linkedAccounts?.length || 0,
         appsCount: targetProfile.folders?.reduce((total, folder) => total + (folder.apps?.length || 0), 0) || 0,
         foldersCount: targetProfile.folders?.length || 0,
-        isDevelopmentWallet: targetProfile.isDevelopmentWallet || true,
+        developmentMode: targetProfile.developmentMode || false,
         createdAt: targetProfile.createdAt,
         updatedAt: targetProfile.updatedAt
       },

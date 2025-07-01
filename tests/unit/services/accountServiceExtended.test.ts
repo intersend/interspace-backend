@@ -670,7 +670,7 @@ describe('AccountService Extended Tests', () => {
       prisma.smartProfile.update.mockResolvedValue({
         id: profileId,
         sessionWalletAddress: newAddress,
-        isDevelopmentWallet: false
+        developmentMode: false
       });
 
       const result = await accountService.updateProfileSessionWallet(

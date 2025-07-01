@@ -11,7 +11,7 @@ const { logger } = require('../utils/logger');
 // Create singleton instance based on MPC configuration
 let sessionWalletInstance;
 
-if (config.DISABLE_MPC) {
+if (config.DISABLE_MPC || process.env.DISABLE_MPC === 'true') {
   logger.info('MPC disabled, using mock session wallet service');
   sessionWalletInstance = new MockSessionWalletService();
 } else {
@@ -29,7 +29,7 @@ if (config.DISABLE_MPC) {
 async function createSessionWallet(profileId, clientShare, developmentMode = false) {
   try {
     // In development mode or when MPC is disabled, just generate a simple address
-    if (developmentMode || config.DISABLE_MPC || process.env.NODE_ENV === 'development') {
+    if (developmentMode || config.DISABLE_MPC || process.env.DISABLE_MPC === 'true') {
       const crypto = require('crypto');
       const hash = crypto.createHash('sha256').update(profileId || crypto.randomBytes(32)).digest('hex');
       const address = '0x' + hash.slice(0, 40);

@@ -43,7 +43,7 @@ class ProfileControllerV2 {
           linkedAccountsCount: p.linkedAccounts?.length || 0,
           appsCount: p._count?.apps || 0,
           foldersCount: p._count?.folders || 0,
-          isDevelopmentWallet: p.isDevelopmentWallet,
+          developmentMode: p.developmentMode,
           createdAt: p.createdAt,
           updatedAt: p.updatedAt
         }))
@@ -55,7 +55,7 @@ class ProfileControllerV2 {
   }
 
   /**
-   * Create a new profile - V2 version with development mode by default
+   * Create a new profile - V2 version with development mode
    */
   async createProfile(req, res, next) {
     try {
@@ -67,7 +67,7 @@ class ProfileControllerV2 {
         });
       }
 
-      const { name, isDevelopmentWallet = true } = req.body;
+      const { name, developmentMode = false } = req.body;
       const accountId = req.account?.id || req.user?.accountId;
       
       if (!accountId) {
@@ -110,11 +110,11 @@ class ProfileControllerV2 {
         userId = user.id;
       }
 
-      // Create profile with development mode by default for V2
+      // Create profile with development mode
       const profile = await smartProfileService.createProfile(userId, {
         name,
-        developmentMode: isDevelopmentWallet,
-        clientShare: isDevelopmentWallet ? undefined : req.body.clientShare
+        developmentMode,
+        clientShare: developmentMode ? undefined : req.body.clientShare
       });
 
       // Link profile to account
@@ -122,15 +122,7 @@ class ProfileControllerV2 {
 
       res.status(201).json({
         success: true,
-        data: {
-          id: profile.id,
-          name: profile.name,
-          sessionWalletAddress: profile.sessionWalletAddress,
-          isActive: profile.isActive,
-          isDevelopmentWallet: profile.isDevelopmentWallet,
-          createdAt: profile.createdAt,
-          updatedAt: profile.updatedAt
-        }
+        data: profile
       });
     } catch (error) {
       logger.error('Create profile error:', error);
@@ -174,7 +166,7 @@ class ProfileControllerV2 {
           linkedAccountsCount: profile.linkedAccounts?.length || 0,
           appsCount: profile._count?.apps || 0,
           foldersCount: profile._count?.folders || 0,
-          isDevelopmentWallet: profile.isDevelopmentWallet,
+          developmentMode: profile.developmentMode,
           createdAt: profile.createdAt,
           updatedAt: profile.updatedAt
         }
@@ -223,7 +215,7 @@ class ProfileControllerV2 {
           name: updatedProfile.name,
           sessionWalletAddress: updatedProfile.sessionWalletAddress,
           isActive: updatedProfile.isActive,
-          isDevelopmentWallet: updatedProfile.isDevelopmentWallet,
+          developmentMode: updatedProfile.developmentMode,
           updatedAt: updatedProfile.updatedAt
         }
       });

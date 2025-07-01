@@ -72,6 +72,9 @@ export interface Config {
   
   // MPC Webhook Configuration
   MPC_WEBHOOK_SECRET?: string;
+  
+  // MPC Configuration
+  DISABLE_MPC?: boolean;
 
   // Frontend URL
   FRONTEND_URL: string;
@@ -200,6 +203,9 @@ export const config: Config = {
   
   // MPC Webhook Configuration
   MPC_WEBHOOK_SECRET: process.env.MPC_WEBHOOK_SECRET || 'development-webhook-secret',
+  
+  // MPC Configuration
+  DISABLE_MPC: getEnvBoolean('DISABLE_MPC', false),
 
   // Google Cloud Platform (Optional)
   GOOGLE_CLOUD_PROJECT: process.env.GOOGLE_CLOUD_PROJECT,

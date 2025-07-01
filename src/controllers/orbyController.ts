@@ -5,20 +5,8 @@ import { gasTokenService } from '@/services/gasTokenService';
 import { smartProfileService } from '@/services/smartProfileService';
 import { ApiResponse, AppError, NotFoundError } from '@/types';
 import { CreateOperationsStatus } from '@orb-labs/orby-core';
-
-/**
- * Helper: Get chain name from ID
- */
-function getChainName(chainId: number): string {
-  const chains: Record<number, string> = {
-    1: 'Ethereum',
-    10: 'Optimism',
-    137: 'Polygon',
-    42161: 'Arbitrum',
-    8453: 'Base'
-  };
-  return chains[chainId] || `Chain ${chainId}`;
-}
+import { getChainName } from '@/utils/chainRegistry';
+import { UnifiedBalance, PortfolioResponse, CachedPortfolioItem } from '@/types/portfolio';
 
 export class OrbyController {
   /**
@@ -82,34 +70,63 @@ export class OrbyController {
         profileWithOrby.orbyAccountClusterId = clusterId;
       }
 
-      // Get unified portfolio from Orby
-      const portfolio = await orbyService.getFungibleTokenPortfolio(profileWithOrby);
+      // Get unified portfolio from Orby (fresh data every time)
+      const portfolio: CachedPortfolioItem[] = await orbyService.getFungibleTokenPortfolio(profileWithOrby);
       
-      // Transform Orby response to our format
-      const unifiedBalance = {
-        totalUsdValue: '0', // Would need price API
-        tokens: portfolio.map(item => ({
-          standardizedTokenId: item.standardizedTokenId,
-          symbol: item.tokenBalances[0]?.token.symbol || 'Unknown',
-          name: item.tokenBalances[0]?.token.name || 'Unknown',
-          // Handle both CurrencyAmount instances and plain objects from cache
-          totalAmount: typeof item.total.toRawAmount === 'function' 
-            ? item.total.toRawAmount().toString()
-            : item.total.numerator?.toString() || '0',
-          totalUsdValue: '0',
-          decimals: item.tokenBalances[0]?.token.decimals || 18,
-          balancesPerChain: item.tokenBalances.map(tb => ({
-            chainId: Number(tb.token.chainId),
-            chainName: getChainName(Number(tb.token.chainId)),
-            // Handle both FungibleTokenAmount instances and plain objects from cache
-            amount: typeof tb.toRawAmount === 'function'
-              ? tb.toRawAmount().toString()
-              : tb.numerator?.toString() || '0',
-            tokenAddress: tb.token.address,
-            isNative: tb.token.address === '0x0000000000000000000000000000000000000000'
-          }))
-        }))
+      // Log the portfolio received from Orby
+      console.log('\n========== CONTROLLER PORTFOLIO DEBUG ==========');
+      console.log(`Total tokens received: ${portfolio.length}`);
+      portfolio.forEach((item, index) => {
+        console.log(`Token ${index + 1}: ${item.tokenBalances[0]?.token.symbol || 'Unknown'} - Raw Amount: ${item.totalRawAmount} - USD: ${item.totalValueInFiat}`);
+      });
+      
+      // Calculate total USD value across all tokens
+      let totalPortfolioUsdValue = 0;
+      
+      // Transform to unified balance format (NO FILTERING - show all tokens)
+      const unifiedBalance: UnifiedBalance = {
+        totalUsdValue: '0', // Will be updated after processing all tokens
+        tokens: portfolio.map(item => {
+          const decimals = item.tokenBalances[0]?.token.decimals || 18;
+          
+          // Convert totalValueInFiat with proper decimal handling
+          let totalUsdValue = '0';
+          if (item.totalValueInFiat && item.totalValueInFiat !== '0') {
+            // Orby returns fiat values in smallest unit (e.g., cents for USD)
+            // Default to 2 decimals for USD if not specified
+            const fiatDecimals = 2;
+            const rawFiatValue = parseFloat(item.totalValueInFiat);
+            const divisor = Math.pow(10, fiatDecimals);
+            const usdValue = rawFiatValue / divisor;
+            
+            totalUsdValue = usdValue.toFixed(2);
+            totalPortfolioUsdValue += usdValue;
+            
+            console.log(`Token ${item.tokenBalances[0]?.token.symbol}: Raw fiat=${item.totalValueInFiat}, Formatted=$${totalUsdValue}`);
+          }
+          
+          return {
+            standardizedTokenId: item.standardizedTokenId,
+            symbol: item.tokenBalances[0]?.token.symbol || 'Unknown',
+            name: item.tokenBalances[0]?.token.name || 'Unknown',
+            totalAmount: item.totalRawAmount, // Keep raw amount, frontend will format
+            totalUsdValue,
+            decimals,
+            balancesPerChain: item.tokenBalances.map(tb => ({
+              chainId: Number(tb.chainId),
+              chainName: getChainName(Number(tb.chainId)),
+              amount: tb.rawAmount, // Keep raw amount, frontend will format
+              tokenAddress: tb.token.address,
+              isNative: tb.token.address === '0x0000000000000000000000000000000000000000' ||
+                        tb.token.address === '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE' ||
+                        !tb.token.address || tb.token.address === ''
+            }))
+          };
+        })
       };
+      
+      // Update total portfolio USD value
+      unifiedBalance.totalUsdValue = totalPortfolioUsdValue.toFixed(2);
 
       // Get gas analysis
       const gasAnalysis = await gasTokenService.analyzeGasTokens(profileWithOrby);
@@ -121,9 +138,13 @@ export class OrbyController {
           profileName: profile.name,
           unifiedBalance,
           gasAnalysis: {
-            suggestedGasToken: gasAnalysis.suggestedToken,
+            suggestedGasToken: gasAnalysis.suggestedGasToken ? {
+              tokenId: gasAnalysis.suggestedGasToken.tokenId,
+              symbol: gasAnalysis.suggestedGasToken.symbol,
+              score: gasAnalysis.suggestedGasToken.score
+            } : null,
             nativeGasAvailable: gasAnalysis.nativeGasAvailable,
-            availableGasTokens: gasAnalysis.availableTokens.slice(0, 5) // Top 5
+            availableGasTokens: gasAnalysis.availableGasTokens.slice(0, 5).map(token => token.symbol) // Return array of symbols (strings)
           },
           linkedAccountsCount: profile.linkedAccounts.length
         }

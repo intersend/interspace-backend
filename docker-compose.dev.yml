@@ -59,6 +59,13 @@ services:
       - ENABLE_V2_API=true
       - AUTO_CREATE_PROFILE=true
       - DEFAULT_PRIVACY_MODE=linked
+      # MPC Settings
+      - DUO_NODE_URL=http://duo-node:3001
+      - DUO_NODE_AUDIENCE_URL=http://duo-node:3001
+      - SILENCE_ADMIN_TOKEN=dev-admin-token
+      - SILENCE_NODE_URL=http://sigpair:8080
+      - SILENCE_CLOUD_PUBLIC_KEY=020000000000000000000000000000000000000000000000000000000000000000
+      - MPC_WEBHOOK_SECRET=dev-webhook-secret
     ports:
       - "3000:3000"
     volumes:
@@ -73,9 +80,69 @@ services:
     stdin_open: true
     tty: true
 
+  # Duo Node service
+  duo-node:
+    build:
+      context: ../interspace-duo-node
+      dockerfile: Dockerfile
+    container_name: interspace-duo-node-dev
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - DUO_SERVER_URL=http://sigpair:8080
+      - DUO_NODE_AUDIENCE_URL=http://localhost:3001
+      - LOG_LEVEL=debug
+      - REQUEST_TIMEOUT_MS=30000
+      - MAX_REQUEST_SIZE=1mb
+      - SIGNATURE_SECRET=dev-signature-secret
+      - SIGNATURE_REQUIRED=false
+      - BACKEND_WEBHOOK_URL=http://app:3000/api/mpc/webhook
+      - WEBHOOK_SECRET=dev-webhook-secret
+    ports:
+      - "3001:3001"
+    depends_on:
+      - sigpair
+    volumes:
+      - ../interspace-duo-node:/usr/src/app
+      - /usr/src/app/node_modules
+
+  # Silence Labs Duo Server (sigpair)
+  sigpair-db:
+    image: postgres:14-alpine
+    container_name: interspace-sigpair-db-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sigpair
+      POSTGRES_PASSWORD: sigpair
+      POSTGRES_DB: sigpair
+    volumes:
+      - sigpair-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sigpair"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  sigpair:
+    image: ghcr.io/silence-laboratories/duo-server:v2-latest
+    container_name: interspace-sigpair-dev
+    restart: unless-stopped
+    environment:
+      PGHOST: sigpair-db
+      PGUSER: sigpair
+      PGDATABASE: sigpair
+      PGPASSWORD: sigpair
+    ports:
+      - "8080:8080"
+    depends_on:
+      sigpair-db:
+        condition: service_healthy
+
 volumes:
   postgres-dev-data:
   redis-dev-data:
+  sigpair-db-data:
 
 networks:
   default:

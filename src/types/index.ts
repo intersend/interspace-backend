@@ -1,3 +1,6 @@
+// Re-export portfolio types
+export * from './portfolio';
+
 export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
@@ -84,7 +87,8 @@ export interface SmartProfileResponse {
   linkedAccountsCount: number;
   appsCount: number;
   foldersCount: number;
-  isDevelopmentWallet?: boolean; // Indicates if this profile uses a development wallet
+  developmentMode?: boolean; // Indicates if this profile uses a development wallet
+  isDevelopmentWallet?: boolean; // For iOS compatibility (same as developmentMode)
   clientShare?: any; // Returned only for development wallets
   createdAt: string;
   updatedAt: string;

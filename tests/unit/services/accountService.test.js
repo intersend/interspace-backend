@@ -374,7 +374,7 @@ describe('AccountService', () => {
           userId: 'usr_123',
           sessionWalletAddress: '0xsession123',
           isActive: true,
-          isDevelopmentWallet: false,
+          developmentMode: false,
           createdByAccountId: 'acc_123'
         }
       });
