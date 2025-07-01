@@ -1,30 +1,5 @@
 import { getRedisClient, withRedis } from '@/utils/redis';
-import { StandardizedBalance } from '@orb-labs/orby-core';
-
-interface UnifiedBalance {
-  totalUsdValue: string;
-  tokens: Array<{
-    standardizedTokenId: string;
-    symbol: string;
-    name: string;
-    totalAmount: string;
-    totalUsdValue: string;
-    decimals: number;
-    balancesPerChain: Array<{
-      chainId: number;
-      chainName: string;
-      amount: string;
-      tokenAddress: string;
-      isNative: boolean;
-    }>;
-  }>;
-}
-
-interface GasAnalysis {
-  suggestedToken: any;
-  nativeGasAvailable: any[];
-  availableTokens: any[];
-}
+import { CachedPortfolioItem, GasAnalysisResult } from '@/types/portfolio';
 
 interface TokenIdentifier {
   chainId: bigint;
@@ -32,66 +7,17 @@ interface TokenIdentifier {
 }
 
 class CacheService {
-  private readonly BALANCE_CACHE_PREFIX = 'balance:';
   private readonly TOKEN_ID_CACHE_PREFIX = 'tokenId:';
   private readonly GAS_ANALYSIS_CACHE_PREFIX = 'gasAnalysis:';
   private readonly COALESCE_CACHE_PREFIX = 'coalesce:';
   
-  private readonly DEFAULT_BALANCE_TTL = 300; // 5 minutes
   private readonly DEFAULT_TOKEN_ID_TTL = 86400; // 24 hours
   private readonly DEFAULT_GAS_ANALYSIS_TTL = 600; // 10 minutes
   
   // Track in-flight requests for coalescing
   private inFlightRequests: Map<string, Promise<any>> = new Map();
 
-  /**
-   * Get cached balance for a profile
-   */
-  async getCachedBalance(profileId: string): Promise<StandardizedBalance[] | null> {
-    return withRedis(async (redis) => {
-      const key = `${this.BALANCE_CACHE_PREFIX}${profileId}`;
-      const cached = await redis.get(key);
-      
-      if (cached) {
-        console.log(`Cache hit for balance: ${profileId}`);
-        return JSON.parse(cached);
-      }
-      
-      console.log(`Cache miss for balance: ${profileId}`);
-      return null;
-    });
-  }
-
-  /**
-   * Set cached balance for a profile
-   */
-  async setCachedBalance(
-    profileId: string, 
-    balance: StandardizedBalance[], 
-    ttl: number = this.DEFAULT_BALANCE_TTL
-  ): Promise<void> {
-    await withRedis(async (redis) => {
-      const key = `${this.BALANCE_CACHE_PREFIX}${profileId}`;
-      await redis.setex(key, ttl, JSON.stringify(balance));
-      console.log(`Cached balance for profile: ${profileId} (TTL: ${ttl}s)`);
-    });
-  }
-
-  /**
-   * Invalidate balance cache for a profile
-   */
-  async invalidateBalanceCache(profileId: string): Promise<void> {
-    await withRedis(async (redis) => {
-      const key = `${this.BALANCE_CACHE_PREFIX}${profileId}`;
-      const deleted = await redis.del(key);
-      if (deleted) {
-        console.log(`Invalidated balance cache for profile: ${profileId}`);
-      }
-      
-      // Also invalidate gas analysis cache when balance changes
-      await this.invalidateGasAnalysisCache(profileId);
-    });
-  }
+  // Balance caching removed - we always fetch fresh data from Orby
 
   /**
    * Get cached token IDs
@@ -202,7 +128,7 @@ class CacheService {
   /**
    * Get cached gas analysis
    */
-  async getCachedGasAnalysis(profileId: string): Promise<GasAnalysis | null> {
+  async getCachedGasAnalysis(profileId: string): Promise<GasAnalysisResult | null> {
     return withRedis(async (redis) => {
       const key = `${this.GAS_ANALYSIS_CACHE_PREFIX}${profileId}`;
       const cached = await redis.get(key);
@@ -222,7 +148,7 @@ class CacheService {
    */
   async setCachedGasAnalysis(
     profileId: string, 
-    analysis: GasAnalysis,
+    analysis: GasAnalysisResult,
     ttl: number = this.DEFAULT_GAS_ANALYSIS_TTL
   ): Promise<void> {
     await withRedis(async (redis) => {
@@ -249,10 +175,8 @@ class CacheService {
    * Invalidate all caches for a profile
    */
   async invalidateProfileCaches(profileId: string): Promise<void> {
-    await Promise.all([
-      this.invalidateBalanceCache(profileId),
-      this.invalidateGasAnalysisCache(profileId)
-    ]);
+    // Only invalidate gas analysis cache now (balance caching removed)
+    await this.invalidateGasAnalysisCache(profileId);
   }
 
   /**
@@ -261,7 +185,6 @@ class CacheService {
   async clearAllCaches(): Promise<void> {
     await withRedis(async (redis) => {
       const patterns = [
-        `${this.BALANCE_CACHE_PREFIX}*`,
         `${this.TOKEN_ID_CACHE_PREFIX}*`,
         `${this.GAS_ANALYSIS_CACHE_PREFIX}*`,
         `${this.COALESCE_CACHE_PREFIX}*`
@@ -281,13 +204,11 @@ class CacheService {
    * Get cache statistics
    */
   async getCacheStats(): Promise<{
-    balanceCacheCount: number;
     tokenIdCacheCount: number;
     gasAnalysisCacheCount: number;
     inFlightRequests: number;
   }> {
     const stats = {
-      balanceCacheCount: 0,
       tokenIdCacheCount: 0,
       gasAnalysisCacheCount: 0,
       inFlightRequests: this.inFlightRequests.size
@@ -295,7 +216,6 @@ class CacheService {
     
     await withRedis(async (redis) => {
       const patterns = [
-        { key: 'balanceCacheCount', pattern: `${this.BALANCE_CACHE_PREFIX}*` },
         { key: 'tokenIdCacheCount', pattern: `${this.TOKEN_ID_CACHE_PREFIX}*` },
         { key: 'gasAnalysisCacheCount', pattern: `${this.GAS_ANALYSIS_CACHE_PREFIX}*` }
       ];

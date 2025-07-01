@@ -85,9 +85,9 @@ services:
       - CORS_ORIGINS=http://localhost:3000,http://localhost:19006,http://localhost:3001
       # Required MPC/Orby settings
       - SILENCE_ADMIN_TOKEN=local-test-token
-      - SILENCE_NODE_URL=http://localhost:8080
-      - DUO_NODE_URL=http://localhost:3001
-      - DUO_NODE_AUDIENCE_URL=http://localhost:3001
+      - SILENCE_NODE_URL=https://sigpair-dev-784862970473.us-central1.run.app
+      - DUO_NODE_URL=http://duo-node:3001
+      - DUO_NODE_AUDIENCE_URL=http://duo-node:3001
       - ORBY_INSTANCE_PRIVATE_API_KEY=c669420b-1cca-4a62-ab6c-a580fd06d575
       - ORBY_INSTANCE_PUBLIC_API_KEY=aae1a17a-6c09-4649-827e-fe5b49eb67b3
       - ORBY_APP_NAME=interspace-local
@@ -110,6 +110,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      duo-node:
+        condition: service_healthy
+      sigpair:
+        condition: service_started
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
       interval: 20s
@@ -121,10 +125,82 @@ services:
     stdin_open: true
     tty: true
 
+  # Sigpair database (Silence Labs Duo Server DB)
+  sigpair-db:
+    profiles: ["local"]
+    image: postgres:14-alpine
+    container_name: interspace-sigpair-db-local
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sigpair
+      POSTGRES_PASSWORD: sigpair
+      POSTGRES_DB: sigpair
+    volumes:
+      - sigpair-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sigpair"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - interspace-local-network
+
+  # Sigpair service (Silence Labs Duo Server)
+  sigpair:
+    profiles: ["local"]
+    image: ghcr.io/silence-laboratories/duo-server:v2-latest
+    container_name: interspace-sigpair-local
+    restart: unless-stopped
+    environment:
+      - PGHOST=sigpair-db
+      - PGPORT=5432
+      - PGUSER=sigpair
+      - PGDATABASE=sigpair
+      - PGPASSWORD=sigpair
+      - NODE_ENV=development
+      - PORT=8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      sigpair-db:
+        condition: service_healthy
+    networks:
+      - interspace-local-network
+
+  # Duo-node service for MPC operations
+  duo-node:
+    profiles: ["local"]
+    build:
+      context: ../interspace-duo-node
+      dockerfile: Dockerfile
+    container_name: interspace-duo-node-local
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=development
+      - PORT=3001
+      - DUO_SERVER_URL=http://sigpair:8080
+      - DUO_SERVER_AUTH_TOKEN=${SILENCE_ADMIN_TOKEN:-local-test-token}
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/interspace_local
+      - DUO_NODE_AUDIENCE_URL=http://localhost:3001
+      - BACKEND_WEBHOOK_URL=http://app:3000/api/mpc/webhook
+      - WEBHOOK_SECRET=dev-webhook-secret
+      - LOG_LEVEL=debug
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      sigpair:
+        condition: service_started
+    networks:
+      - interspace-local-network
+
 volumes:
   postgres-local-data:
     driver: local
   redis-local-data:
+    driver: local
+  sigpair-db-data:
     driver: local
 
 networks:

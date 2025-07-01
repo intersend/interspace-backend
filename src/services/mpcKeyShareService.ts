@@ -97,6 +97,59 @@ class MpcKeyShareService {
   }
 
   /**
+   * Get the cloud public key for MPC operations
+   * This is the server's public key that iOS clients need for key generation
+   */
+  async getCloudPublicKey(): Promise<string> {
+    // Check if we have a configured cloud public key
+    if (process.env.SILENCE_CLOUD_PUBLIC_KEY) {
+      return process.env.SILENCE_CLOUD_PUBLIC_KEY;
+    }
+    
+    // For local development, fetch the verifying key from sigpair directly
+    try {
+      // In local development, sigpair runs on port 8080
+      const sigpairUrl = process.env.NODE_ENV === 'development' ? 'http://sigpair:8080' : (this.duoNodeUrl || 'http://duo-node:3001');
+      
+      // For local development, use axios directly without Google auth
+      const isLocalDevelopment = process.env.NODE_ENV === 'development' || sigpairUrl.includes('localhost') || sigpairUrl.includes('sigpair');
+      
+      if (isLocalDevelopment) {
+        // Direct call without authentication for local development
+        const response = await axios.get(`${sigpairUrl}/v3/verifying-key`);
+        
+        if (response.data && response.data.verifying_key) {
+          const fullKey = response.data.verifying_key;
+          logger.info('Fetched verifying key from sigpair', {
+            verifyingKey: fullKey.substring(0, 10) + '...',
+            length: fullKey.length,
+            prefix: fullKey.substring(0, 2),
+            source: sigpairUrl
+          });
+          
+          // Return the full key with prefix - iOS SDK needs it to identify the algorithm
+          // Prefix "01" = Ed25519, "02" = ECDSA
+          return fullKey;
+        }
+      } else {
+        // Use authenticated client for production
+        const authenticatedAxios = await this.getAuthenticatedClient();
+        const response = await authenticatedAxios.get(`${sigpairUrl}/v3/verifying-key`);
+        
+        if (response.data && response.data.verifying_key) {
+          logger.info('Fetched verifying key from duo-server');
+          return response.data.verifying_key;
+        }
+      }
+    } catch (error) {
+      logger.error('Failed to fetch verifying key from sigpair:', error);
+    }
+    
+    // If we can't fetch the key, throw an error
+    throw new Error('Failed to fetch cloud public key from sigpair');
+  }
+
+  /**
    * Delete the key mapping (used when rotating or deleting keys)
    */
   async deleteKeyMapping(profileId: string) {

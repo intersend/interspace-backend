@@ -2,6 +2,7 @@ import { prisma } from "@/utils/database";
 import { orbyService } from "./orbyService";
 import { SmartProfile } from "@prisma/client";
 import { cacheService } from "./cacheService";
+import { CachedPortfolioItem, GasAnalysisResult } from "@/types/portfolio";
 
 interface GasTokenScore {
   tokenId: string;
@@ -23,30 +24,15 @@ export class GasTokenService {
   /**
    * Analyze and rank available gas tokens for a profile
    */
-  async analyzeGasTokens(profile: SmartProfile): Promise<{
-    availableTokens: GasTokenScore[];
-    suggestedToken: GasTokenScore | null;
-    nativeGasAvailable: { chainId: number; amount: string; symbol: string }[];
-  }> {
+  async analyzeGasTokens(profile: SmartProfile): Promise<GasAnalysisResult> {
     // Check cache first
     const cached = await cacheService.getCachedGasAnalysis(profile.id);
     if (cached) {
       return cached;
     }
 
-    // Get portfolio from Orby (this is already cached)
-    const portfolio = await orbyService.getFungibleTokenPortfolio(profile);
-    
-    // Debug logging to understand the structure
-    if (portfolio.length > 0 && portfolio[0]) {
-      const firstItem = portfolio[0];
-      console.log('Portfolio item structure:', {
-        hasTotal: 'total' in firstItem,
-        totalType: typeof firstItem.total,
-        totalValue: firstItem.total,
-        hasToRawAmount: firstItem.total && typeof firstItem.total.toRawAmount === 'function'
-      });
-    }
+    // Get fresh portfolio from Orby (no caching)
+    const portfolio: CachedPortfolioItem[] = await orbyService.getFungibleTokenPortfolio(profile);
 
     const gasTokenScores: GasTokenScore[] = [];
     const nativeGasAvailable: {
@@ -57,55 +43,30 @@ export class GasTokenService {
 
     // Determine total balance for weighting
     const totalBalance = portfolio.reduce(
-      (acc, sb) => {
-        // Handle different possible structures of total
-        let rawAmount: string;
-        if (typeof sb.total === 'object' && sb.total && typeof sb.total.toRawAmount === 'function') {
-          rawAmount = String(sb.total.toRawAmount());
-        } else if (typeof sb.total === 'string' || typeof sb.total === 'number') {
-          rawAmount = String(sb.total);
-        } else {
-          console.warn('Unexpected total structure:', sb.total);
-          rawAmount = '0';
-        }
-        return acc + BigInt(rawAmount);
-      },
-      0n,
+      (acc, item) => acc + BigInt(item.totalRawAmount || '0'),
+      0n
     );
 
     const preferred = await this.getPreferredGasToken(profile.id);
 
-    for (const standardizedBalance of portfolio) {
-      const { standardizedTokenId, total, tokenBalances } = standardizedBalance;
+    for (const item of portfolio) {
+      const { standardizedTokenId, totalRawAmount, tokenBalances } = item;
 
       const token = tokenBalances[0]?.token;
       if (!token) continue;
 
-      // Handle different possible structures of total
-      let rawAmount: string;
-      if (typeof total === 'object' && total && typeof total.toRawAmount === 'function') {
-        rawAmount = String(total.toRawAmount());
-      } else if (typeof total === 'string' || typeof total === 'number') {
-        rawAmount = String(total);
-      } else {
-        console.warn('Unexpected total structure in loop:', total);
-        rawAmount = '0';
-      }
-      
-      const balanceRaw = BigInt(rawAmount);
+      const balanceRaw = BigInt(totalRawAmount || '0');
       if (balanceRaw === 0n) continue;
 
       const isNative = this.isNativeToken(token);
-      const availableChains = tokenBalances.map((tb) =>
-        Number(tb.token.chainId),
-      );
+      const availableChains = tokenBalances.map(tb => Number(tb.chainId));
 
       const balanceScore =
         totalBalance === 0n ? 0 : Number((balanceRaw * 100n) / totalBalance);
       const nativeBonus = isNative ? 50 : 0;
       const preferenceScore = await this.getPreferenceScore(
         profile.id,
-        standardizedTokenId,
+        standardizedTokenId
       );
 
       const score = balanceScore * 0.2 + nativeBonus + preferenceScore * 0.3;
@@ -115,19 +76,19 @@ export class GasTokenService {
         symbol: token.symbol || "Unknown",
         name: token.name || "Unknown",
         score,
-        totalBalance: rawAmount,
-        totalUsdValue: "0",
+        totalBalance: totalRawAmount,
+        totalUsdValue: item.totalValueInFiat || "0",
         availableChains,
         isNative,
-        factors: { balanceScore, nativeBonus, preferenceScore },
+        factors: { balanceScore, nativeBonus, preferenceScore }
       });
 
       if (isNative) {
         for (const tb of tokenBalances) {
           nativeGasAvailable.push({
-            chainId: Number(tb.token.chainId),
-            amount: tb.toRawAmount().toString(),
-            symbol: token.symbol || "ETH",
+            chainId: Number(tb.chainId),
+            amount: tb.rawAmount,
+            symbol: token.symbol || "ETH"
           });
         }
       }
@@ -145,9 +106,9 @@ export class GasTokenService {
       )!;
     }
 
-    const result = {
-      availableTokens: gasTokenScores,
-      suggestedToken,
+    const result: GasAnalysisResult = {
+      availableGasTokens: gasTokenScores,
+      suggestedGasToken: suggestedToken,
       nativeGasAvailable,
     };
 

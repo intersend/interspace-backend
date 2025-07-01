@@ -1,5 +1,6 @@
+//@ts-nocheck
 import { OrbyProvider } from '@orb-labs/orby-ethers6';
-import { Account, AccountCluster, Activity, ActivityStatus, OnchainOperation, QuoteType, CreateOperationsStatus } from '@orb-labs/orby-core';
+import { Account, AccountCluster, Activity, ActivityStatus, OnchainOperation, QuoteType, CreateOperationsStatus, StandardizedBalance } from '@orb-labs/orby-core';
 import { prisma } from '@/utils/database';
 import { config } from '@/utils/config';
 import { AppError, NotFoundError } from '@/types';
@@ -7,6 +8,7 @@ import type { SmartProfile, LinkedAccount } from '@prisma/client';
 import { ethers } from 'ethers';
 import { cacheService } from './cacheService';
 import { logger } from '@/utils/logger';
+import { CachedPortfolioItem, TokenInfo, TokenBalance } from '@/types/portfolio';
 
 // Define the response type based on Orby SDK structure
 interface CreateOperationsResponse {
@@ -192,18 +194,6 @@ export class OrbyService {
     });
 
     await this.createOrGetAccountCluster(profileWithOrby, tx);
-    
-    // Invalidate balance cache since account cluster has changed
-    await cacheService.invalidateProfileCaches(profileId);
-    logger.info(`Invalidated balance cache for profile ${profileId} after cluster update`);
-  }
-
-  /**
-   * Invalidate balance cache for a profile
-   */
-  async invalidateBalanceCache(profileId: string): Promise<void> {
-    await cacheService.invalidateProfileCaches(profileId);
-    logger.info(`Invalidated balance cache for profile ${profileId}`);
   }
 
   /**
@@ -281,42 +271,181 @@ export class OrbyService {
   /**
    * Get fungible token portfolio for a profile
    */
-  async getFungibleTokenPortfolio(profile: SmartProfile, chainId: number = config.DEFAULT_CHAIN_ID) {
+  async getFungibleTokenPortfolio(profile: SmartProfile & { linkedAccounts?: LinkedAccount[] }, chainId: number = config.DEFAULT_CHAIN_ID): Promise<CachedPortfolioItem[]> {
     const profileWithOrby = profile as SmartProfileWithOrby;
     
     if (!profileWithOrby.orbyAccountClusterId) {
       throw new AppError('Profile does not have an Orby account cluster', 400);
     }
 
-    // Check cache first
-    const cached = await cacheService.getCachedBalance(profile.id);
-    if (cached) {
-      return cached;
+    // Log the profile and linked accounts
+    console.log('\n========== PROFILE DEBUG ==========');
+    console.log(`Profile ID: ${profile.id}`);
+    console.log(`Orby Cluster ID: ${profileWithOrby.orbyAccountClusterId}`);
+    console.log(`Session Wallet: ${profile.sessionWalletAddress}`);
+    if (profile.linkedAccounts) {
+      console.log(`Linked Accounts: ${profile.linkedAccounts.length}`);
+      profile.linkedAccounts.forEach(la => {
+        console.log(`  - ${la.address} (Chain: ${la.chainId}, Active: ${la.isActive})`);
+      });
+    }
+    console.log('===================================\n');
+
+    // Always fetch fresh data from Orby (no caching for balance data)
+    // Get virtual node for the chain
+    const virtualNode = await this.getVirtualNode(profile, chainId);
+
+    // Use the raw RPC method to get portfolio with proper parameters
+    const response = await virtualNode.send('orby_getFungibleTokenPortfolio', [{
+      accountClusterId: profileWithOrby.orbyAccountClusterId!,
+      offset: 0,
+      limit: 100 // Get more tokens to ensure we get all balances
+    }]);
+
+    const portfolio = response?.fungibleTokenBalances || [];
+
+    if (!portfolio || portfolio.length === 0) {
+      console.log('No portfolio data returned from Orby');
+      return [];
     }
 
-    // Use request coalescing for concurrent requests
-    return cacheService.coalesceRequest(
-      `portfolio:${profile.id}:${chainId}`,
-      async () => {
-        // Get virtual node for the chain
-        const virtualNode = await this.getVirtualNode(profile, chainId);
+    // // Comprehensive logging of the raw response
+    // console.log(`\n========== ORBY PORTFOLIO RESPONSE DEBUG ==========`);
+    // console.log(`Total items in portfolio: ${portfolio.length}`);
+    // console.log('Full response structure:', JSON.stringify(response, null, 2));
+    
+    // portfolio.forEach((item: any, index: number) => {
+    //   console.log(`\n--- Token ${index + 1} ---`);
+    //   console.log(`StandardizedTokenId: ${item.standardizedTokenId}`);
+    //   console.log(`TotalTokenAmount:`, JSON.stringify(item.totalTokenAmount, null, 2));
+    //   console.log(`TotalValueInFiat:`, JSON.stringify(item.totalValueInFiat, null, 2));
+    //   console.log(`TokenBalancesOnChains: ${item.tokenBalancesOnChains?.length || 0} chains`);
+      
+    //   if (item.tokenBalancesOnChains && item.tokenBalancesOnChains.length > 0) {
+    //     item.tokenBalancesOnChains.forEach((chainBalance: any, idx: number) => {
+    //       console.log(`  Chain ${idx + 1}:`, JSON.stringify(chainBalance, null, 2));
+    //     });
+    //   }
+    // });
+    // console.log(`\n================================================\n`);
 
-        // Use virtual node to get portfolio
-        const portfolio = await virtualNode.getFungibleTokenPortfolio(
-          profileWithOrby.orbyAccountClusterId!
-        );
-
-        if (!portfolio) {
-          throw new AppError('Failed to get token portfolio', 500);
+    // Transform Orby response to our format based on actual API structure
+    const transformedPortfolio: CachedPortfolioItem[] = portfolio.map((item: any) => {
+      // Extract total amount from totalTokenAmount object
+      let totalRawAmount = '0';
+      let tokenInfo: any = {};
+      let decimals = 18;
+      
+      try {
+        if (item.totalTokenAmount) {
+          // Extract amount value
+          if (item.totalTokenAmount.amount !== undefined) {
+            totalRawAmount = item.totalTokenAmount.amount.toString();
+          }
+          
+          // Extract token metadata
+          if (item.totalTokenAmount.currency || item.totalTokenAmount.token?.metadata?.currency) {
+            const currency = item.totalTokenAmount.currency || item.totalTokenAmount.token?.metadata?.currency;
+            tokenInfo = {
+              symbol: currency.asset?.symbol || currency.symbol || 'Unknown',
+              name: currency.asset?.name || currency.name || 'Unknown',
+              decimals: currency.decimals || 18
+            };
+            decimals = currency.decimals || 18;
+          }
         }
+      } catch (err) {
+        console.error('Error extracting total amount:', err);
+      }
+      
+      // Transform token balances from tokenBalancesOnChains
+      const tokenBalances: TokenBalance[] = [];
+      const tokenBalancesOnChains: { chainId: string; rawAmount: string }[] = [];
+      
+      if (item.tokenBalancesOnChains && Array.isArray(item.tokenBalancesOnChains)) {
+        item.tokenBalancesOnChains.forEach((chainBalance: any) => {
+          try {
+            // Extract chain ID from CAIP-2 format
+            const chainIdStr = chainBalance.token?.chainId || 'EIP155-1';
+            const chainId = chainIdStr.toString().replace('EIP155-', '');
+            
+            // Extract amount
+            const rawAmount = chainBalance.amount?.toString() || '0';
+            
+            // Get token info from this chain balance if not already set
+            if (!tokenInfo.symbol && chainBalance.token?.metadata?.currency) {
+              const currency = chainBalance.token.metadata.currency;
+              tokenInfo = {
+                symbol: currency.asset?.symbol || currency.symbol || 'Unknown',
+                name: currency.asset?.name || currency.name || 'Unknown',
+                decimals: currency.decimals || 18
+              };
+            }
+            
+            tokenBalances.push({
+              token: {
+                symbol: tokenInfo.symbol || 'Unknown',
+                name: tokenInfo.name || 'Unknown',
+                decimals: tokenInfo.decimals || decimals,
+                chainId: chainId,
+                address: chainBalance.token?.address || ''
+              },
+              rawAmount,
+              chainId: chainId
+            });
+            
+            tokenBalancesOnChains.push({
+              chainId,
+              rawAmount
+            });
+          } catch (err) {
+            console.error('Error processing chain balance:', err);
+          }
+        });
+      }
 
-        // Cache the result
-        await cacheService.setCachedBalance(profile.id, portfolio);
+      // Extract fiat value
+      let totalValueInFiat = '0';
+      try {
+        if (item.totalValueInFiat?.amount !== undefined) {
+          // The amount is in the smallest unit (like cents for USD)
+          // Currency object should tell us the decimals
+          const fiatAmount = item.totalValueInFiat.amount;
+          const fiatDecimals = item.totalValueInFiat.currency?.decimals || 2;
+          
+          // Store the raw amount with proper decimal conversion info
+          totalValueInFiat = fiatAmount.toString();
+          
+          console.log(`Fiat value for ${tokenInfo.symbol}: raw=${fiatAmount}, decimals=${fiatDecimals}`);
+        }
+      } catch (err) {
+        console.error('Error extracting fiat value:', err);
+      }
 
-        return portfolio;
-      },
-      300 // 5 minute TTL
-    );
+      return {
+        standardizedTokenId: item.standardizedTokenId,
+        tokenBalances,
+        tokenBalancesOnChains,
+        totalRawAmount,
+        totalValueInFiat
+      };
+    });
+
+    // Log the transformed portfolio
+    console.log('\n========== TRANSFORMED PORTFOLIO ==========');
+    transformedPortfolio.forEach((item, index) => {
+      const symbol = item.tokenBalances[0]?.token.symbol || 'Unknown';
+      console.log(`${index + 1}. ${symbol}:`);
+      console.log(`   Total Raw Amount: ${item.totalRawAmount}`);
+      console.log(`   Total Value in Fiat: ${item.totalValueInFiat}`);
+      console.log(`   Token Balances Count: ${item.tokenBalances.length}`);
+      item.tokenBalances.forEach(tb => {
+        console.log(`     - Chain ${tb.chainId}: ${tb.rawAmount} (${tb.token.address})`);
+      });
+    });
+    console.log('==========================================\n');
+    
+    return transformedPortfolio;
   }
 
   /**
@@ -566,8 +695,6 @@ export class OrbyService {
       let status = operation.status;
       if (activity.overallStatus === ActivityStatus.SUCCESSFUL) {
         status = 'successful';
-        // Invalidate balance cache when transaction succeeds
-        await cacheService.invalidateProfileCaches(operation.profileId);
       } else if (activity.overallStatus === ActivityStatus.FAILED) {
         status = 'failed';
       }

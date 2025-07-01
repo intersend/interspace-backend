@@ -77,7 +77,7 @@ export class SmartProfileController {
 
       console.log('Profile created successfully, sending response:', {
         profileId: profile.id,
-        isDevelopmentWallet: profile.isDevelopmentWallet,
+        developmentMode: profile.developmentMode,
         hasClientShare: !!profile.clientShare
       });
 
