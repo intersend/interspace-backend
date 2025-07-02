@@ -12,14 +12,20 @@ export const v2AuthAdapter = async (req: Request, res: Response, next: NextFunct
       const account = (req as any).account;
       const session = (req as any).session;
       
+      // For profile-based routes, verify profile access
+      const profileId = req.params.profileId || req.params.id;
+      
       logger.info('Adapting V2 auth for V1 controller', {
         accountId: account.id,
         accountType: account.type,
-        sessionId: session.sessionId
+        accountIdentifier: account.identifier,
+        sessionId: session.sessionId,
+        profileId: profileId || 'none'
       });
       
-      // For profile-based routes, verify profile access
-      const profileId = req.params.profileId || req.params.id;
+      console.log('\n========== V2 AUTH ADAPTER DEBUG ==========');
+      console.log('Account:', account);
+      console.log('Profile ID from params:', profileId);
       if (profileId) {
         const { prisma } = await import('@/utils/database');
         
@@ -44,13 +50,21 @@ export const v2AuthAdapter = async (req: Request, res: Response, next: NextFunct
         // Find the user associated with this profile for v1 compatibility
         let userId: string | undefined;
         
+        console.log('Looking for userId...');
+        console.log('Profile userId:', profileAccess.profile.userId);
+        
         // Try to find user through profile owner
         if (profileAccess.profile.userId) {
           userId = profileAccess.profile.userId;
+          console.log('Found userId from profile:', userId);
         }
         
         // If no user found through profile, try to find through account
         if (!userId) {
+          console.log('No userId in profile, searching by account identifier...');
+          console.log('Account type:', account.type);
+          console.log('Account identifier:', account.identifier);
+          
           const user = await prisma.user.findFirst({
             where: {
               OR: [
@@ -63,6 +77,9 @@ export const v2AuthAdapter = async (req: Request, res: Response, next: NextFunct
           
           if (user) {
             userId = user.id;
+            console.log('Found existing user:', userId);
+          } else {
+            console.log('No existing user found');
           }
         }
         
@@ -70,9 +87,11 @@ export const v2AuthAdapter = async (req: Request, res: Response, next: NextFunct
         if (!userId) {
           // For v2-only accounts, use a prefixed account ID as userId
           userId = `v2_account_${account.id}`;
+          console.log('Created synthetic userId:', userId);
           
           // Optionally create a user record for better compatibility
           if (process.env.CREATE_V1_USERS_FOR_V2_ACCOUNTS === 'true') {
+            console.log('CREATE_V1_USERS_FOR_V2_ACCOUNTS is enabled, creating user record...');
             const user = await prisma.user.create({
               data: {
                 email: account.type === 'email' ? account.identifier : null,
@@ -88,6 +107,7 @@ export const v2AuthAdapter = async (req: Request, res: Response, next: NextFunct
               }
             });
             userId = user.id;
+            console.log('Created new user record:', userId);
           }
         }
         
@@ -97,6 +117,9 @@ export const v2AuthAdapter = async (req: Request, res: Response, next: NextFunct
           ipAddress: req.ip,
           userAgent: req.get('User-Agent')
         } as any;
+        
+        console.log('Set req.user with userId:', userId);
+        console.log('============================================\n');
       } else {
         // For non-profile routes, create basic user context
         let userId = `v2_account_${account.id}`;

@@ -48,19 +48,88 @@ export class OrbyController {
    */
   async getUnifiedBalance(req: Request, res: Response): Promise<void> {
     try {
-      const { id: profileId } = req.params;
-      // Support both V1 (req.user) and V2 (req.account) authentication
-      const userId = (req as any).account?.userId || req.user?.userId;
+      // Handle both V1 routes (id) and V2 routes (profileId)
+      const profileId = req.params.id || req.params.profileId;
+      
+      // Debug logging for authentication context
+      console.log('\n========== BALANCE ENDPOINT DEBUG ==========');
+      console.log('Request params:', req.params);
+      console.log('Profile ID from params:', profileId);
+      console.log('req.account:', (req as any).account);
+      console.log('req.user:', (req as any).user);
+      console.log('req.isV2Auth:', (req as any).isV2Auth);
+      
+      // For V2 auth, the adapter sets req.user.userId
+      // For V1 auth, req.user.userId is set directly
+      let userId: string | undefined;
+      
+      if ((req as any).isV2Auth) {
+        // V2 authentication - adapter sets req.user
+        userId = req.user?.userId;
+        console.log('V2 Auth detected, using req.user.userId:', userId);
+      } else {
+        // V1 authentication
+        userId = req.user?.userId;
+        console.log('V1 Auth detected, using req.user.userId:', userId);
+      }
+      
+      console.log('Extracted userId:', userId);
+      console.log('Authentication type:', (req as any).isV2Auth ? 'V2 (via adapter)' : 'V1 (direct)');
       
       if (!userId) {
+        console.error('No userId found in request context');
+        console.error('req.user object:', req.user);
+        console.error('This likely means the V2 auth adapter failed to set req.user');
         throw new AppError('User not authenticated', 401);
       }
 
+      // Debug database query
+      console.log('\nExecuting database query with:');
+      console.log('  profileId:', profileId);
+      console.log('  userId:', userId);
+      
       // Get profile with linked accounts
       const profile = await prisma.smartProfile.findFirst({
         where: { id: profileId, userId },
         include: { linkedAccounts: true }
       });
+
+      console.log('\nDatabase query result:');
+      console.log('  Profile found:', !!profile);
+      if (profile) {
+        console.log('  Profile ID:', profile.id);
+        console.log('  Profile name:', profile.name);
+        console.log('  Profile userId:', profile.userId);
+        console.log('  Linked accounts count:', profile.linkedAccounts?.length || 0);
+      } else {
+        // Additional debugging when profile not found
+        console.log('\nProfile not found. Running additional checks...');
+        
+        // Check if profile exists without userId filter
+        const profileWithoutUser = await prisma.smartProfile.findFirst({
+          where: { id: profileId }
+        });
+        
+        if (profileWithoutUser) {
+          console.log('  Profile exists but belongs to different user');
+          console.log('  Profile userId:', profileWithoutUser.userId);
+          console.log('  Request userId:', userId);
+        } else {
+          console.log('  Profile does not exist in database');
+        }
+        
+        // Check all profiles for this user
+        const userProfiles = await prisma.smartProfile.findMany({
+          where: { userId },
+          select: { id: true, name: true }
+        });
+        
+        console.log(`\n  User ${userId} has ${userProfiles.length} profiles:`);
+        userProfiles.forEach(p => {
+          console.log(`    - ${p.id}: ${p.name}`);
+        });
+      }
+      console.log('============================================\n');
 
       if (!profile) {
         throw new NotFoundError('Profile not found');
@@ -167,9 +236,16 @@ export class OrbyController {
    */
   async createIntent(req: Request, res: Response): Promise<void> {
     try {
-      const { id: profileId } = req.params;
-      // Support both V1 (req.user) and V2 (req.account) authentication
-      const userId = (req as any).account?.userId || req.user?.userId;
+      // Handle both V1 routes (id) and V2 routes (profileId)
+      const profileId = req.params.id || req.params.profileId;
+      
+      // Get userId based on auth version
+      let userId: string | undefined;
+      if ((req as any).isV2Auth) {
+        userId = req.user?.userId;
+      } else {
+        userId = req.user?.userId;
+      }
       
       if (!userId) {
         throw new AppError('User not authenticated', 401);
@@ -368,9 +444,16 @@ export class OrbyController {
    */
   async getTransactionHistory(req: Request, res: Response): Promise<void> {
     try {
-      const { id: profileId } = req.params;
-      // Support both V1 (req.user) and V2 (req.account) authentication
-      const userId = (req as any).account?.userId || req.user?.userId;
+      // Handle both V1 routes (id) and V2 routes (profileId)
+      const profileId = req.params.id || req.params.profileId;
+      
+      // Get userId based on auth version
+      let userId: string | undefined;
+      if ((req as any).isV2Auth) {
+        userId = req.user?.userId;
+      } else {
+        userId = req.user?.userId;
+      }
       
       if (!userId) {
         throw new AppError('User not authenticated', 401);
@@ -454,9 +537,16 @@ export class OrbyController {
    */
   async getGasTokens(req: Request, res: Response): Promise<void> {
     try {
-      const { id: profileId } = req.params;
-      // Support both V1 (req.user) and V2 (req.account) authentication
-      const userId = (req as any).account?.userId || req.user?.userId;
+      // Handle both V1 routes (id) and V2 routes (profileId)
+      const profileId = req.params.id || req.params.profileId;
+      
+      // Get userId based on auth version
+      let userId: string | undefined;
+      if ((req as any).isV2Auth) {
+        userId = req.user?.userId;
+      } else {
+        userId = req.user?.userId;
+      }
       
       if (!userId) {
         throw new AppError('User not authenticated', 401);
@@ -489,9 +579,16 @@ export class OrbyController {
    */
   async setPreferredGasToken(req: Request, res: Response): Promise<void> {
     try {
-      const { id: profileId } = req.params;
-      // Support both V1 (req.user) and V2 (req.account) authentication
-      const userId = (req as any).account?.userId || req.user?.userId;
+      // Handle both V1 routes (id) and V2 routes (profileId)
+      const profileId = req.params.id || req.params.profileId;
+      
+      // Get userId based on auth version
+      let userId: string | undefined;
+      if ((req as any).isV2Auth) {
+        userId = req.user?.userId;
+      } else {
+        userId = req.user?.userId;
+      }
       
       if (!userId) {
         throw new AppError('User not authenticated', 401);
@@ -534,7 +631,8 @@ export class OrbyController {
    */
   async getVirtualNodeRpcUrl(req: Request, res: Response, next: NextFunction) {
     try {
-      const { id: profileId } = req.params;
+      // Handle both V1 routes (id) and V2 routes (profileId)
+      const profileId = req.params.id || req.params.profileId;
       const chainId = parseInt(req.query.chainId as string);
 
       if (!profileId || isNaN(chainId)) {

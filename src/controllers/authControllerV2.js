@@ -1503,72 +1503,76 @@ const unlinkAccounts = async (req, res, next) => {
       });
     }
 
-    // Check if trying to unlink the same account
-    if (currentAccountId === targetAccountId) {
-      return res.status(400).json({
-        success: false,
-        error: 'Cannot unlink your own account'
-      });
-    }
-
-    // Check if accounts are linked
-    const [firstId, secondId] = [currentAccountId, targetAccountId].sort();
-    const existingLink = await prisma.identityLink.findUnique({
-      where: {
-        accountAId_accountBId: {
-          accountAId: firstId,
-          accountBId: secondId
-        }
-      }
+    // In flat identity model, get all accounts in the identity graph
+    const allLinkedAccounts = await accountService.getLinkedAccounts(currentAccountId);
+    
+    logger.info(`Unlink request - Identity graph for account ${currentAccountId}:`, {
+      currentAccountId,
+      targetAccountId,
+      linkedAccounts: allLinkedAccounts,
+      linkedCount: allLinkedAccounts.length
     });
 
-    if (!existingLink) {
+    // Check if target account is part of the identity graph
+    if (!allLinkedAccounts.includes(targetAccountId)) {
       return res.status(404).json({
         success: false,
-        error: 'Accounts are not linked'
+        error: 'Target account is not part of your identity graph'
       });
     }
 
-    // Check if this would leave either account without any links
-    const currentLinks = await accountService.getLinkedAccounts(currentAccountId);
-    const targetLinks = await accountService.getLinkedAccounts(targetAccountId);
-
-    if (currentLinks.length <= 1) {
+    // Check if this would leave the identity graph without any accounts
+    // In flat model, we need at least one account remaining in the graph
+    if (allLinkedAccounts.length <= 1) {
       return res.status(400).json({
         success: false,
-        error: 'Cannot unlink the last remaining account'
+        error: 'Cannot unlink the last remaining account in your identity graph'
       });
     }
 
-    // Delete the link
-    await prisma.identityLink.delete({
+    // Find all identity links involving the target account within this graph
+    const linksToDelete = await prisma.identityLink.findMany({
       where: {
-        accountAId_accountBId: {
-          accountAId: firstId,
-          accountBId: secondId
-        }
+        AND: [
+          {
+            OR: [
+              { accountAId: targetAccountId },
+              { accountBId: targetAccountId }
+            ]
+          },
+          {
+            OR: [
+              { accountAId: { in: allLinkedAccounts } },
+              { accountBId: { in: allLinkedAccounts } }
+            ]
+          }
+        ]
       }
     });
 
-    // Remove ProfileAccount links if the unlinked account no longer has access
-    const profiles = await accountService.getAccessibleProfiles(currentAccountId);
-    for (const profile of profiles) {
-      // Check if target account still has access through other links
-      const targetStillHasAccess = await accountService.getAccessibleProfiles(targetAccountId)
-        .then(targetProfiles => targetProfiles.some(p => p.id === profile.id));
-      
-      if (!targetStillHasAccess) {
-        // Remove target account from this profile
-        await prisma.profileAccount.deleteMany({
-          where: {
-            profileId: profile.id,
-            accountId: targetAccountId
-          }
-        });
-      }
+    logger.info(`Found ${linksToDelete.length} links to delete for account ${targetAccountId}`);
+
+    // Delete all links for the target account within this identity graph
+    for (const link of linksToDelete) {
+      await prisma.identityLink.delete({
+        where: { id: link.id }
+      });
     }
 
-    logger.info(`Unlinked accounts: ${currentAccountId} <-> ${targetAccountId}`);
+    // Remove ProfileAccount links for the unlinked account
+    // After unlinking, the target account should no longer have access to profiles
+    // that were only accessible through this identity graph
+    const profilesBeforeUnlink = await accountService.getAccessibleProfiles(targetAccountId);
+    
+    // Remove all ProfileAccount entries for the target account
+    // The account will need to be re-linked to access these profiles again
+    await prisma.profileAccount.deleteMany({
+      where: {
+        accountId: targetAccountId
+      }
+    });
+
+    logger.info(`Unlinked account ${targetAccountId} from identity graph. Removed access to ${profilesBeforeUnlink.length} profiles.`);
 
     // Log the unlinking action
     await auditService.log({
