@@ -179,3 +179,4 @@ tests/**/*.real.*
 # Company specific files
 *intersend*
 *interspace-specific*
+.clinerules/
