@@ -125,3 +125,57 @@ Dockerfile.prod
 # .github/workflows/test.yml
 .env.e2e
 .env.e2e.real
+
+# Environment files - comprehensive patterns
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Google Cloud specific
+.env.gcp.*
+.env.cloud
+cloudbuild*.yaml
+*.tfvars
+!*.tfvars.example
+terraform.tfstate*
+.terraform/
+.gcloudignore
+
+# Credentials and secrets
+*-credentials.json
+*-service-account.json
+*.pem
+*.key
+*.cert
+*.crt
+*.p12
+*.pfx
+
+# Infrastructure and deployment
+infrastructure/
+migration-job.yaml
+deploy/
+deployment/
+
+# Internal documentation
+INTERNAL_*.md
+*-internal.md
+docs/internal/
+
+# Google Cloud build files
+cloudbuild/
+
+# Deployment scripts
+scripts/gcp-*.sh
+scripts/deploy-*.sh
+scripts/*-prod.sh
+
+# Test data with real credentials
+tests/e2e/real/
+tests/e2e/config/.env.real
+tests/**/*.real.*
+
+# Company specific files
+*intersend*
+*interspace-specific*
