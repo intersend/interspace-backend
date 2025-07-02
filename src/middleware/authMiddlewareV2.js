@@ -40,18 +40,39 @@ const authenticateAccount = async (req, res, next) => {
         authHeaderValue: authHeader ? '[REDACTED]' : 'undefined',
         userAgent: req.headers['user-agent'],
         method: req.method,
-        path: req.path
+        path: req.path,
+        fullUrl: req.originalUrl,
+        headers: Object.keys(req.headers)
       });
       throw new AppError('No token provided', 401);
     }
 
     const token = authHeader.replace('Bearer ', '');
+    
+    // Log token prefix for debugging
+    logger.info('AuthMiddlewareV2.authenticateAccount - Token received', {
+      tokenPrefix: token.substring(0, 20) + '...',
+      path: req.path,
+      method: req.method
+    });
 
     // Verify token
     let decoded;
     try {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
+      logger.info('AuthMiddlewareV2.authenticateAccount - Token verified', {
+        accountId: decoded.accountId,
+        userId: decoded.userId,
+        sessionToken: decoded.sessionToken,
+        tokenType: decoded.type,
+        version: decoded.version
+      });
     } catch (error) {
+      logger.error('AuthMiddlewareV2.authenticateAccount - Token verification failed', {
+        errorName: error.name,
+        errorMessage: error.message,
+        tokenPrefix: token.substring(0, 20) + '...'
+      });
       if (error.name === 'TokenExpiredError') {
         throw new AppError('Token expired', 401);
       }
@@ -64,6 +85,11 @@ const authenticateAccount = async (req, res, next) => {
     });
 
     if (blacklisted) {
+      logger.warn('AuthMiddlewareV2.authenticateAccount - Token is blacklisted', {
+        tokenPrefix: token.substring(0, 20) + '...',
+        blacklistedAt: blacklisted.createdAt,
+        reason: blacklisted.reason
+      });
       throw new AppError('Token has been revoked', 401);
     }
 

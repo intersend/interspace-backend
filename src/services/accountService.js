@@ -261,7 +261,7 @@ class AccountService {
             },
             sessionWalletAddress: sessionWallet?.address || '0x' + '0'.repeat(40), // Fallback address for edge cases
             isActive: true,
-            developmentMode: sessionWallet?.isDevelopment || false
+            isDevelopmentWallet: sessionWallet?.isDevelopment || false
           }
         });
 

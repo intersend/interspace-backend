@@ -79,6 +79,19 @@ router.put('/link-privacy',
 );
 
 /**
+ * @route   POST /api/v2/auth/unlink-accounts
+ * @desc    Unlink an account from the identity graph
+ * @access  Private
+ */
+router.post('/unlink-accounts',
+  authenticateAccount,
+  [
+    body('targetAccountId').isString().notEmpty().withMessage('Target account ID is required')
+  ],
+  authControllerV2.unlinkAccounts
+);
+
+/**
  * @route   GET /api/v2/auth/identity-graph
  * @desc    Get identity graph for current account
  * @access  Private

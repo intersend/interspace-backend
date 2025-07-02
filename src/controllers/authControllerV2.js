@@ -1483,10 +1483,122 @@ const switchProfile = async (req, res, next) => {
   }
 };
 
+/**
+ * Unlink accounts from identity graph
+ */
+const unlinkAccounts = async (req, res, next) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const { targetAccountId } = req.body;
+    const currentAccountId = req.account?.id;
+    
+    if (!currentAccountId) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+
+    // Check if trying to unlink the same account
+    if (currentAccountId === targetAccountId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Cannot unlink your own account'
+      });
+    }
+
+    // Check if accounts are linked
+    const [firstId, secondId] = [currentAccountId, targetAccountId].sort();
+    const existingLink = await prisma.identityLink.findUnique({
+      where: {
+        accountAId_accountBId: {
+          accountAId: firstId,
+          accountBId: secondId
+        }
+      }
+    });
+
+    if (!existingLink) {
+      return res.status(404).json({
+        success: false,
+        error: 'Accounts are not linked'
+      });
+    }
+
+    // Check if this would leave either account without any links
+    const currentLinks = await accountService.getLinkedAccounts(currentAccountId);
+    const targetLinks = await accountService.getLinkedAccounts(targetAccountId);
+
+    if (currentLinks.length <= 1) {
+      return res.status(400).json({
+        success: false,
+        error: 'Cannot unlink the last remaining account'
+      });
+    }
+
+    // Delete the link
+    await prisma.identityLink.delete({
+      where: {
+        accountAId_accountBId: {
+          accountAId: firstId,
+          accountBId: secondId
+        }
+      }
+    });
+
+    // Remove ProfileAccount links if the unlinked account no longer has access
+    const profiles = await accountService.getAccessibleProfiles(currentAccountId);
+    for (const profile of profiles) {
+      // Check if target account still has access through other links
+      const targetStillHasAccess = await accountService.getAccessibleProfiles(targetAccountId)
+        .then(targetProfiles => targetProfiles.some(p => p.id === profile.id));
+      
+      if (!targetStillHasAccess) {
+        // Remove target account from this profile
+        await prisma.profileAccount.deleteMany({
+          where: {
+            profileId: profile.id,
+            accountId: targetAccountId
+          }
+        });
+      }
+    }
+
+    logger.info(`Unlinked accounts: ${currentAccountId} <-> ${targetAccountId}`);
+
+    // Log the unlinking action
+    await auditService.log({
+      accountId: currentAccountId,
+      action: 'unlink_account',
+      resource: 'account',
+      details: JSON.stringify({
+        targetAccountId,
+        unlinkedAt: new Date()
+      }),
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent']
+    });
+
+    res.json({
+      success: true,
+      message: 'Accounts unlinked successfully'
+    });
+
+  } catch (error) {
+    logger.error('Unlink accounts error:', error);
+    next(error);
+  }
+};
+
 module.exports = {
   authenticateV2,
   refreshTokenV2,
   linkAccounts,
+  unlinkAccounts,
   updateLinkPrivacyMode,
   getIdentityGraph,
   switchProfile
