@@ -169,6 +169,18 @@ export class SiweService {
     userAgent?: string;
   }): Promise<{ valid: boolean; address?: string; error?: string }> {
     try {
+      // Development mode bypass
+      if (process.env.NODE_ENV === 'development' && 
+          params.signature === 'dev_bypass' && 
+          params.message === 'dev_bypass' &&
+          params.expectedAddress) {
+        console.log('✅ Development mode bypass - skipping signature verification for address:', params.expectedAddress);
+        return { 
+          valid: true, 
+          address: params.expectedAddress 
+        };
+      }
+      
       // Parse the message
       const parsedMessage = this.parseMessage(params.message);
       

@@ -1141,10 +1141,24 @@ const refreshTokenV2 = async (req, res, next) => {
  */
 const linkAccounts = async (req, res, next) => {
   try {
+    logger.info('linkAccounts - Controller called', {
+      hasAccount: !!req.account,
+      accountId: req.account?.id,
+      body: req.body,
+      headers: {
+        authorization: req.headers.authorization ? 'Present' : 'Missing'
+      }
+    });
+    
     const { targetType, targetIdentifier, targetProvider, linkType = 'direct', privacyMode = 'linked' } = req.body;
     const currentAccountId = req.account?.id;
     
     if (!currentAccountId) {
+      logger.error('linkAccounts - No account ID found', {
+        account: req.account,
+        user: req.user,
+        session: req.session
+      });
       return res.status(401).json({
         success: false,
         error: 'Authentication required'
@@ -1189,15 +1203,38 @@ const linkAccounts = async (req, res, next) => {
       }
       
       // Verify the email code
-      const verification = await prisma.emailVerification.findFirst({
+      const bcrypt = require('bcryptjs');
+      const verifications = await prisma.emailVerification.findMany({
         where: {
           email: targetIdentifier,
-          code: verificationCode,
-          expiresAt: { gte: new Date() }
+          expiresAt: { gte: new Date() },
+          attempts: { lt: 5 }
         }
       });
       
-      if (!verification) {
+      // Check each verification's hashed code
+      let validVerification = null;
+      for (const v of verifications) {
+        const isValid = await bcrypt.compare(verificationCode, v.code);
+        if (isValid) {
+          validVerification = v;
+          break;
+        }
+      }
+      
+      if (!validVerification) {
+        // Increment attempts
+        await prisma.emailVerification.updateMany({
+          where: { 
+            email: targetIdentifier,
+            expiresAt: { gte: new Date() }
+          },
+          data: { 
+            attempts: { increment: 1 },
+            lastAttemptAt: new Date()
+          }
+        });
+        
         return res.status(401).json({
           success: false,
           error: 'Invalid or expired verification code'
