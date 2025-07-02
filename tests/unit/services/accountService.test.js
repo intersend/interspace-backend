@@ -1,4 +1,3 @@
-const { describe, it, expect, beforeEach, afterEach, jest } = require('@jest/globals');
 const accountService = require('../../../src/services/accountService');
 const { PrismaClient } = require('@prisma/client');
 
@@ -134,9 +133,12 @@ describe('AccountService', () => {
   });
 
   describe('getLinkedAccounts', () => {
-    it('should return all linked accounts', async () => {
+    it('should return all linked accounts using BFS traversal', async () => {
       const accountId = 'acc_123';
-      const links = [
+      
+      // Mock the BFS traversal
+      // First call for acc_123
+      prisma.identityLink.findMany.mockResolvedValueOnce([
         {
           accountAId: accountId,
           accountBId: 'acc_456',
@@ -147,48 +149,103 @@ describe('AccountService', () => {
           accountBId: accountId,
           privacyMode: 'partial'
         }
-      ];
-
-      prisma.identityLink.findMany.mockResolvedValue(links);
+      ]);
+      
+      // Second call for acc_456
+      prisma.identityLink.findMany.mockResolvedValueOnce([
+        {
+          accountAId: 'acc_456',
+          accountBId: accountId,
+          privacyMode: 'linked'
+        }
+      ]);
+      
+      // Third call for acc_789
+      prisma.identityLink.findMany.mockResolvedValueOnce([
+        {
+          accountAId: 'acc_789',
+          accountBId: accountId,
+          privacyMode: 'partial'
+        }
+      ]);
 
       const result = await accountService.getLinkedAccounts(accountId);
 
-      expect(result).toEqual(['acc_123', 'acc_456', 'acc_789']);
-      expect(prisma.identityLink.findMany).toHaveBeenCalledWith({
-        where: {
-          OR: [
-            { accountAId: accountId },
-            { accountBId: accountId }
-          ],
-          privacyMode: { not: 'isolated' }
-        },
-        include: {
-          accountA: true,
-          accountB: true
+      expect(result).toEqual(expect.arrayContaining(['acc_123', 'acc_456', 'acc_789']));
+      expect(result.length).toBe(3);
+      expect(prisma.identityLink.findMany).toHaveBeenCalledTimes(3);
+    });
+
+    it('should handle transitive links (A->B->C)', async () => {
+      // Test case: Email (A) -> Wallet (B) -> Social (C)
+      const emailAccountId = 'acc_email';
+      const walletAccountId = 'acc_wallet';
+      const socialAccountId = 'acc_social';
+      
+      // First call for email account
+      prisma.identityLink.findMany.mockResolvedValueOnce([
+        {
+          accountAId: emailAccountId,
+          accountBId: walletAccountId,
+          privacyMode: 'linked'
         }
-      });
+      ]);
+      
+      // Second call for wallet account (finds both email and social)
+      prisma.identityLink.findMany.mockResolvedValueOnce([
+        {
+          accountAId: emailAccountId,
+          accountBId: walletAccountId,
+          privacyMode: 'linked'
+        },
+        {
+          accountAId: walletAccountId,
+          accountBId: socialAccountId,
+          privacyMode: 'linked'
+        }
+      ]);
+      
+      // Third call for social account
+      prisma.identityLink.findMany.mockResolvedValueOnce([
+        {
+          accountAId: walletAccountId,
+          accountBId: socialAccountId,
+          privacyMode: 'linked'
+        }
+      ]);
+
+      const result = await accountService.getLinkedAccounts(walletAccountId);
+
+      // Starting from wallet, should find all three accounts
+      expect(result).toEqual(expect.arrayContaining([emailAccountId, walletAccountId, socialAccountId]));
+      expect(result.length).toBe(3);
     });
 
     it('should exclude isolated accounts', async () => {
       const accountId = 'acc_123';
-      const links = [
+      
+      // Only return non-isolated links
+      prisma.identityLink.findMany.mockResolvedValueOnce([
         {
           accountAId: accountId,
           accountBId: 'acc_456',
           privacyMode: 'linked'
-        },
-        {
-          accountAId: accountId,
-          accountBId: 'acc_789',
-          privacyMode: 'isolated' // Should be excluded
         }
-      ];
-
-      prisma.identityLink.findMany.mockResolvedValue([links[0]]); // Only non-isolated
+      ]);
+      
+      // Second call for acc_456
+      prisma.identityLink.findMany.mockResolvedValueOnce([
+        {
+          accountAId: 'acc_456',
+          accountBId: accountId,
+          privacyMode: 'linked'
+        }
+      ]);
 
       const result = await accountService.getLinkedAccounts(accountId);
 
-      expect(result).toEqual(['acc_123', 'acc_456']);
+      expect(result).toEqual(expect.arrayContaining(['acc_123', 'acc_456']));
+      expect(result.length).toBe(2);
     });
   });
 

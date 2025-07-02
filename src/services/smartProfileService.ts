@@ -32,17 +32,7 @@ export class SmartProfileService {
     
     // Use retryable transaction with extended timeout
     profileData = await withRetryableTransaction(async (tx) => {
-      // Check if user already has a profile with this name
-      const existingProfile = await tx.smartProfile.findFirst({
-        where: {
-          userId,
-          name: data.name
-        }
-      });
-
-      if (existingProfile) {
-        throw new ConflictError('Profile with this name already exists');
-      }
+      // Allow duplicate profile names - no need to check for existing names
 
       // Create profile first to get ID
       const profile = await tx.smartProfile.create({
@@ -329,20 +319,7 @@ export class SmartProfileService {
         throw new NotFoundError('SmartProfile');
       }
 
-      // If updating name, check for conflicts
-      if (data.name && data.name !== existingProfile.name) {
-        const nameConflict = await tx.smartProfile.findFirst({
-          where: {
-            userId,
-            name: data.name,
-            id: { not: profileId }
-          }
-        });
-
-        if (nameConflict) {
-          throw new ConflictError('Profile with this name already exists');
-        }
-      }
+      // Allow duplicate profile names - no need to check for conflicts when updating
 
       // Handle activation logic
       if (data.isActive === true) {

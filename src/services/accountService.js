@@ -75,33 +75,45 @@ class AccountService {
    */
   async getLinkedAccounts(accountId) {
     try {
-      // Get direct links where this account is either A or B
-      const links = await prisma.identityLink.findMany({
-        where: {
-          OR: [
-            { accountAId: accountId },
-            { accountBId: accountId }
-          ],
-          privacyMode: { not: 'isolated' } // Respect privacy boundaries
-        },
-        include: {
-          accountA: true,
-          accountB: true
-        }
-      });
-
-      // Collect all linked account IDs
-      const linkedAccountIds = new Set([accountId]);
+      // Use BFS to traverse the entire identity graph
+      const visited = new Set([accountId]);
+      const queue = [accountId];
       
-      links.forEach(link => {
-        if (link.accountAId === accountId) {
-          linkedAccountIds.add(link.accountBId);
-        } else {
-          linkedAccountIds.add(link.accountAId);
+      while (queue.length > 0) {
+        const currentAccountId = queue.shift();
+        
+        // Get all links for the current account
+        const links = await prisma.identityLink.findMany({
+          where: {
+            OR: [
+              { accountAId: currentAccountId },
+              { accountBId: currentAccountId }
+            ],
+            privacyMode: { not: 'isolated' } // Respect privacy boundaries
+          }
+        });
+        
+        // Process each link
+        for (const link of links) {
+          const connectedAccountId = link.accountAId === currentAccountId 
+            ? link.accountBId 
+            : link.accountAId;
+          
+          // If we haven't visited this account yet, add it to the queue
+          if (!visited.has(connectedAccountId)) {
+            visited.add(connectedAccountId);
+            queue.push(connectedAccountId);
+          }
         }
+      }
+      
+      // Log the traversal result for debugging
+      logger.debug(`Identity graph traversal for account ${accountId}: found ${visited.size} linked accounts`, {
+        accountId,
+        linkedAccounts: Array.from(visited)
       });
 
-      return Array.from(linkedAccountIds);
+      return Array.from(visited);
     } catch (error) {
       logger.error('Error in getLinkedAccounts:', error);
       throw error;
@@ -151,6 +163,12 @@ class AccountService {
     try {
       // Get all linked accounts
       const linkedAccountIds = await this.getLinkedAccounts(accountId);
+      
+      logger.debug(`Getting accessible profiles for account ${accountId}`, {
+        accountId,
+        linkedAccountIds,
+        linkedCount: linkedAccountIds.length
+      });
 
       // Get all profiles linked to any of these accounts
       const profileAccounts = await prisma.profileAccount.findMany({
@@ -170,6 +188,16 @@ class AccountService {
           }
         }
       });
+      
+      logger.debug(`Found ProfileAccount entries`, {
+        accountId,
+        profileAccountCount: profileAccounts.length,
+        profileAccountDetails: profileAccounts.map(pa => ({
+          accountId: pa.accountId,
+          profileId: pa.profileId,
+          profileName: pa.profile?.name
+        }))
+      });
 
       // Deduplicate profiles
       const profileMap = new Map();
@@ -179,7 +207,14 @@ class AccountService {
         }
       });
 
-      return Array.from(profileMap.values());
+      const profiles = Array.from(profileMap.values());
+      logger.debug(`Returning accessible profiles`, {
+        accountId,
+        profileCount: profiles.length,
+        profiles: profiles.map(p => ({ id: p.id, name: p.name }))
+      });
+
+      return profiles;
     } catch (error) {
       logger.error('Error in getAccessibleProfiles:', error);
       throw error;

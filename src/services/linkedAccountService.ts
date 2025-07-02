@@ -520,6 +520,12 @@ export class LinkedAccountService {
       return { valid: false, error: 'Missing required verification data' };
     }
 
+    // Development mode bypass
+    if (process.env.NODE_ENV === 'development' && signature === 'dev_bypass' && message === 'dev_bypass') {
+      console.log('✅ Development mode bypass - skipping signature verification for address:', address);
+      return { valid: true };
+    }
+
     try {
       // Check if this is a SIWE message (contains required SIWE fields)
       const isSiweMessage = message.includes('wants you to sign in with your Ethereum account:') &&

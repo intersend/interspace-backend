@@ -49,7 +49,12 @@ export class OrbyController {
   async getUnifiedBalance(req: Request, res: Response): Promise<void> {
     try {
       const { id: profileId } = req.params;
-      const userId = req.user!.userId!;
+      // Support both V1 (req.user) and V2 (req.account) authentication
+      const userId = (req as any).account?.userId || req.user?.userId;
+      
+      if (!userId) {
+        throw new AppError('User not authenticated', 401);
+      }
 
       // Get profile with linked accounts
       const profile = await prisma.smartProfile.findFirst({
@@ -163,7 +168,12 @@ export class OrbyController {
   async createIntent(req: Request, res: Response): Promise<void> {
     try {
       const { id: profileId } = req.params;
-      const userId = req.user!.userId!;
+      // Support both V1 (req.user) and V2 (req.account) authentication
+      const userId = (req as any).account?.userId || req.user?.userId;
+      
+      if (!userId) {
+        throw new AppError('User not authenticated', 401);
+      }
       const { type, from, to, gasToken } = req.body;
 
       // Validate profile ID
@@ -359,7 +369,12 @@ export class OrbyController {
   async getTransactionHistory(req: Request, res: Response): Promise<void> {
     try {
       const { id: profileId } = req.params;
-      const userId = req.user!.userId!;
+      // Support both V1 (req.user) and V2 (req.account) authentication
+      const userId = (req as any).account?.userId || req.user?.userId;
+      
+      if (!userId) {
+        throw new AppError('User not authenticated', 401);
+      }
       const { page = '1', limit = '20', status } = req.query;
 
       // Verify profile ownership
@@ -440,7 +455,12 @@ export class OrbyController {
   async getGasTokens(req: Request, res: Response): Promise<void> {
     try {
       const { id: profileId } = req.params;
-      const userId = req.user!.userId!;
+      // Support both V1 (req.user) and V2 (req.account) authentication
+      const userId = (req as any).account?.userId || req.user?.userId;
+      
+      if (!userId) {
+        throw new AppError('User not authenticated', 401);
+      }
 
       const profile = await prisma.smartProfile.findFirst({
         where: { id: profileId, userId }
@@ -470,7 +490,12 @@ export class OrbyController {
   async setPreferredGasToken(req: Request, res: Response): Promise<void> {
     try {
       const { id: profileId } = req.params;
-      const userId = req.user!.userId!;
+      // Support both V1 (req.user) and V2 (req.account) authentication
+      const userId = (req as any).account?.userId || req.user?.userId;
+      
+      if (!userId) {
+        throw new AppError('User not authenticated', 401);
+      }
       const { standardizedTokenId, tokenSymbol, chainPreferences } = req.body;
 
       // Validate profile ID

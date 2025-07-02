@@ -852,7 +852,22 @@ const authenticateV2 = async (req, res, next) => {
     }
 
     // Step 2: Get linked profiles
+    const linkedAccountIds = await accountService.getLinkedAccounts(account.id);
+    logger.info(`Authentication - found linked accounts`, {
+      accountId: account.id,
+      accountType: account.type,
+      identifier: account.identifier,
+      linkedAccountCount: linkedAccountIds.length,
+      linkedAccountIds
+    });
+    
     const profiles = await accountService.getAccessibleProfiles(account.id);
+    logger.info(`Authentication - found accessible profiles`, {
+      accountId: account.id,
+      profileCount: profiles.length,
+      profileIds: profiles.map(p => p.id),
+      profileNames: profiles.map(p => p.name)
+    });
     
     // Step 3: Check if new user (no profiles)
     let isNewUser = false;
@@ -866,7 +881,10 @@ const authenticateV2 = async (req, res, next) => {
       const profileId = uuidv4();
       
       // Create session wallet with the profile ID
-      const sessionWallet = await sessionWalletService.createSessionWallet(profileId);
+      // For automatic profiles during email auth, we create a placeholder wallet
+      // The real MPC wallet will be created when the iOS client initiates key generation
+      // via /api/v2/mpc/generate endpoint
+      const sessionWallet = await sessionWalletService.createSessionWallet(profileId, null, false);
       
       // Create automatic profile with session wallet
       // This now includes auto-linking wallet accounts
@@ -1255,12 +1273,20 @@ const linkAccounts = async (req, res, next) => {
     // Get updated accessible profiles
     const profiles = await accountService.getAccessibleProfiles(currentAccountId);
     
+    logger.info(`Linking ${targetType} account to profiles`, {
+      currentAccountId,
+      targetAccountId: targetAccount.id,
+      targetType,
+      profileCount: profiles.length,
+      profileIds: profiles.map(p => p.id)
+    });
+    
     // Link the new account to all accessible profiles
-    // This ensures email accounts show up in profile accounts
+    // This ensures the newly linked account shows up in profile accounts
     for (const profile of profiles) {
       try {
         await accountService.linkProfileToAccount(targetAccount.id, profile.id);
-        logger.info(`Linked ${targetType} account ${targetAccount.id} to profile ${profile.id}`);
+        logger.info(`Successfully linked ${targetType} account ${targetAccount.id} to profile ${profile.id}`);
       } catch (linkError) {
         logger.warn(`Failed to link account to profile ${profile.id}:`, linkError);
       }

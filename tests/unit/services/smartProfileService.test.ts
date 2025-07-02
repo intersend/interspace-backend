@@ -68,14 +68,19 @@ describe('SmartProfileService', () => {
       expect(profile.updatedAt).toBeDefined();
     });
 
-    test('should prevent duplicate profile names for same user', async () => {
+    test('should allow duplicate profile names for same user', async () => {
       const profileData = { name: 'Duplicate Name', clientShare: {} };
       
-      await smartProfileService.createProfile(testUser.id, profileData);
+      const profile1 = await smartProfileService.createProfile(testUser.id, profileData);
+      const profile2 = await smartProfileService.createProfile(testUser.id, profileData);
       
-      await expect(
-        smartProfileService.createProfile(testUser.id, profileData)
-      ).rejects.toThrow(ConflictError);
+      expect(profile1.name).toBe(profile2.name);
+      expect(profile1.id).not.toBe(profile2.id);
+      
+      // Verify both profiles exist
+      const profiles = await smartProfileService.getUserProfiles(testUser.id);
+      const duplicateNameProfiles = profiles.filter(p => p.name === 'Duplicate Name');
+      expect(duplicateNameProfiles.length).toBe(2);
     });
 
     test('should allow same profile name for different users', async () => {
@@ -209,15 +214,24 @@ describe('SmartProfileService', () => {
       expect(previouslyActive.isActive).toBe(false);
     });
 
-    test('should prevent duplicate names', async () => {
+    test('should allow duplicate names', async () => {
       await SmartProfileFactory.create({ 
         userId: testUser.id, 
         name: 'Existing Name' 
       });
       
-      await expect(
-        smartProfileService.updateProfile(testProfile.id, testUser.id, { name: 'Existing Name' })
-      ).rejects.toThrow(ConflictError);
+      const updatedProfile = await smartProfileService.updateProfile(
+        testProfile.id, 
+        testUser.id, 
+        { name: 'Existing Name' }
+      );
+      
+      expect(updatedProfile.name).toBe('Existing Name');
+      
+      // Verify both profiles have the same name
+      const profiles = await smartProfileService.getUserProfiles(testUser.id);
+      const sameNameProfiles = profiles.filter(p => p.name === 'Existing Name');
+      expect(sameNameProfiles.length).toBe(2);
     });
 
     test('should create audit log for updates', async () => {

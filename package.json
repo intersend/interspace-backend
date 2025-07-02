@@ -37,6 +37,9 @@
     "postinstall": "node scripts/patch-orby.js",
     "test:sendgrid": "ts-node -r tsconfig-paths/register scripts/test-sendgrid.ts",
     "test:flat-identity": "./scripts/test-flat-identity.sh",
+    "check:clusters": "tsx scripts/check-account-clusters.ts",
+    "fix:mpc-links": "tsx scripts/fix-missing-mpc-links.ts",
+    "debug:profile": "tsx scripts/debug-profile-lookup.ts",
     "test:flat-identity:coverage": "NODE_ENV=test jest --config jest.config.js --coverage --testPathPattern='(flatIdentityModel|accountService)'"
   },
   "keywords": [

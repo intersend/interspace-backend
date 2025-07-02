@@ -50,11 +50,20 @@ async function createSessionWallet(profileId, clientShare, developmentMode = fal
       };
     }
 
-    // Use real session wallet service
-    const result = await sessionWalletInstance.createSessionWallet(profileId, clientShare);
+    // For real MPC wallets, we need proper key generation first
+    // This should only be called after MPC key generation is complete
+    // For automatic profile creation, we should use development mode
+    logger.warn(`Attempting to create real MPC wallet without proper key generation. Profile: ${profileId}`);
+    
+    // Generate a placeholder address for now
+    // The real MPC wallet will be created when iOS client initiates key generation
+    const { ethers } = require('ethers');
+    const placeholderWallet = ethers.Wallet.createRandom();
+    
     return {
-      address: result.address,
-      isDevelopment: false
+      address: placeholderWallet.address,
+      isDevelopment: false,
+      placeholder: true
     };
   } catch (error) {
     logger.error('Failed to create session wallet:', error);

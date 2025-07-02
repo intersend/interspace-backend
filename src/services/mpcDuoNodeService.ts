@@ -36,7 +36,9 @@ class MPCDuoNodeService extends EventEmitter {
 
   constructor() {
     super();
-    this.connect();
+    // Disabled Socket.IO connection - duo-node doesn't implement Socket.IO server
+    // iOS connects directly to sigpair for WebSocket MPC operations
+    // this.connect();
   }
 
   private connect() {
@@ -163,7 +165,8 @@ class MPCDuoNodeService extends EventEmitter {
    * Start key generation process
    */
   async startKeyGeneration(profileId: string, p1Messages: any[]): Promise<KeyGenResult> {
-    await this.ensureConnected();
+    // Socket.IO connection disabled - duo-node is REST-only
+    throw new ApiError('MPC key generation via backend is not supported. iOS should connect directly to sigpair.', 501);
 
     const sessionId = `keygen_${profileId}_${uuidv4()}`;
     const session: MPCSession = {
@@ -225,7 +228,8 @@ class MPCDuoNodeService extends EventEmitter {
     message: string,
     p1Messages: any[]
   ): Promise<SignResult> {
-    await this.ensureConnected();
+    // Socket.IO connection disabled - duo-node is REST-only
+    throw new ApiError('MPC signing via backend is not supported. iOS should connect directly to sigpair.', 501);
 
     const sessionId = `sign_${keyId}_${uuidv4()}`;
     const session: MPCSession = {
@@ -283,24 +287,9 @@ class MPCDuoNodeService extends EventEmitter {
    * Forward P1 message from client
    */
   async forwardP1Message(sessionId: string, messageType: 'keyGen' | 'sign', message: any) {
-    await this.ensureConnected();
+    // Socket.IO connection disabled - duo-node is REST-only
+    throw new ApiError('MPC message forwarding is not supported. iOS should connect directly to sigpair.', 501);
 
-    const session = this.sessions.get(sessionId);
-    if (!session) {
-      throw new ApiError('Session not found', 404);
-    }
-
-    if (session.status === 'completed' || session.status === 'failed') {
-      throw new ApiError('Session already finished', 400);
-    }
-
-    const event = messageType === 'keyGen' ? 'keyGen:p1Message' : 'sign:p1Message';
-    
-    this.socket!.emit(event, {
-      sessionId,
-      message,
-      keyId: messageType === 'sign' ? session.result?.keyId : undefined
-    });
   }
 
   /**
