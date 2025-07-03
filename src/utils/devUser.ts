@@ -1,10 +1,20 @@
 import { prisma } from './database';
 
-export async function getDevUser() {
+export async function getDevAccount() {
   const email = 'dev@example.com';
-  return prisma.user.upsert({
-    where: { email },
+  return prisma.account.upsert({
+    where: { 
+      type_identifier: {
+        type: 'email',
+        identifier: email
+      }
+    },
     update: {},
-    create: { email, emailVerified: true }
+    create: { 
+      type: 'email',
+      identifier: email,
+      verified: true,
+      metadata: {}
+    }
   });
 }

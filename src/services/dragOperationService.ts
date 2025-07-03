@@ -14,13 +14,11 @@ export class DragOperationService {
    */
   async recordOperation(
     profileId: string,
-    userId: string,
     operation: DragOperationDetails
   ): Promise<DragOperation> {
     return await prisma.dragOperation.create({
       data: {
         profileId,
-        userId,
         type: operation.type,
         before: operation.before,
         after: operation.after,
@@ -34,15 +32,13 @@ export class DragOperationService {
    */
   async getOperationHistory(
     profileId: string,
-    userId: string,
     limit: number = 50,
     offset: number = 0
   ): Promise<{ operations: DragOperation[]; total: number }> {
-    // Verify profile ownership
-    const profile = await prisma.smartProfile.findFirst({
+    // Verify profile exists
+    const profile = await prisma.smartProfile.findUnique({
       where: {
-        id: profileId,
-        userId
+        id: profileId
       }
     });
 
@@ -77,14 +73,12 @@ export class DragOperationService {
    * Get the last undoable operation
    */
   async getLastUndoableOperation(
-    profileId: string,
-    userId: string
+    profileId: string
   ): Promise<DragOperation | null> {
-    // Verify profile ownership
-    const profile = await prisma.smartProfile.findFirst({
+    // Verify profile exists
+    const profile = await prisma.smartProfile.findUnique({
       where: {
-        id: profileId,
-        userId
+        id: profileId
       }
     });
 
@@ -107,10 +101,9 @@ export class DragOperationService {
    * Undo the last operation
    */
   async undoLastOperation(
-    profileId: string,
-    userId: string
+    profileId: string
   ): Promise<{ success: boolean; operation?: DragOperation }> {
-    const lastOperation = await this.getLastUndoableOperation(profileId, userId);
+    const lastOperation = await this.getLastUndoableOperation(profileId);
     
     if (!lastOperation) {
       return { success: false };
@@ -135,14 +128,12 @@ export class DragOperationService {
    */
   async clearHistory(
     profileId: string,
-    userId: string,
     olderThanDays: number = 30
   ): Promise<number> {
-    // Verify profile ownership
-    const profile = await prisma.smartProfile.findFirst({
+    // Verify profile exists
+    const profile = await prisma.smartProfile.findUnique({
       where: {
-        id: profileId,
-        userId
+        id: profileId
       }
     });
 

@@ -3,6 +3,10 @@ import { getRedisClient } from '@/utils/redis';
 import { logger } from '@/utils/logger';
 
 export type BlacklistReason = 
+  | 'logout' 
+  | 'rotation'
+  | 'security'
+  | 'password_change'
   | 'USER_LOGOUT' 
   | 'SECURITY_BREACH' 
   | 'TOKEN_REFRESH' 
