@@ -67,8 +67,8 @@ class ProfileControllerV2 {
         });
       }
 
-      const { name, developmentMode = false } = req.body;
-      const accountId = req.account?.id || req.user?.accountId;  // Support both account and legacy user objects
+      const { name, developmentMode = false, clientShare } = req.body;
+      const accountId = req.account?.id;
       
       if (!accountId) {
         return res.status(401).json({
@@ -77,48 +77,12 @@ class ProfileControllerV2 {
         });
       }
 
-      // Get account details (for backward compatibility)
-      const { prisma } = require('../utils/database');
-      const account = await prisma.account.findUnique({
-        where: { id: accountId }
-      });
-      let userId = req.user?.userId;  // Legacy user ID for backward compatibility
-      
-      if (!userId) {
-        // Find or create legacy user record based on account
-        const { prisma } = require('../utils/database');
-        let user = await prisma.user.findFirst({  // Legacy user table
-          where: {
-            OR: [
-              account.type === 'email' ? { email: account.identifier } : {},
-              account.type === 'wallet' ? { walletAddress: account.identifier } : {}
-            ].filter(condition => Object.keys(condition).length > 0)
-          }
-        });
-        
-        if (!user) {
-          user = await prisma.user.create({  // Create legacy user record for backward compatibility
-            data: {
-              email: account.type === 'email' ? account.identifier : undefined,
-              walletAddress: account.type === 'wallet' ? account.identifier : undefined,
-              authStrategies: JSON.stringify([account.type]),
-              emailVerified: account.verified
-            }
-          });
-        }
-        
-        userId = user.id;
-      }
-
-      // Create profile with development mode
-      const profile = await smartProfileService.createProfile(userId, {
+      // Create profile with development mode using accountId (flat identity model)
+      const profile = await smartProfileService.createProfile(accountId, {
         name,
         developmentMode,
-        clientShare: developmentMode ? undefined : req.body.clientShare
+        clientShare: developmentMode ? clientShare : undefined
       });
-
-      // Link profile to account
-      await accountService.linkProfileToAccount(accountId, profile.id);
 
       res.status(201).json({
         success: true,
