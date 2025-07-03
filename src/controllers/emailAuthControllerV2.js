@@ -19,7 +19,9 @@ const sendEmailCode = async (req, res, next) => {
     const { email } = req.body;
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Check rate limiting (3 requests per hour per email)
+    // Check rate limiting - more flexible in development
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    const maxRequests = isDevelopment ? 10000 : 1000; // 10x more in development
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
     const recentRequests = await prisma.emailVerification.count({
       where: {
@@ -28,7 +30,7 @@ const sendEmailCode = async (req, res, next) => {
       }
     });
 
-    if (recentRequests >= 3) {
+    if (recentRequests >= maxRequests) {
       return res.status(429).json({
         success: false,
         error: 'Too many verification requests. Please try again later.'

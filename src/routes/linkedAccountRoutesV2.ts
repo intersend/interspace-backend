@@ -1,82 +1,207 @@
-import { Router } from 'express';
-import { linkedAccountController } from '@/controllers/linkedAccountController';
-import { asyncHandler } from '@/middleware/errorHandler';
-import { validateRequest } from '@/middleware/validation';
-import { userRateLimit } from '@/middleware/rateLimiter';
-import { v2AuthAdapter } from '@/middleware/v2AuthAdapter';
-import Joi from 'joi';
-
-const { authenticateAccount } = require('@/middleware/authMiddlewareV2');
+import { Router, Request, Response } from 'express';
+import { authenticateAccount } from '@/middleware/authMiddlewareV2';
+import { ensureProfileAccess } from '@/middleware/authCompatibility';
+import { apiRateLimit } from '@/middleware/rateLimiter';
+import { validateRequest } from '@/middleware/validateRequest';
+import { body, param, query } from 'express-validator';
+import { asyncHandler } from '@/utils/asyncHandler';
+import { linkedAccountService } from '@/services/linkedAccountService';
 
 const router = Router();
 
-// All routes require authentication
+// Apply authentication middleware to all routes
 router.use(authenticateAccount);
-router.use(asyncHandler(v2AuthAdapter)); // Adapt v2 auth for v1 controllers
-router.use(userRateLimit);
 
-// Validation schemas
-const linkAccountSchema = Joi.object({
-  address: Joi.string().required(),
-  walletType: Joi.string().valid('metamask', 'walletconnect', 'coinbase', 'other').default('other'),
-  customName: Joi.string().max(50).optional(),
-  isPrimary: Joi.boolean().default(false)
-});
-
-const updateAccountSchema = Joi.object({
-  customName: Joi.string().max(50).allow(null, '').optional(),
-  isPrimary: Joi.boolean().optional()
-});
-
-const searchByAddressSchema = Joi.object({
-  address: Joi.string().required()
-});
-
-const tokenAllowanceSchema = Joi.object({
-  spender: Joi.string().required(),
-  amount: Joi.string().required(),
-  tokenAddress: Joi.string().required(),
-  chainId: Joi.number().required()
-});
-
-// Profile-specific routes
-router.get('/profiles/:profileId/accounts', asyncHandler(linkedAccountController.getProfileAccounts));
-
+// Link wallet account to profile
 router.post(
   '/profiles/:profileId/accounts',
-  validateRequest(linkAccountSchema),
-  asyncHandler(linkedAccountController.linkAccount)
+  apiRateLimit,
+  param('profileId').isString().notEmpty(),
+  body('address').isEthereumAddress(),
+  body('walletType').isString().notEmpty(),
+  body('chainId').isNumeric(),
+  body('signature').isString().notEmpty(),
+  body('message').isString().notEmpty(),
+  body('name').optional().isString(),
+  body('isPrimary').optional().isBoolean(),
+  validateRequest,
+  asyncHandler(ensureProfileAccess),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { profileId } = req.params;
+    const linkData = req.body;
+
+    // Convert chainId to number if it exists
+    if (linkData.chainId) {
+      linkData.chainId = parseInt(linkData.chainId);
+    }
+
+    const result = await linkedAccountService.linkAccount(
+      profileId!,
+      (req as any).account.id,
+      linkData
+    );
+
+    res.json({
+      success: true,
+      data: result
+    });
+  })
 );
 
-// Account-specific routes
-router.put(
-  '/accounts/:accountId',
-  validateRequest(updateAccountSchema),
-  asyncHandler(linkedAccountController.updateLinkedAccount)
+// Get profile accounts
+router.get(
+  '/profiles/:profileId/accounts',
+  apiRateLimit,
+  param('profileId').isString().notEmpty(),
+  query('chainId').optional().isNumeric(),
+  query('walletType').optional().isString(),
+  validateRequest,
+  asyncHandler(ensureProfileAccess),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { profileId } = req.params;
+    const { chainId, walletType } = req.query;
+
+    const accounts = await linkedAccountService.getProfileAccounts(
+      profileId!,
+      (req as any).account.id
+    );
+
+    res.json({
+      success: true,
+      data: accounts
+    });
+  })
 );
 
-router.delete('/accounts/:accountId', asyncHandler(linkedAccountController.unlinkAccount));
+// Update linked account
+router.patch(
+  '/profiles/:profileId/accounts/:accountId',
+  apiRateLimit,
+  param('profileId').isString().notEmpty(),
+  param('accountId').isString().notEmpty(),
+  body('name').optional().isString(),
+  body('isPrimary').optional().isBoolean(),
+  validateRequest,
+  asyncHandler(ensureProfileAccess),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { profileId, accountId } = req.params;
+    const updateData = req.body;
 
-// Set primary account route - needs to be implemented in controller
-// router.post('/accounts/:accountId/primary', asyncHandler(linkedAccountController.setPrimaryAccount));
+    const result = await linkedAccountService.updateLinkedAccount(
+      accountId!, // linkedAccountId
+      (req as any).account.id,
+      updateData
+    );
 
-// Search route
-router.post(
+    res.json({
+      success: true,
+      data: result
+    });
+  })
+);
+
+// Unlink account
+router.delete(
+  '/profiles/:profileId/accounts/:accountId',
+  apiRateLimit,
+  param('profileId').isString().notEmpty(),
+  param('accountId').isString().notEmpty(),
+  validateRequest,
+  asyncHandler(ensureProfileAccess),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { profileId, accountId } = req.params;
+
+    await linkedAccountService.unlinkAccount(
+      accountId!, // linkedAccountId
+      (req as any).account.id
+    );
+
+    res.json({
+      success: true,
+      message: 'Account unlinked successfully'
+    });
+  })
+);
+
+// Search account by address
+router.get(
   '/accounts/search',
-  validateRequest(searchByAddressSchema),
-  asyncHandler(linkedAccountController.searchAccountByAddress)
+  apiRateLimit,
+  query('address').isEthereumAddress(),
+  validateRequest,
+  asyncHandler(async (req: Request, res: Response) => {
+    const { address } = req.query;
+
+    const result = await linkedAccountService.searchAccountByAddress(
+      address as string
+    );
+
+    res.json({
+      success: true,
+      data: result
+    });
+  })
 );
 
-// Token allowance routes
+// Grant token allowance
 router.post(
   '/profiles/:profileId/accounts/:accountId/allowances',
-  validateRequest(tokenAllowanceSchema),
-  asyncHandler(linkedAccountController.grantTokenAllowance)
+  apiRateLimit,
+  param('profileId').isString().notEmpty(),
+  param('accountId').isString().notEmpty(),
+  body('tokenAddress').isEthereumAddress(),
+  body('spender').isEthereumAddress(),
+  body('amount').isString().notEmpty(),
+  body('chainId').isNumeric(),
+  body('signature').isString().notEmpty(),
+  validateRequest,
+  asyncHandler(ensureProfileAccess),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { profileId, accountId } = req.params;
+    const allowanceData = req.body;
+
+    // Convert chainId to number if it exists
+    if (allowanceData.chainId) {
+      allowanceData.chainId = parseInt(allowanceData.chainId);
+    }
+
+    const result = await linkedAccountService.grantTokenAllowance(
+      accountId!, // linkedAccountId
+      (req as any).account.id,
+      allowanceData
+    );
+
+    res.json({
+      success: true,
+      data: result
+    });
+  })
 );
 
+// Get account allowances
 router.get(
   '/profiles/:profileId/accounts/:accountId/allowances',
-  asyncHandler(linkedAccountController.getAccountAllowances)
+  apiRateLimit,
+  param('profileId').isString().notEmpty(),
+  param('accountId').isString().notEmpty(),
+  query('chainId').optional().isNumeric(),
+  query('tokenAddress').optional().isEthereumAddress(),
+  validateRequest,
+  asyncHandler(ensureProfileAccess),
+  asyncHandler(async (req: Request, res: Response) => {
+    const { profileId, accountId } = req.params;
+    const { chainId, tokenAddress } = req.query;
+
+    const allowances = await linkedAccountService.getAccountAllowances(
+      accountId!, // linkedAccountId
+      (req as any).account.id
+    );
+
+    res.json({
+      success: true,
+      data: allowances
+    });
+  })
 );
 
 export default router;

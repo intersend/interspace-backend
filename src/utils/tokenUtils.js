@@ -2,36 +2,31 @@ const jwt = require('jsonwebtoken');
 const { config } = require('./config');
 
 /**
- * Generate tokens for V2 authentication supporting accountId
- * Backward compatible with userId for legacy support
+ * Generate tokens for V2 authentication
  */
 function generateTokens(payload) {
   const { 
     accountId, 
-    userId, 
     sessionToken, 
     deviceId,
     activeProfileId 
   } = payload;
 
+  if (!accountId || !sessionToken) {
+    throw new Error('accountId and sessionToken are required for token generation');
+  }
+
   // Create base payload
   const tokenPayload = {
     type: 'access',
     iat: Math.floor(Date.now() / 1000),
-    version: 'v2'
+    version: 'v2',
+    accountId,
+    sessionToken
   };
 
-  // Add accountId for V2 or userId for legacy
-  if (accountId) {
-    tokenPayload.accountId = accountId;
-    tokenPayload.sessionToken = sessionToken;
-    if (activeProfileId) {
-      tokenPayload.activeProfileId = activeProfileId;
-    }
-  } else if (userId) {
-    // Legacy support
-    tokenPayload.userId = userId;
-    tokenPayload.version = 'v1';
+  if (activeProfileId) {
+    tokenPayload.activeProfileId = activeProfileId;
   }
 
   // Add optional deviceId
@@ -71,7 +66,6 @@ function generateTokens(payload) {
 
 /**
  * Verify refresh token for V2 authentication
- * Supports both accountId (V2) and userId (legacy)
  */
 function verifyRefreshToken(token) {
   try {
@@ -98,7 +92,6 @@ function verifyRefreshToken(token) {
 
 /**
  * Verify access token for V2 authentication
- * Supports both accountId (V2) and userId (legacy)
  */
 function verifyAccessToken(token) {
   try {

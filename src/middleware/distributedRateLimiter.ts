@@ -85,10 +85,10 @@ export function createRateLimitMiddleware(
       });
       
       // Log security event
-      const userId = (req as any).user?.userId;
+      const accountId = (req as any).account?.id;
       auditService.logSecurityEvent({
         type: 'RATE_LIMIT_EXCEEDED',
-        userId,
+        accountId,
         details: { 
           endpoint: req.path,
           method: req.method,
@@ -99,7 +99,7 @@ export function createRateLimitMiddleware(
       }).catch(err => logger.error('Failed to log rate limit event', err));
       
       // Check for rate limit abuse
-      securityMonitoringService.checkRateLimitAbuse(userId, req.ip)
+      securityMonitoringService.checkRateLimitAbuse(accountId, req.ip)
         .catch(err => logger.error('Failed to check rate limit abuse', err));
       
       next(new RateLimitError('Too many requests - please try again later'));
@@ -139,7 +139,7 @@ export const distributedApiRateLimit = createRateLimitMiddleware(distributedApiL
 export const distributedAuthRateLimit = createRateLimitMiddleware(distributedAuthLimiter);
 export const distributedTransactionRateLimit = createRateLimitMiddleware(
   distributedTransactionLimiter,
-  (req: Request) => (req as any).user?.userId || req.ip || 'unknown'
+  (req: Request) => (req as any).account?.id || req.ip || 'unknown'
 );
 
 // Endpoint-specific rate limiters

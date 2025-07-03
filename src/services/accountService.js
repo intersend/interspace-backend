@@ -1,25 +1,9 @@
 const { v4: uuidv4 } = require('uuid');
 const { logger } = require('../utils/logger');
-const { PrismaClient } = require('@prisma/client');
-const { withTransaction } = require('../utils/database');
-
-// Create a singleton instance of PrismaClient
-const prismaClientSingleton = () => {
-  return new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-  });
-};
-
-// Use global to ensure we don't create multiple instances
-const globalForPrisma = global;
-const prisma = globalForPrisma.prisma || prismaClientSingleton();
-
-if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.prisma = prisma;
-}
+const { prisma, withTransaction } = require('../utils/database.ts');
 
 // Debug log
-console.log('[AccountService] Prisma initialized successfully');
+console.log('[AccountService] Using shared prisma instance from database.ts');
 
 class AccountService {
   /**
@@ -227,41 +211,25 @@ class AccountService {
   async createAutomaticProfile(account, sessionWallet = null, profileId = null) {
     return withTransaction(async (tx) => {
       try {
-        // For backward compatibility, we still need a user record
-        // In future, this can be removed
-        let user = await tx.user.findFirst({
-          where: {
-            OR: [
-              { email: account.type === 'email' ? account.identifier : undefined },
-              { walletAddress: account.type === 'wallet' ? account.identifier : undefined }
-            ]
-          }
-        });
-
-        if (!user) {
-          // Create a minimal user record for backward compatibility
-          user = await tx.user.create({
-            data: {
-              id: uuidv4(),
-              email: account.type === 'email' ? account.identifier : null,
-              walletAddress: account.type === 'wallet' ? account.identifier : null,
-              isGuest: false,
-              authStrategies: account.type
-            }
-          });
+        // In flat identity model, profiles are top-level entities
+        // No user model needed
+        
+        // Determine profile name based on account metadata
+        let profileName = 'My Smartprofile';
+        if (account.metadata?.displayName) {
+          profileName = `${account.metadata.displayName}'s Profile`;
+        } else if (account.metadata?.username) {
+          profileName = `${account.metadata.username}'s Profile`;
         }
 
         // Create the profile
         const profile = await tx.smartProfile.create({
           data: {
             id: profileId || undefined, // Use provided ID or let Prisma generate one
-            name: 'My Smartprofile',
-            user: {
-              connect: { id: user.id }
-            },
+            name: profileName,
             sessionWalletAddress: sessionWallet?.address || '0x' + '0'.repeat(40), // Fallback address for edge cases
             isActive: true,
-            isDevelopmentWallet: sessionWallet?.isDevelopment || false
+            developmentMode: sessionWallet?.isDevelopment || false
           }
         });
 
@@ -278,7 +246,6 @@ class AccountService {
         if (account.type === 'wallet') {
           await tx.linkedAccount.create({
             data: {
-              userId: user.id,
               profileId: profile.id,
               address: account.identifier.toLowerCase(),
               authStrategy: 'wallet',
@@ -286,7 +253,7 @@ class AccountService {
               customName: account.metadata?.customName || null,
               isPrimary: true, // First wallet is primary
               isActive: true,
-              chainId: account.metadata?.chainId || 1,
+              chainId: account.metadata?.chainId ? parseInt(account.metadata.chainId) : 1,
               metadata: JSON.stringify(account.metadata || {})
             }
           });
@@ -298,7 +265,6 @@ class AccountService {
         if (sessionWallet?.address && sessionWallet.address !== '0x' + '0'.repeat(40)) {
           await tx.linkedAccount.create({
             data: {
-              userId: user.id,
               profileId: profile.id,
               address: sessionWallet.address.toLowerCase(),
               authStrategy: 'mpc',
@@ -308,7 +274,7 @@ class AccountService {
               isActive: true,
               chainId: 1, // Default to mainnet, can be updated later
               metadata: JSON.stringify({
-                isDevelopment: sessionWallet.isDevelopment || false,
+                developmentMode: sessionWallet.isDevelopment || false,
                 createdAt: new Date().toISOString()
               })
             }

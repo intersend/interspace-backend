@@ -19,7 +19,7 @@ export function errorHandler(
     method: req.method,
     ip: req.ip,
     userAgent: req.get('User-Agent')?.slice(0, 100), // Truncate long user agents
-    userId: req.user?.userId,
+    accountId: req.account?.id,  // Changed from userId to accountId for flat identity model
     timestamp: new Date().toISOString()
   };
 

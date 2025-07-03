@@ -23,21 +23,26 @@ export class LinkedAccountService {
    */
   async linkAccount(
     profileId: string, 
-    userId: string, 
+    accountId: string, // Changed from accountId to accountId for access control
     data: LinkAccountRequest
   ): Promise<LinkedAccountResponse> {
     return withTransaction(async (tx) => {
-      // Verify profile ownership
-      const profile = await tx.smartProfile.findFirst({
+      // Verify profile access via ProfileAccount
+      const profileAccess = await tx.profileAccount.findFirst({
         where: { 
-          id: profileId,
-          userId 
+          profileId,
+          accountId 
+        },
+        include: {
+          profile: true
         }
       });
 
-      if (!profile) {
-        throw new NotFoundError('SmartProfile');
+      if (!profileAccess) {
+        throw new NotFoundError('Profile not found or access denied');
       }
+
+      const profile = profileAccess.profile;
 
       // Check if account is already linked to THIS SPECIFIC PROFILE
       const existingAccount = await tx.linkedAccount.findFirst({
@@ -79,7 +84,6 @@ export class LinkedAccountService {
       // Create linked account
       const linkedAccount = await tx.linkedAccount.create({
         data: {
-          userId,
           profileId,
           address: data.address.toLowerCase(),
           authStrategy: 'wallet',
@@ -102,7 +106,7 @@ export class LinkedAccountService {
       // Log the account linking
       await tx.auditLog.create({
         data: {
-          userId,
+          accountId: accountId, // Using accountId for audit trail
           profileId,
           action: 'ACCOUNT_LINKED',
           resource: 'LinkedAccount',
@@ -136,20 +140,23 @@ export class LinkedAccountService {
   /**
    * Get all linked accounts for a profile
    */
-  async getProfileAccounts(profileId: string, userId: string): Promise<LinkedAccountResponse[]> {
-    // Verify profile ownership
-    const profile = await prisma.smartProfile.findFirst({
+  async getProfileAccounts(profileId: string, accountId: string): Promise<LinkedAccountResponse[]> {
+    // Verify profile access via ProfileAccount
+    const profileAccess = await prisma.profileAccount.findFirst({
       where: { 
-        id: profileId,
-        userId 
+        profileId,
+        accountId 
+      },
+      include: {
+        profile: true
       }
     });
 
-    if (!profile) {
-      throw new NotFoundError('SmartProfile');
+    if (!profileAccess) {
+      throw new NotFoundError('Profile not found or access denied');
     }
 
-    const accounts = await prisma.linkedAccount.findMany({
+    const linkedAccounts = await prisma.linkedAccount.findMany({
       where: { 
         profileId,
         isActive: true 
@@ -167,7 +174,7 @@ export class LinkedAccountService {
       ]
     });
 
-    return accounts.map(account => this.formatLinkedAccountResponse(account));
+    return linkedAccounts.map(linkedAccount => this.formatLinkedAccountResponse(linkedAccount));
   }
 
   /**
@@ -178,7 +185,7 @@ export class LinkedAccountService {
       throw new Error('Valid Ethereum address required');
     }
 
-    const account = await prisma.linkedAccount.findFirst({
+    const linkedAccount = await prisma.linkedAccount.findFirst({
       where: {
         address: address.toLowerCase(),
         isActive: true
@@ -199,15 +206,15 @@ export class LinkedAccountService {
       }
     });
 
-    if (!account || !account.profile) {
+    if (!linkedAccount || !linkedAccount.profile) {
       return null;
     }
 
     return {
-      profileId: account.profile.id,
-      profileName: account.profile.name,
-      isActive: account.profile.isActive,
-      linkedAccount: this.formatLinkedAccountResponse(account)
+      profileId: linkedAccount.profile.id,
+      profileName: linkedAccount.profile.name,
+      isActive: linkedAccount.profile.isActive,
+      linkedAccount: this.formatLinkedAccountResponse(linkedAccount)
     };
   }
 
@@ -215,31 +222,42 @@ export class LinkedAccountService {
    * Update a linked account
    */
   async updateLinkedAccount(
-    accountId: string,
-    userId: string,
+    linkedAccountId: string,
+    accountId: string, // Account making the request
     data: UpdateLinkedAccountRequest
   ): Promise<LinkedAccountResponse> {
     return withTransaction(async (tx) => {
-      // Verify account ownership
-      const account = await tx.linkedAccount.findFirst({
+      // Get the linked account with profile
+      const linkedAccount = await tx.linkedAccount.findUnique({
         where: { 
-          id: accountId,
-          userId 
+          id: linkedAccountId
         },
         include: { profile: true }
       });
 
-      if (!account) {
+      if (!linkedAccount) {
         throw new NotFoundError('LinkedAccount');
       }
 
+      // Verify the requesting account has access to this profile
+      const profileAccess = await tx.profileAccount.findFirst({
+        where: {
+          profileId: linkedAccount.profileId,
+          accountId
+        }
+      });
+
+      if (!profileAccess) {
+        throw new AuthorizationError('You do not have access to this profile');
+      }
+
       // Handle primary account changes
-      if (data.isPrimary === true && !account.isPrimary) {
+      if (data.isPrimary === true && !linkedAccount.isPrimary) {
         // Remove primary status from other accounts in the same profile
         await tx.linkedAccount.updateMany({
           where: { 
-            profileId: account.profileId,
-            id: { not: accountId }
+            profileId: linkedAccount.profileId,
+            id: { not: linkedAccountId }
           },
           data: { isPrimary: false }
         });
@@ -247,7 +265,7 @@ export class LinkedAccountService {
 
       // Update the account
       const updatedAccount = await tx.linkedAccount.update({
-        where: { id: accountId },
+        where: { id: linkedAccountId },
         data: {
           ...(data.customName !== undefined && { customName: data.customName }),
           ...(data.isPrimary !== undefined && { isPrimary: data.isPrimary }),
@@ -269,30 +287,13 @@ export class LinkedAccountService {
   /**
    * Remove a linked account
    */
-  async unlinkAccount(accountId: string, userId: string): Promise<void> {
+  async unlinkAccount(linkedAccountId: string, accountId: string): Promise<void> {
     return withTransaction(async (tx) => {
-      console.log('Attempting to unlink account:', { accountId, userId });
+      console.log('Attempting to unlink account:', { linkedAccountId, accountId });
       
-      // First, try to find the account by ID only to debug
-      const accountCheck = await tx.linkedAccount.findUnique({
-        where: { id: accountId }
-      });
-      
-      if (accountCheck) {
-        console.log('Found account in DB:', {
-          id: accountCheck.id,
-          dbUserId: accountCheck.userId,
-          requestUserId: userId,
-          match: accountCheck.userId === userId
-        });
-      }
-      
-      // Verify account ownership
-      const account = await tx.linkedAccount.findFirst({
-        where: { 
-          id: accountId,
-          userId 
-        },
+      // Get the linked account
+      const linkedAccount = await tx.linkedAccount.findUnique({
+        where: { id: linkedAccountId },
         include: {
           profile: {
             include: {
@@ -304,17 +305,29 @@ export class LinkedAccountService {
         }
       });
 
-      if (!account) {
+      if (!linkedAccount) {
         throw new NotFoundError('LinkedAccount');
+      }
+      
+      // Verify the requesting account has access to this profile
+      const profileAccess = await tx.profileAccount.findFirst({
+        where: {
+          profileId: linkedAccount.profileId,
+          accountId
+        }
+      });
+
+      if (!profileAccess) {
+        throw new AuthorizationError('You do not have access to this profile');
       }
 
       // Allow removing the last account - profile can exist without linked accounts
-      console.log(`Unlinking account from profile ${account.profileId}. Active accounts: ${account.profile?.linkedAccounts.length || 0}`);
+      console.log(`Unlinking account from profile ${linkedAccount.profileId}. Active accounts: ${linkedAccount.profile?.linkedAccounts.length || 0}`);
 
       // If removing primary account, assign primary to another account (if one exists)
-      if (account.isPrimary && account.profile && account.profile.linkedAccounts.length > 1) {
-        const nextAccount = account.profile.linkedAccounts.find(acc => 
-          acc.id !== accountId && acc.isActive
+      if (linkedAccount.isPrimary && linkedAccount.profile && linkedAccount.profile.linkedAccounts.length > 1) {
+        const nextAccount = linkedAccount.profile.linkedAccounts.find(acc => 
+          acc.id !== linkedAccountId && acc.isActive
         );
         
         if (nextAccount) {
@@ -327,54 +340,53 @@ export class LinkedAccountService {
 
       // Soft delete the account first
       await tx.linkedAccount.update({
-        where: { id: accountId },
+        where: { id: linkedAccountId },
         data: { isActive: false }
       });
 
-      // Check if this EOA is linked to any other active profiles for the same user
+      // Check if this EOA is linked to any other active profiles
       const otherActiveAccounts = await tx.linkedAccount.findMany({
         where: {
-          userId: account.userId,
-          address: account.address,
+          address: linkedAccount.address,
           isActive: true,
-          id: { not: accountId } // Exclude the current account
+          id: { not: linkedAccountId } // Exclude the current account
         }
       });
 
       // If no other active profiles use this EOA, completely remove it
       if (otherActiveAccounts.length === 0) {
-        console.log(`🗑️ Completely removing EOA ${account.address} from user ${account.userId} as it's not linked to any other profiles`);
+        console.log(`🗑️ Completely removing EOA ${linkedAccount.address} as it's not linked to any other profiles`);
         
         // Delete the record entirely
         await tx.linkedAccount.delete({
-          where: { id: accountId }
+          where: { id: linkedAccountId }
         });
 
         // Log the complete removal
         await tx.auditLog.create({
           data: {
-            userId: account.userId,
-            profileId: account.profileId,
+            accountId: accountId, // Using accountId for audit trail
+            profileId: linkedAccount.profileId,
             action: 'ACCOUNT_COMPLETELY_REMOVED',
             resource: 'LinkedAccount',
             details: JSON.stringify({
-              address: account.address,
+              address: linkedAccount.address,
               reason: 'Not linked to any other profiles'
             })
           }
         });
       } else {
-        console.log(`🔗 Keeping EOA ${account.address} for user ${account.userId} as it's still linked to ${otherActiveAccounts.length} other profile(s)`);
+        console.log(`🔗 Keeping EOA ${linkedAccount.address} as it's still linked to ${otherActiveAccounts.length} other profile(s)`);
 
         // Log the soft delete
         await tx.auditLog.create({
           data: {
-            userId: account.userId,
-            profileId: account.profileId,
+            accountId: accountId, // Using accountId for audit trail
+            profileId: linkedAccount.profileId,
             action: 'ACCOUNT_UNLINKED',
             resource: 'LinkedAccount',
             details: JSON.stringify({
-              address: account.address,
+              address: linkedAccount.address,
               remainingProfiles: otherActiveAccounts.length
             })
           }
@@ -383,7 +395,7 @@ export class LinkedAccountService {
 
       // Update Orby cluster to reflect removed account
       try {
-        await orbyService.updateAccountCluster(account.profileId!, tx);
+        await orbyService.updateAccountCluster(linkedAccount.profileId, tx);
       } catch (err) {
         logger.error('Failed to update Orby cluster after unlinking account:', err);
         // Throw the error to rollback the transaction
@@ -402,29 +414,43 @@ export class LinkedAccountService {
    * Grant token allowance to session wallet
    */
   async grantTokenAllowance(
-    accountId: string,
-    userId: string,
+    linkedAccountId: string,
+    accountId: string, // Changed from accountId to accountId for access control
     data: TokenAllowanceRequest
   ): Promise<TokenAllowanceResponse> {
     return withTransaction(async (tx) => {
-      // Verify account ownership
-      const account = await tx.linkedAccount.findFirst({
+      // Get the linked account with profile info
+      const linkedAccount = await tx.linkedAccount.findFirst({
         where: { 
-          id: accountId,
-          userId,
+          id: linkedAccountId,
           isActive: true
+        },
+        include: {
+          profile: true
         }
       });
 
-      if (!account) {
+      if (!linkedAccount) {
         throw new NotFoundError('LinkedAccount');
+      }
+
+      // Verify the requesting account has access to this profile
+      const profileAccess = await tx.profileAccount.findFirst({
+        where: {
+          profileId: linkedAccount.profileId,
+          accountId
+        }
+      });
+
+      if (!profileAccess) {
+        throw new AuthorizationError('You do not have access to this profile');
       }
 
       // Check if allowance already exists
       const existingAllowance = await tx.tokenAllowance.findUnique({
         where: {
           linkedAccountId_tokenAddress_chainId: {
-            linkedAccountId: accountId,
+            linkedAccountId: linkedAccountId,
             tokenAddress: data.tokenAddress.toLowerCase(),
             chainId: data.chainId
           }
@@ -445,7 +471,7 @@ export class LinkedAccountService {
         // Create new allowance
         allowance = await tx.tokenAllowance.create({
           data: {
-            linkedAccountId: accountId,
+            linkedAccountId: linkedAccountId,
             tokenAddress: data.tokenAddress.toLowerCase(),
             allowanceAmount: BigInt(data.allowanceAmount),
             chainId: data.chainId
@@ -460,22 +486,36 @@ export class LinkedAccountService {
   /**
    * Get token allowances for an account
    */
-  async getAccountAllowances(accountId: string, userId: string): Promise<TokenAllowanceResponse[]> {
-    // Verify account ownership
-    const account = await prisma.linkedAccount.findFirst({
+  async getAccountAllowances(linkedAccountId: string, accountId: string): Promise<TokenAllowanceResponse[]> {
+    // Get the linked account with profile info
+    const linkedAccount = await prisma.linkedAccount.findFirst({
       where: { 
-        id: accountId,
-        userId,
+        id: linkedAccountId,
         isActive: true
+      },
+      include: {
+        profile: true
       }
     });
 
-    if (!account) {
+    if (!linkedAccount) {
       throw new NotFoundError('LinkedAccount');
     }
 
+    // Verify the requesting account has access to this profile
+    const profileAccess = await prisma.profileAccount.findFirst({
+      where: {
+        profileId: linkedAccount.profileId,
+        accountId
+      }
+    });
+
+    if (!profileAccess) {
+      throw new AuthorizationError('You do not have access to this profile');
+    }
+
     const allowances = await prisma.tokenAllowance.findMany({
-      where: { linkedAccountId: accountId },
+      where: { linkedAccountId: linkedAccountId },
       orderBy: { createdAt: 'desc' }
     });
 
@@ -485,17 +525,33 @@ export class LinkedAccountService {
   /**
    * Revoke token allowance
    */
-  async revokeTokenAllowance(allowanceId: string, userId: string): Promise<void> {
-    // Verify allowance ownership through linked account
+  async revokeTokenAllowance(allowanceId: string, accountId: string): Promise<void> {
+    // Verify allowance ownership through linked account and profile access
     const allowance = await prisma.tokenAllowance.findUnique({
       where: { id: allowanceId },
       include: {
-        linkedAccount: true
+        linkedAccount: {
+          include: {
+            profile: true
+          }
+        }
       }
     });
 
-    if (!allowance || allowance.linkedAccount.userId !== userId) {
+    if (!allowance) {
       throw new NotFoundError('TokenAllowance');
+    }
+
+    // Verify the requesting account has access to this profile
+    const profileAccess = await prisma.profileAccount.findFirst({
+      where: {
+        profileId: allowance.linkedAccount.profileId,
+        accountId
+      }
+    });
+
+    if (!profileAccess) {
+      throw new AuthorizationError('You do not have access to this profile');
     }
 
     await prisma.tokenAllowance.delete({

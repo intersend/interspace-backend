@@ -12,15 +12,15 @@ class ProfileControllerV2 {
    */
   async getProfiles(req, res, next) {
     try {
-      const accountId = req.account?.id || req.user?.accountId;
+      const accountId = req.account?.id || req.user?.accountId;  // Support both account and legacy user objects
       
       // Debug logging
       logger.info('ProfileControllerV2.getProfiles - Request details:', {
         accountId,
         hasAccount: !!req.account,
         accountObj: req.account,
-        hasUser: !!req.user,
-        userObj: req.user
+        hasUser: !!req.user,  // Legacy user object support
+        userObj: req.user  // Legacy user object
       });
       
       if (!accountId) {
@@ -68,7 +68,7 @@ class ProfileControllerV2 {
       }
 
       const { name, developmentMode = false } = req.body;
-      const accountId = req.account?.id || req.user?.accountId;
+      const accountId = req.account?.id || req.user?.accountId;  // Support both account and legacy user objects
       
       if (!accountId) {
         return res.status(401).json({
@@ -82,12 +82,12 @@ class ProfileControllerV2 {
       const account = await prisma.account.findUnique({
         where: { id: accountId }
       });
-      let userId = req.user?.userId;
+      let userId = req.user?.userId;  // Legacy user ID for backward compatibility
       
       if (!userId) {
-        // Find or create user based on account
+        // Find or create legacy user record based on account
         const { prisma } = require('../utils/database');
-        let user = await prisma.user.findFirst({
+        let user = await prisma.user.findFirst({  // Legacy user table
           where: {
             OR: [
               account.type === 'email' ? { email: account.identifier } : {},
@@ -97,7 +97,7 @@ class ProfileControllerV2 {
         });
         
         if (!user) {
-          user = await prisma.user.create({
+          user = await prisma.user.create({  // Create legacy user record for backward compatibility
             data: {
               email: account.type === 'email' ? account.identifier : undefined,
               walletAddress: account.type === 'wallet' ? account.identifier : undefined,
@@ -251,13 +251,8 @@ class ProfileControllerV2 {
         });
       }
 
-      // Check if it's the last profile
-      if (profiles.length === 1) {
-        return res.status(400).json({
-          success: false,
-          error: 'Cannot delete the last profile'
-        });
-      }
+      // In flat identity model, we allow deleting any profile
+      // Even if it's the last one
 
       // Delete profile
       const userId = profile.userId || req.user?.userId;

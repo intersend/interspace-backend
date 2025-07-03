@@ -22,7 +22,7 @@ export class SmartProfileService {
    * Create a new SmartProfile with session wallet
    */
   async createProfile(
-    userId: string, 
+    accountId: string, 
     data: CreateSmartProfileRequest,
     primaryWalletAddress?: string
   ): Promise<SmartProfileResponse> {
@@ -37,10 +37,19 @@ export class SmartProfileService {
       // Create profile first to get ID
       const profile = await tx.smartProfile.create({
         data: {
-          userId,
           name: data.name,
           sessionWalletAddress: 'pending', // Temporary placeholder
           isActive: false,
+        }
+      });
+
+      // Create ProfileAccount relationship
+      await tx.profileAccount.create({
+        data: {
+          profileId: profile.id,
+          accountId,
+          isPrimary: true,
+          permissions: { role: 'OWNER' } // Store role in permissions JSON field
         }
       });
 
@@ -93,7 +102,7 @@ export class SmartProfileService {
         // Log the profile creation early (before Orby)
         await tx.auditLog.create({
           data: {
-            userId,
+            accountId,
             profileId: profile.id,
             action: 'SMART_PROFILE_CREATED',
             resource: 'SmartProfile',
@@ -114,7 +123,7 @@ export class SmartProfileService {
 
       } catch (error) {
         // Log the error for debugging
-        console.error(`Profile creation failed for user ${userId}:`, {
+        console.error(`Profile creation failed for account ${accountId}:`, {
           error: error instanceof Error ? error.message : error,
           stack: error instanceof Error ? error.stack : undefined
         });
@@ -200,7 +209,7 @@ export class SmartProfileService {
         // Create an audit log entry for successful Orby integration
         await prisma.auditLog.create({
           data: {
-            userId,
+            accountId,
             profileId: updatedProfile.id,
             action: 'ORBY_CLUSTER_CREATED',
             resource: 'OrbyAccountCluster',
@@ -221,7 +230,7 @@ export class SmartProfileService {
         // Create an audit log entry for failed Orby integration
         await prisma.auditLog.create({
           data: {
-            userId,
+            accountId,
             profileId: updatedProfile.id,
             action: 'ORBY_CLUSTER_CREATION_FAILED',
             resource: 'OrbyAccountCluster',
@@ -252,50 +261,66 @@ export class SmartProfileService {
 
   /**
    * Get all profiles for a user
+   * @deprecated Use getAccountProfiles instead
    */
-  async getUserProfiles(userId: string): Promise<SmartProfileResponse[]> {
-    const profiles = await prisma.smartProfile.findMany({
-      where: { userId },
+  async getUserProfiles(accountId: string): Promise<SmartProfileResponse[]> {
+    return this.getAccountProfiles(accountId);
+  }
+
+  /**
+   * Get all profiles for an account
+   */
+  async getAccountProfiles(accountId: string): Promise<SmartProfileResponse[]> {
+    const profileAccounts = await prisma.profileAccount.findMany({
+      where: { accountId },
       include: {
-        _count: {
-          select: {
-            linkedAccounts: true,
-            apps: true,
-            folders: true
+        profile: {
+          include: {
+            _count: {
+              select: {
+                linkedAccounts: true,
+                apps: true,
+                folders: true
+              }
+            }
           }
         }
       },
-      orderBy: { createdAt: 'desc' }
+      orderBy: { profile: { createdAt: 'desc' } }
     });
 
-    return profiles.map(profile => this.formatProfileResponse(profile));
+    return profileAccounts.map(pa => this.formatProfileResponse(pa.profile));
   }
 
   /**
    * Get a specific profile by ID
    */
-  async getProfileById(profileId: string, userId: string): Promise<SmartProfileResponse> {
-    const profile = await prisma.smartProfile.findFirst({
+  async getProfileById(profileId: string, accountId: string): Promise<SmartProfileResponse> {
+    const profileAccount = await prisma.profileAccount.findFirst({
       where: { 
-        id: profileId,
-        userId 
+        profileId,
+        accountId 
       },
       include: {
-        _count: {
-          select: {
-            linkedAccounts: true,
-            apps: true,
-            folders: true
+        profile: {
+          include: {
+            _count: {
+              select: {
+                linkedAccounts: true,
+                apps: true,
+                folders: true
+              }
+            }
           }
         }
       }
     });
 
-    if (!profile) {
+    if (!profileAccount) {
       throw new NotFoundError('SmartProfile');
     }
 
-    return this.formatProfileResponse(profile);
+    return this.formatProfileResponse(profileAccount.profile);
   }
 
   /**
@@ -303,19 +328,20 @@ export class SmartProfileService {
    */
   async updateProfile(
     profileId: string, 
-    userId: string, 
+    accountId: string, 
     data: UpdateSmartProfileRequest
   ): Promise<SmartProfileResponse> {
     return withTransaction(async (tx) => {
       // Verify ownership
-      const existingProfile = await tx.smartProfile.findFirst({
+      const existingProfileAccount = await tx.profileAccount.findFirst({
         where: { 
-          id: profileId,
-          userId 
-        }
+          profileId,
+          accountId 
+        },
+        include: { profile: true }
       });
 
-      if (!existingProfile) {
+      if (!existingProfileAccount) {
         throw new NotFoundError('SmartProfile');
       }
 
@@ -323,11 +349,20 @@ export class SmartProfileService {
 
       // Handle activation logic
       if (data.isActive === true) {
-        // Deactivate all other profiles for this user
+        // Deactivate all other profiles for this account
+        const accountProfiles = await tx.profileAccount.findMany({
+          where: { accountId },
+          select: { profileId: true }
+        });
+        
+        const profileIds = accountProfiles.map(ap => ap.profileId);
+        
         await tx.smartProfile.updateMany({
           where: { 
-            userId,
-            id: { not: profileId }
+            id: { 
+              in: profileIds,
+              not: profileId 
+            }
           },
           data: { isActive: false }
         });
@@ -355,7 +390,7 @@ export class SmartProfileService {
       // Log the update
       await tx.auditLog.create({
         data: {
-          userId,
+          accountId,
           profileId: profileId,
           action: 'SMART_PROFILE_UPDATED',
           resource: 'SmartProfile',
@@ -373,32 +408,36 @@ export class SmartProfileService {
   /**
    * Delete a profile
    */
-  async deleteProfile(profileId: string, userId: string): Promise<void> {
+  async deleteProfile(profileId: string, accountId: string): Promise<void> {
     return withTransaction(async (tx) => {
       // Verify ownership
-      const profile = await tx.smartProfile.findFirst({
+      const profileAccount = await tx.profileAccount.findFirst({
         where: { 
-          id: profileId,
-          userId 
+          profileId,
+          accountId 
         },
         include: {
-          linkedAccounts: true
+          profile: {
+            include: {
+              linkedAccounts: true
+            }
+          }
         }
       });
 
-      if (!profile) {
+      if (!profileAccount) {
         throw new NotFoundError('SmartProfile');
       }
 
-      // Check if profile has linked accounts
-      if (profile.linkedAccounts.length > 0) {
-        throw new ConflictError('Cannot delete profile with linked accounts. Please remove all linked accounts first.');
-      }
+      const profile = profileAccount.profile;
+
+      // In flat identity model, we allow deleting profiles even with linked accounts
+      // The cascade delete will handle removing all related data
 
       // Log the deletion before actually deleting
       await tx.auditLog.create({
         data: {
-          userId,
+          accountId,
           profileId: profileId,
           action: 'SMART_PROFILE_DELETED',
           resource: 'SmartProfile',
@@ -419,46 +458,62 @@ export class SmartProfileService {
   /**
    * Get active profile for a user
    */
-  async getActiveProfile(userId: string): Promise<SmartProfileResponse | null> {
-    const activeProfile = await prisma.smartProfile.findFirst({
+  async getActiveProfile(accountId: string): Promise<SmartProfileResponse | null> {
+    const activeProfileAccount = await prisma.profileAccount.findFirst({
       where: { 
-        userId,
-        isActive: true 
+        accountId,
+        profile: {
+          isActive: true
+        }
       },
       include: {
-        _count: {
-          select: {
-            linkedAccounts: true,
-            apps: true,
-            folders: true
+        profile: {
+          include: {
+            _count: {
+              select: {
+                linkedAccounts: true,
+                apps: true,
+                folders: true
+              }
+            }
           }
         }
       }
     });
 
-    return activeProfile ? this.formatProfileResponse(activeProfile) : null;
+    return activeProfileAccount ? this.formatProfileResponse(activeProfileAccount.profile) : null;
   }
 
   /**
    * Switch active profile
    */
-  async switchActiveProfile(profileId: string, userId: string): Promise<SmartProfileResponse> {
+  async switchActiveProfile(profileId: string, accountId: string): Promise<SmartProfileResponse> {
     return withTransaction(async (tx) => {
       // Verify ownership and that profile exists
-      const profile = await tx.smartProfile.findFirst({
+      const profileAccount = await tx.profileAccount.findFirst({
         where: { 
-          id: profileId,
-          userId 
-        }
+          profileId,
+          accountId 
+        },
+        include: { profile: true }
       });
 
-      if (!profile) {
+      if (!profileAccount) {
         throw new NotFoundError('SmartProfile');
       }
 
-      // Deactivate all profiles
+      const profile = profileAccount.profile;
+
+      // Deactivate all profiles for this account
+      const accountProfiles = await tx.profileAccount.findMany({
+        where: { accountId },
+        select: { profileId: true }
+      });
+      
+      const profileIds = accountProfiles.map(ap => ap.profileId);
+      
       await tx.smartProfile.updateMany({
-        where: { userId },
+        where: { id: { in: profileIds } },
         data: { isActive: false }
       });
 
@@ -480,7 +535,7 @@ export class SmartProfileService {
       // Log the profile switch
       await tx.auditLog.create({
         data: {
-          userId,
+          accountId,
           profileId: profileId,
           action: 'SMART_PROFILE_ACTIVATED',
           resource: 'SmartProfile',
@@ -498,8 +553,8 @@ export class SmartProfileService {
   /**
    * Get session wallet transaction routing for a profile
    */
-  async getTransactionRouting(profileId: string, userId: string, targetApp: string): Promise<any> {
-    const profile = await this.getProfileById(profileId, userId);
+  async getTransactionRouting(profileId: string, accountId: string, targetApp: string): Promise<any> {
+    const profile = await this.getProfileById(profileId, accountId);
     
     // Get primary linked account
     const primaryAccount = await prisma.linkedAccount.findFirst({
@@ -523,16 +578,16 @@ export class SmartProfileService {
   /**
    * Validate session wallet
    */
-  async validateSessionWallet(profileId: string, userId: string): Promise<boolean> {
+  async validateSessionWallet(profileId: string, accountId: string): Promise<boolean> {
     return sessionWalletService.isSessionWalletDeployed(profileId);
   }
 
   /**
    * Get session wallet address for a profile
    */
-  async getSessionWalletAddress(profileId: string, userId: string): Promise<string> {
+  async getSessionWalletAddress(profileId: string, accountId: string): Promise<string> {
     // Verify ownership
-    await this.getProfileById(profileId, userId);
+    await this.getProfileById(profileId, accountId);
     
     return sessionWalletService.getSessionWalletAddress(profileId);
   }
@@ -542,14 +597,14 @@ export class SmartProfileService {
    */
   async executeTransaction(
     profileId: string,
-    userId: string,
+    accountId: string,
     targetAddress: string,
     value: string,
     data: string,
     chainId: number = this.config.DEFAULT_CHAIN_ID
   ): Promise<string> {
     // Verify ownership
-    await this.getProfileById(profileId, userId);
+    await this.getProfileById(profileId, accountId);
     
     return sessionWalletService.executeTransaction(
       profileId,
@@ -563,9 +618,9 @@ export class SmartProfileService {
   /**
    * Rotate the session wallet key shares for a profile
    */
-  async rotateSessionWallet(profileId: string, userId: string): Promise<any> {
+  async rotateSessionWallet(profileId: string, accountId: string): Promise<any> {
     // Verify ownership
-    await this.getProfileById(profileId, userId);
+    await this.getProfileById(profileId, accountId);
     return sessionWalletService.rotateSessionWallet(profileId);
   }
 
@@ -576,7 +631,7 @@ export class SmartProfileService {
    * Generate MPC wallet for a profile
    * This triggers the key generation process with duo-node
    */
-  private async generateMPCWallet(profileId: string, userId: string): Promise<{ address: string; keyId: string }> {
+  private async generateMPCWallet(profileId: string, accountId: string): Promise<{ address: string; keyId: string }> {
     try {
       // Get the duo-node URL from config
       const duoNodeUrl = process.env.DUO_NODE_URL || 'http://localhost:3001';

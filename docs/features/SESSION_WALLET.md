@@ -72,7 +72,7 @@ For development without blockchain:
 // Automatic session wallet creation
 const profile = await smartProfileService.createProfile({
   name: "Trading Profile",
-  userId: user.id
+  userId: account.id  // Legacy field name, represents accountId
 });
 // profile.sessionWalletAddress is ready
 ```

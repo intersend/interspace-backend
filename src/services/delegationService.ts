@@ -52,7 +52,7 @@ class DelegationService {
    * Create an EIP-7702 authorization request for frontend signing
    */
   async createDelegationAuthorization(
-    userId: string,
+    accountId: string,
     linkedAccountId: string,
     sessionWallet: string,
     chainId: number,
@@ -63,7 +63,13 @@ class DelegationService {
     const linkedAccount = await prisma.linkedAccount.findFirst({
       where: {
         id: linkedAccountId,
-        userId
+        profile: {
+          profileAccounts: {
+            some: {
+              accountId
+            }
+          }
+        }
       }
     });
 
@@ -112,7 +118,7 @@ class DelegationService {
    * Store a signed delegation authorization
    */
   async storeDelegation(
-    userId: string,
+    accountId: string,
     linkedAccountId: string,
     signedAuthorization: SignedAuthorization,
     permissions: DelegationPermissions = { all: true },
@@ -122,7 +128,13 @@ class DelegationService {
     const linkedAccount = await prisma.linkedAccount.findFirst({
       where: {
         id: linkedAccountId,
-        userId
+        profile: {
+          profileAccounts: {
+            some: {
+              accountId
+            }
+          }
+        }
       },
       include: {
         profile: true
@@ -160,7 +172,7 @@ class DelegationService {
     // Log the delegation creation
     if (linkedAccount.profile) {
       // TODO: await auditLogService.log({
-      //   userId,
+      //   accountId,
       //   profileId: linkedAccount.profile.id,
       //   action: 'DELEGATION_CREATED',
       //   resource: 'AccountDelegation',
@@ -187,12 +199,12 @@ class DelegationService {
   ): Promise<boolean> {
     const delegation = await prisma.accountDelegation.findFirst({
       where: {
-        linkedAccount: {
-          address: linkedAccountAddress
-        },
         sessionWallet,
         chainId,
         isActive: true,
+        linkedAccount: {
+          address: linkedAccountAddress
+        },
         OR: [
           { expiresAt: null },
           { expiresAt: { gt: new Date() } }
@@ -207,14 +219,18 @@ class DelegationService {
    * Get active delegations for a profile
    */
   async getProfileDelegations(
-    userId: string,
+    accountId: string,
     profileId: string
   ): Promise<AccountDelegation[]> {
     // Verify profile ownership
     const profile = await prisma.smartProfile.findFirst({
       where: {
         id: profileId,
-        userId
+        profileAccounts: {
+          some: {
+            accountId
+          }
+        }
       }
     });
 
@@ -246,7 +262,7 @@ class DelegationService {
    * Execute a transaction using delegation
    */
   async executeWithDelegation(
-    userId: string,
+    accountId: string,
     delegationId: string,
     transaction: TransactionRequest
   ): Promise<{ hash: string }> {
@@ -255,7 +271,13 @@ class DelegationService {
       where: {
         id: delegationId,
         linkedAccount: {
-          userId
+          profile: {
+            profileAccounts: {
+              some: {
+                accountId
+              }
+            }
+          }
         },
         isActive: true
       },
@@ -300,7 +322,7 @@ class DelegationService {
 
     // Log the delegated execution
     // TODO: await auditLogService.log({
-    //   userId,
+    //   accountId,
     //   profileId: delegation.linkedAccount.profile.id,
     //   action: 'DELEGATED_TRANSACTION_EXECUTED',
     //   resource: 'Transaction',
@@ -321,14 +343,20 @@ class DelegationService {
    * Revoke a delegation
    */
   async revokeDelegation(
-    userId: string,
+    accountId: string,
     delegationId: string
   ): Promise<void> {
     const delegation = await prisma.accountDelegation.findFirst({
       where: {
         id: delegationId,
         linkedAccount: {
-          userId
+          profile: {
+            profileAccounts: {
+              some: {
+                accountId
+              }
+            }
+          }
         }
       },
       include: {
@@ -356,7 +384,7 @@ class DelegationService {
     // Log the revocation
     if (delegation.linkedAccount.profile) {
       // TODO: await auditLogService.log({
-      //   userId,
+      //   accountId,
       //   profileId: delegation.linkedAccount.profile.id,
       //   action: 'DELEGATION_REVOKED',
       //   resource: 'AccountDelegation',

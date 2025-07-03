@@ -60,9 +60,10 @@ export interface AuthTokens {
 }
 
 export interface JwtPayload {
-  userId: string;
-  deviceId?: string;
+  accountId: string;
+  sessionToken?: string;
   type: 'access' | 'refresh';
+  version?: string;
   iat: number;
   exp: number;
 }
