@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import { appsService } from '@/services/appsService';
-import { ApiResponse } from '@/types';
-const { getAuthorizationId, verifyProfileAccess } = require('@/utils/profileAccessV2');
+import { appsService } from '../services/appsService';
+import { ApiResponse } from '../types';
+const { getAuthorizationId, verifyProfileAccess } = require('../utils/profileAccessV2');
 
 export class AppsController {
   
@@ -32,7 +32,7 @@ export class AppsController {
       }
 
       // Verify access to profile
-      const { hasAccess } = await verifyProfileAccess(profileId, authInfo.id, authInfo.isV2);
+      const { hasAccess } = await verifyProfileAccess(profileId, authInfo.id);
       if (!hasAccess) {
         res.status(403).json({
           success: false,
@@ -41,8 +41,8 @@ export class AppsController {
         return;
       }
 
-      // Use userId for service call (V1 compatibility) or fall back to account ID
-      const app = await appsService.createApp(profileId, authInfo.userId || authInfo.id, {
+      // Pass account ID to service
+      const app = await appsService.createApp(profileId, authInfo.id, {
         name,
         url,
         iconUrl,
@@ -99,7 +99,7 @@ export class AppsController {
         return;
       }
 
-      const apps = await appsService.getProfileApps(profileId, authInfo.userId || authInfo.id);
+      const apps = await appsService.getProfileApps(profileId, authInfo.id);
 
       res.status(200).json({
         success: true,
@@ -149,7 +149,7 @@ export class AppsController {
         return;
       }
 
-      const apps = await appsService.getFolderApps(folderId, profileId, authInfo.userId || authInfo.id);
+      const apps = await appsService.getFolderApps(folderId, profileId, authInfo.id);
 
       res.status(200).json({
         success: true,
@@ -199,7 +199,7 @@ export class AppsController {
         return;
       }
 
-      const apps = await appsService.getRootApps(profileId, authInfo.userId || authInfo.id);
+      const apps = await appsService.getRootApps(profileId, authInfo.id);
 
       res.status(200).json({
         success: true,
@@ -240,7 +240,7 @@ export class AppsController {
         return;
       }
 
-      const app = await appsService.updateApp(appId, authInfo.userId || authInfo.id, {
+      const app = await appsService.updateApp(appId, authInfo.id, {
         name,
         url,
         iconUrl
@@ -285,7 +285,7 @@ export class AppsController {
         return;
       }
 
-      await appsService.deleteApp(appId, authInfo.userId || authInfo.id);
+      await appsService.deleteApp(appId, authInfo.id);
 
       res.status(200).json({
         success: true,
@@ -336,7 +336,7 @@ export class AppsController {
         return;
       }
 
-      await appsService.reorderApps(profileId, authInfo.userId || authInfo.id, appOrders);
+      await appsService.reorderApps(profileId, authInfo.id, appOrders);
 
       res.status(200).json({
         success: true,
@@ -377,7 +377,7 @@ export class AppsController {
         return;
       }
 
-      const app = await appsService.moveAppToFolder(appId, authInfo.userId || authInfo.id, folderId);
+      const app = await appsService.moveAppToFolder(appId, authInfo.id, folderId);
 
       res.status(200).json({
         success: true,
@@ -429,7 +429,7 @@ export class AppsController {
         return;
       }
 
-      const apps = await appsService.searchApps(profileId, authInfo.userId || authInfo.id, query as string);
+      const apps = await appsService.searchApps(profileId, authInfo.id, query as string);
 
       res.status(200).json({
         success: true,

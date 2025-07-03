@@ -6,11 +6,17 @@ import {
   VerifiedRegistrationResponse,
   VerifiedAuthenticationResponse
 } from '@simplewebauthn/server';
-import { PublicKeyCredentialCreationOptionsJSON, PublicKeyCredentialRequestOptionsJSON } from '@simplewebauthn/types';
+import { 
+  PublicKeyCredentialCreationOptionsJSON, 
+  PublicKeyCredentialRequestOptionsJSON,
+  AuthenticationResponseJSON,
+  RegistrationResponseJSON
+} from '@simplewebauthn/types';
 import { prisma, withTransaction } from '@/utils/database';
 import { challengeService } from './challengeService';
 import { config } from '@/utils/config';
 import { AuthenticationError, NotFoundError } from '@/types';
+import { logger } from '@/utils/logger';
 
 interface PasskeyRegistrationOptions {
   accountId: string; // Changed from userId to accountId for V2
@@ -353,6 +359,160 @@ class PasskeyService {
       };
     } catch (error) {
       console.error('Passkey authentication error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate registration options for a new user (no authentication required)
+   */
+  async generateRegistrationOptionsForNewUser(params: {
+    username: string;
+    displayName?: string;
+    deviceName?: string;
+  }): Promise<PublicKeyCredentialCreationOptionsJSON> {
+    try {
+      const { username, displayName, deviceName } = params;
+
+      // Generate a new user ID for the new account
+      const { v4: uuidv4 } = require('uuid');
+      const newUserId = uuidv4();
+
+      // Generate challenge first (returns base64url string)
+      const challenge = challengeService.generateChallenge(newUserId, 'registration');
+
+      const options = await generateRegistrationOptions({
+        rpName: this.rpName,
+        rpID: this.rpID,
+        userID: Buffer.from(newUserId),
+        userName: username,
+        userDisplayName: displayName || username,
+        challenge: Buffer.from(challenge, 'base64url'), // Convert base64url string to Buffer
+        attestationType: 'none',
+        authenticatorSelection: {
+          residentKey: 'preferred',
+          userVerification: 'preferred',
+          authenticatorAttachment: 'platform'
+        },
+        excludeCredentials: [], // No credentials to exclude for new users
+        supportedAlgorithmIDs: [-7, -257], // ES256, RS256
+        timeout: 60000
+      });
+
+      return options;
+    } catch (error: any) {
+      logger.error('Generate registration options for new user error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Register a new user with a passkey
+   */
+  async registerNewUserWithPasskey(
+    response: RegistrationResponseJSON,
+    expectedChallenge: string,
+    params: {
+      username: string;
+      displayName?: string;
+      deviceName?: string;
+    }
+  ): Promise<{
+    verified: boolean;
+    account?: any;
+    tokens?: any;
+    profiles?: any[];
+    activeProfile?: any;
+    isNewUser: boolean;
+  }> {
+    try {
+      const { username, displayName, deviceName } = params;
+      const { v4: uuidv4 } = require('uuid');
+
+      // Generate a new user ID for verification
+      const tempUserId = uuidv4();
+
+      // Verify the registration
+      const verification = await verifyRegistrationResponse({
+        response,
+        expectedChallenge,
+        expectedOrigin: this.origin,
+        expectedRPID: this.rpID,
+        requireUserVerification: false
+      });
+
+      if (!verification.verified || !verification.registrationInfo) {
+        throw new AuthenticationError('Registration verification failed');
+      }
+
+      const { credential } = verification.registrationInfo;
+
+      // Create new account with passkey
+      const accountService = require('./accountService');
+      const account = await accountService.findOrCreateAccount({
+        type: 'passkey',
+        identifier: credential.id,
+        metadata: {
+          publicKey: Buffer.from(credential.publicKey).toString('base64url'),
+          counter: credential.counter,
+          transports: credential.transports,
+          aaguid: verification.registrationInfo.aaguid,
+          credentialDeviceType: verification.registrationInfo.credentialDeviceType,
+          credentialBackedUp: verification.registrationInfo.credentialBackedUp,
+          deviceName: deviceName || 'Unknown Device',
+          username,
+          displayName: displayName || username,
+          createdAt: new Date().toISOString()
+        }
+      });
+
+      // Mark account as verified since passkey proves ownership
+      await accountService.verifyAccount(account.id);
+
+      // Create automatic profile for the new user
+      const sessionWalletService = require('./sessionWalletService');
+      const profileId = uuidv4();
+      const sessionWallet = await sessionWalletService.createSessionWallet(profileId, null, false);
+      const activeProfile = await accountService.createAutomaticProfile(account, sessionWallet, profileId);
+
+      // Create session
+      const session = await accountService.createSession(account.id, {
+        deviceId: params.deviceName || 'passkey-device',
+        userAgent: 'passkey-registration',
+        ipAddress: '0.0.0.0',
+        privacyMode: 'linked'
+      });
+
+      // Generate tokens
+      const { generateTokens } = require('../utils/tokenUtils');
+      const { accessToken, refreshToken, expiresIn } = await generateTokens({
+        accountId: account.id,
+        sessionToken: session.sessionToken,
+        activeProfileId: activeProfile.id,
+        deviceId: params.deviceName || 'passkey-device'
+      });
+
+      return {
+        verified: true,
+        account: {
+          id: account.id,
+          strategy: account.type,
+          identifier: account.identifier,
+          metadata: account.metadata,
+          createdAt: account.createdAt.toISOString(),
+          updatedAt: account.updatedAt.toISOString()
+        },
+        profiles: [activeProfile],
+        activeProfile,
+        tokens: {
+          accessToken,
+          refreshToken,
+          expiresIn
+        },
+        isNewUser: true
+      };
+    } catch (error: any) {
+      logger.error('Register new user with passkey error:', error);
       throw error;
     }
   }

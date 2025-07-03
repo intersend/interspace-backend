@@ -188,7 +188,7 @@ const authenticateV2 = async (req, res, next) => {
           identifier: verifyResult.address.toLowerCase(),
           metadata: { 
             walletType: authData.walletType,
-            chainId: String(authData.chainId || 1)
+            chainId: authData.chainId || 1  // Store as integer for database
           }
         });
         
@@ -870,11 +870,11 @@ const authenticateV2 = async (req, res, next) => {
     });
     
     // Step 3: Check if new user (no profiles)
-    let isNewUser = false;
+    let isNewAccount = false;
     let activeProfile = null;
 
     if (profiles.length === 0) {
-      isNewUser = true;
+      isNewAccount = true;
       
       // Generate a temporary profile ID first
       const { v4: uuidv4 } = require('uuid');
@@ -893,7 +893,7 @@ const authenticateV2 = async (req, res, next) => {
       // Add to profiles array
       profiles.push(activeProfile);
       
-      logger.info(`New user detected. Created automatic profile: ${activeProfile.id}`);
+      logger.info(`New account detected. Created automatic profile: ${activeProfile.id}`);
     } else {
       // Use the most recently active profile
       activeProfile = profiles.find(p => p.isActive) || profiles[0];
@@ -928,7 +928,7 @@ const authenticateV2 = async (req, res, next) => {
       details: JSON.stringify({
         accountId: account.id,
         strategy,
-        isNewUser,
+        isNewAccount,
         privacyMode: session.privacyMode,
         deviceId: deviceInfo.deviceId
       }),
@@ -940,18 +940,21 @@ const authenticateV2 = async (req, res, next) => {
     logger.info('Authentication successful', {
       accountId: account.id,
       strategy,
-      isNewUser,
+      isNewAccount,
       activeProfileId: activeProfile.id,
       privacyMode: session.privacyMode,
       ipAddress: deviceInfo.ipAddress
     });
 
-    // Ensure metadata values are all strings for iOS compatibility
+    // Ensure metadata values are properly handled for iOS compatibility
     const stringifiedMetadata = {};
     if (account.metadata && typeof account.metadata === 'object') {
       Object.keys(account.metadata).forEach(key => {
         const value = account.metadata[key];
-        stringifiedMetadata[key] = value != null ? String(value) : null;
+        // Don't include null values in metadata - iOS expects non-null strings
+        if (value != null) {
+          stringifiedMetadata[key] = String(value);
+        }
       });
     }
     
@@ -998,7 +1001,7 @@ const authenticateV2 = async (req, res, next) => {
         refreshToken,
         expiresIn
       },
-      isNewUser,
+      isNewAccount,
       sessionId: session.id,
       privacyMode: session.privacyMode
     });
@@ -1074,12 +1077,15 @@ const refreshTokenV2 = async (req, res, next) => {
       deviceId: decoded.deviceId
     });
 
-    // Ensure metadata values are all strings for iOS compatibility
+    // Ensure metadata values are properly handled for iOS compatibility
     const stringifiedMetadata = {};
     if (account.metadata && typeof account.metadata === 'object') {
       Object.keys(account.metadata).forEach(key => {
         const value = account.metadata[key];
-        stringifiedMetadata[key] = value != null ? String(value) : null;
+        // Don't include null values in metadata - iOS expects non-null strings
+        if (value != null) {
+          stringifiedMetadata[key] = String(value);
+        }
       });
     }
 
@@ -1126,7 +1132,7 @@ const refreshTokenV2 = async (req, res, next) => {
         refreshToken: newRefreshToken,
         expiresIn
       },
-      isNewUser: false, // Token refresh means not a new user
+      isNewAccount: false, // Token refresh means not a new account
       sessionId: session?.id || null,
       privacyMode: session?.privacyMode || 'linked'
     });
@@ -1521,14 +1527,8 @@ const unlinkAccounts = async (req, res, next) => {
       });
     }
 
-    // Check if this would leave the identity graph without any accounts
-    // In flat model, we need at least one account remaining in the graph
-    if (allLinkedAccounts.length <= 1) {
-      return res.status(400).json({
-        success: false,
-        error: 'Cannot unlink the last remaining account in your identity graph'
-      });
-    }
+    // In flat identity model, we allow unlinking any account
+    // Even if it's the last one in the identity graph
 
     // Find all identity links involving the target account within this graph
     const linksToDelete = await prisma.identityLink.findMany({

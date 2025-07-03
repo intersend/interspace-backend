@@ -97,7 +97,6 @@ class AccountLinkingService {
     const metadata = account.metadata as any || {};
     const linkedAccount = await tx.linkedAccount.create({
       data: {
-        userId: profile.userId,
         profileId: profile.id,
         address: address,
         authStrategy: 'wallet',
@@ -105,7 +104,7 @@ class AccountLinkingService {
         customName: metadata.customName || null,
         isPrimary: linkedAccountCount === 0, // First account is primary
         isActive: true,
-        chainId: metadata.chainId || 1,
+        chainId: metadata.chainId ? parseInt(metadata.chainId) : 1,
         metadata: JSON.stringify(metadata)
       }
     });
@@ -115,7 +114,7 @@ class AccountLinkingService {
     // Log the linking action
     await tx.auditLog.create({
       data: {
-        userId: profile.userId,
+        accountId: account.id,
         profileId: profile.id,
         action: 'WALLET_AUTO_LINKED',
         resource: 'LinkedAccount',
@@ -174,7 +173,6 @@ class AccountLinkingService {
     const metadata = account.metadata as any || {};
     const linkedAccount = await tx.linkedAccount.create({
       data: {
-        userId: profile.userId,
         profileId: profile.id,
         address: address,
         authStrategy: account.provider || account.type, // e.g., 'telegram'
@@ -182,7 +180,7 @@ class AccountLinkingService {
         customName: `${account.provider || account.type} Wallet`,
         isPrimary: linkedAccountCount === 0,
         isActive: true,
-        chainId: metadata.chainId || 1,
+        chainId: metadata.chainId ? parseInt(metadata.chainId) : 1,
         metadata: JSON.stringify({
           provider: account.provider,
           providerId: account.identifier,

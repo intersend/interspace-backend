@@ -1,13 +1,15 @@
 import { faker } from '@faker-js/faker';
 import { prisma } from '@/utils/database';
 
+// Legacy factory - Uses User table for backward compatibility
+// In flat identity model, this represents creating accounts
 export interface CreateUserData {
   walletAddress?: string;
   email?: string;
   isGuest?: boolean;
 }
 
-export class UserFactory {
+export class UserFactory {  // Kept name for backward compatibility
   static generateUserData(overrides: CreateUserData = {}): CreateUserData {
     return {
       walletAddress: faker.string.hexadecimal({ length: 40, prefix: '0x' }),
@@ -18,29 +20,30 @@ export class UserFactory {
   }
 
   static async create(overrides: CreateUserData = {}) {
-    const userData = this.generateUserData(overrides);
+    const accountData = this.generateUserData(overrides);
     
+    // Using legacy user table for backward compatibility
     return prisma.user.create({
       data: {
-        walletAddress: userData.walletAddress,
-        email: userData.email,
-        isGuest: userData.isGuest || false,
+        walletAddress: accountData.walletAddress,
+        email: accountData.email,
+        isGuest: accountData.isGuest || false,
         emailVerified: false,
       }
     });
   }
 
   static async createMany(count: number, overrides: CreateUserData = {}) {
-    const users = [];
+    const accounts = [];
     for (let i = 0; i < count; i++) {
-      const user = await this.create({
+      const account = await this.create({
         ...overrides,
         walletAddress: faker.string.hexadecimal({ length: 40, prefix: '0x' }),
         email: faker.internet.email(),
       });
-      users.push(user);
+      accounts.push(account);
     }
-    return users;
+    return accounts;
   }
 
   static generateValidAddress(): string {

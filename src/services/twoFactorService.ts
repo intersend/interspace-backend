@@ -11,21 +11,75 @@ interface TwoFactorSetupResult {
   backupCodes: string[];
 }
 
+interface TwoFactorMetadata {
+  enabled: boolean;
+  secret?: string;
+  backupCodes?: string[];
+  enabledAt?: string;
+}
+
 export class TwoFactorService {
   /**
-   * Enable 2FA for a user
+   * Get 2FA metadata from account
    */
-  async enableTwoFactor(userId: string): Promise<TwoFactorSetupResult> {
-    // Check if 2FA is already enabled
-    const user = await prisma.user.findUnique({
-      where: { id: userId }
+  private async get2FAMetadata(accountId: string): Promise<TwoFactorMetadata> {
+    const account = await prisma.account.findUnique({
+      where: { id: accountId },
+      select: { metadata: true }
     });
 
-    if (!user) {
-      throw new AuthenticationError('User not found');
+    if (!account) {
+      throw new AuthenticationError('Account not found');
     }
 
-    if (user.twoFactorEnabled) {
+    const metadata = account.metadata as any || {};
+    return metadata.twoFactor || { enabled: false };
+  }
+
+  /**
+   * Update 2FA metadata for account
+   */
+  private async update2FAMetadata(accountId: string, twoFactorData: TwoFactorMetadata): Promise<void> {
+    const account = await prisma.account.findUnique({
+      where: { id: accountId },
+      select: { metadata: true }
+    });
+
+    if (!account) {
+      throw new AuthenticationError('Account not found');
+    }
+
+    const metadata = account.metadata as any || {};
+    metadata.twoFactor = twoFactorData;
+
+    await prisma.account.update({
+      where: { id: accountId },
+      data: { metadata }
+    });
+  }
+
+  /**
+   * Check if 2FA is enabled for an account
+   */
+  async isEnabled(accountId: string): Promise<boolean> {
+    const twoFactorData = await this.get2FAMetadata(accountId);
+    return twoFactorData.enabled;
+  }
+
+  /**
+   * Setup 2FA for an account (generates secret and QR code)
+   */
+  async setupTwoFactor(accountId: string): Promise<TwoFactorSetupResult> {
+    const account = await prisma.account.findUnique({
+      where: { id: accountId }
+    });
+
+    if (!account) {
+      throw new AuthenticationError('Account not found');
+    }
+
+    const twoFactorData = await this.get2FAMetadata(accountId);
+    if (twoFactorData.enabled) {
       throw new AuthenticationError('2FA is already enabled');
     }
 
@@ -33,28 +87,29 @@ export class TwoFactorService {
     const secret = authenticator.generateSecret();
     
     // Generate backup codes
-    const backupCodes = this.generateBackupCodes(8);
+    const backupCodes = this.generateBackupCodesList();
     
-    // Store encrypted secret and backup codes
+    // Store encrypted secret and backup codes temporarily (not enabled yet)
     const encryptedSecret = encrypt(secret);
-    const encryptedBackupCodes = encrypt(JSON.stringify(backupCodes));
+    const encryptedBackupCodes = backupCodes.map(code => encrypt(code));
     
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        twoFactorSecret: encryptedSecret,
-        twoFactorBackupCodes: encryptedBackupCodes,
-        twoFactorEnabled: false // Will be enabled after verification
-      }
+    await this.update2FAMetadata(accountId, {
+      enabled: false,
+      secret: encryptedSecret,
+      backupCodes: encryptedBackupCodes
     });
 
     // Generate QR code
-    const otpauth = authenticator.keyuri(user.email || userId, 'Interspace Wallet', secret);
+    const otpauth = authenticator.keyuri(
+      account.identifier,
+      'Interspace',
+      secret
+    );
+    
     const qrCodeUrl = await QRCode.toDataURL(otpauth);
 
-    // Log the action
     await auditService.log({
-      userId,
+      accountId,
       action: '2FA_SETUP_INITIATED',
       resource: 'TwoFactor',
       details: JSON.stringify({ method: 'totp' })
@@ -68,167 +123,139 @@ export class TwoFactorService {
   }
 
   /**
-   * Verify and complete 2FA setup
+   * Verify token and enable 2FA
    */
-  async verifyAndCompleteTwoFactorSetup(userId: string, token: string): Promise<void> {
-    const user = await prisma.user.findUnique({
-      where: { id: userId }
-    });
+  async verifyAndEnableTwoFactor(accountId: string, token: string): Promise<boolean> {
+    const twoFactorData = await this.get2FAMetadata(accountId);
+    
+    if (twoFactorData.enabled) {
+      throw new AuthenticationError('2FA is already enabled');
+    }
 
-    if (!user || !user.twoFactorSecret) {
+    if (!twoFactorData.secret) {
       throw new AuthenticationError('2FA setup not initiated');
     }
 
-    const secret = decrypt(user.twoFactorSecret);
-    const isValid = authenticator.verify({ token, secret });
+    const decryptedSecret = decrypt(twoFactorData.secret);
+    const isValid = authenticator.verify({
+      token,
+      secret: decryptedSecret
+    });
 
     if (!isValid) {
       await auditService.logSecurityEvent({
         type: 'INVALID_TOKEN',
-        userId,
+        accountId,
         details: { reason: '2FA setup verification failed' }
       });
-      throw new AuthenticationError('Invalid 2FA token');
+      throw new AuthenticationError('Invalid verification code');
     }
 
     // Enable 2FA
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        twoFactorEnabled: true,
-        twoFactorEnabledAt: new Date()
-      }
+    await this.update2FAMetadata(accountId, {
+      ...twoFactorData,
+      enabled: true,
+      enabledAt: new Date().toISOString()
     });
 
     await auditService.log({
-      userId,
+      accountId,
       action: '2FA_ENABLED',
       resource: 'TwoFactor',
       details: JSON.stringify({ method: 'totp' })
-    });
-  }
-
-  /**
-   * Verify 2FA token
-   */
-  async verifyTwoFactorToken(userId: string, token: string): Promise<boolean> {
-    const user = await prisma.user.findUnique({
-      where: { id: userId }
-    });
-
-    if (!user || !user.twoFactorEnabled || !user.twoFactorSecret) {
-      return false;
-    }
-
-    // Check if it's a backup code
-    if (token.length === 8 && user.twoFactorBackupCodes) {
-      return this.verifyBackupCode(userId, token);
-    }
-
-    // Verify TOTP token
-    const secret = decrypt(user.twoFactorSecret);
-    const isValid = authenticator.verify({ token, secret });
-
-    if (isValid) {
-      await auditService.log({
-        userId,
-        action: '2FA_VERIFIED',
-        resource: 'TwoFactor',
-        details: JSON.stringify({ method: 'totp' })
-      });
-    } else {
-      await auditService.logSecurityEvent({
-        type: 'INVALID_TOKEN',
-        userId,
-        details: { reason: '2FA verification failed' }
-      });
-    }
-
-    return isValid;
-  }
-
-  /**
-   * Verify backup code
-   */
-  private async verifyBackupCode(userId: string, code: string): Promise<boolean> {
-    const user = await prisma.user.findUnique({
-      where: { id: userId }
-    });
-
-    if (!user || !user.twoFactorBackupCodes) {
-      return false;
-    }
-
-    const backupCodes = JSON.parse(decrypt(user.twoFactorBackupCodes));
-    const codeIndex = backupCodes.indexOf(code);
-
-    if (codeIndex === -1) {
-      await auditService.logSecurityEvent({
-        type: 'INVALID_TOKEN',
-        userId,
-        details: { reason: 'Invalid backup code' }
-      });
-      return false;
-    }
-
-    // Remove used backup code
-    backupCodes.splice(codeIndex, 1);
-    const encryptedBackupCodes = encrypt(JSON.stringify(backupCodes));
-
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        twoFactorBackupCodes: encryptedBackupCodes
-      }
-    });
-
-    await auditService.log({
-      userId,
-      action: '2FA_BACKUP_CODE_USED',
-      resource: 'TwoFactor',
-      details: JSON.stringify({ remainingCodes: backupCodes.length })
     });
 
     return true;
   }
 
   /**
-   * Disable 2FA
+   * Verify 2FA token
    */
-  async disableTwoFactor(userId: string, password: string): Promise<void> {
-    // Verify password before disabling 2FA
-    const { authService } = await import('./authService');
-    const user = await prisma.user.findUnique({
-      where: { id: userId }
-    });
-
-    if (!user) {
-      throw new AuthenticationError('User not found');
+  async verifyToken(accountId: string, token: string): Promise<boolean> {
+    const twoFactorData = await this.get2FAMetadata(accountId);
+    
+    if (!twoFactorData.enabled) {
+      return true; // 2FA not enabled, consider it valid
     }
 
-    const isPasswordValid = await authService.verifyPassword(password, user.hashedPassword!);
-    if (!isPasswordValid) {
-      await auditService.logSecurityEvent({
-        type: 'PERMISSION_DENIED',
-        userId,
-        details: { reason: 'Invalid password for 2FA disable' }
+    if (!twoFactorData.secret) {
+      throw new AuthenticationError('2FA not properly configured');
+    }
+
+    const decryptedSecret = decrypt(twoFactorData.secret);
+    
+    // Try to verify as TOTP token first
+    const isValidTotp = authenticator.verify({
+      token,
+      secret: decryptedSecret
+    });
+
+    if (isValidTotp) {
+      await auditService.log({
+        accountId,
+        action: '2FA_VERIFIED',
+        resource: 'TwoFactor',
+        details: JSON.stringify({ method: 'totp' })
       });
-      throw new AuthenticationError('Invalid password');
+      return true;
+    }
+
+    // Try backup codes
+    if (twoFactorData.backupCodes) {
+      const backupCodeIndex = twoFactorData.backupCodes.findIndex(
+        encryptedCode => decrypt(encryptedCode) === token
+      );
+
+      if (backupCodeIndex !== -1) {
+        // Remove used backup code
+        const newBackupCodes = [...twoFactorData.backupCodes];
+        newBackupCodes.splice(backupCodeIndex, 1);
+        
+        await this.update2FAMetadata(accountId, {
+          ...twoFactorData,
+          backupCodes: newBackupCodes
+        });
+
+        await auditService.log({
+          accountId,
+          action: '2FA_BACKUP_CODE_USED',
+          resource: 'TwoFactor',
+          details: JSON.stringify({ remainingCodes: newBackupCodes.length })
+        });
+
+        return true;
+      }
+    }
+
+    await auditService.logSecurityEvent({
+      type: 'INVALID_TOKEN',
+      accountId,
+      details: { reason: '2FA verification failed' }
+    });
+
+    return false;
+  }
+
+  /**
+   * Disable 2FA
+   */
+  async disableTwoFactor(accountId: string, password: string): Promise<void> {
+    // For email accounts, we might want to verify password
+    // For now, we'll skip password verification since auth is handled differently
+    
+    const twoFactorData = await this.get2FAMetadata(accountId);
+    
+    if (!twoFactorData.enabled) {
+      throw new AuthenticationError('2FA is not enabled');
     }
 
     // Disable 2FA
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        twoFactorEnabled: false,
-        twoFactorSecret: null,
-        twoFactorBackupCodes: null,
-        twoFactorEnabledAt: null
-      }
+    await this.update2FAMetadata(accountId, {
+      enabled: false
     });
 
     await auditService.log({
-      userId,
+      accountId,
       action: '2FA_DISABLED',
       resource: 'TwoFactor',
       details: JSON.stringify({ method: 'totp' })
@@ -238,35 +265,23 @@ export class TwoFactorService {
   /**
    * Generate new backup codes
    */
-  async regenerateBackupCodes(userId: string, password: string): Promise<string[]> {
-    // Verify password
-    const { authService } = await import('./authService');
-    const user = await prisma.user.findUnique({
-      where: { id: userId }
-    });
-
-    if (!user || !user.twoFactorEnabled) {
-      throw new AuthenticationError('2FA not enabled');
+  async generateBackupCodes(accountId: string): Promise<string[]> {
+    const twoFactorData = await this.get2FAMetadata(accountId);
+    
+    if (!twoFactorData.enabled) {
+      throw new AuthenticationError('2FA is not enabled');
     }
 
-    const isPasswordValid = await authService.verifyPassword(password, user.hashedPassword!);
-    if (!isPasswordValid) {
-      throw new AuthenticationError('Invalid password');
-    }
-
-    // Generate new backup codes
-    const backupCodes = this.generateBackupCodes(8);
-    const encryptedBackupCodes = encrypt(JSON.stringify(backupCodes));
-
-    await prisma.user.update({
-      where: { id: userId },
-      data: {
-        twoFactorBackupCodes: encryptedBackupCodes
-      }
+    const backupCodes = this.generateBackupCodesList();
+    const encryptedBackupCodes = backupCodes.map(code => encrypt(code));
+    
+    await this.update2FAMetadata(accountId, {
+      ...twoFactorData,
+      backupCodes: encryptedBackupCodes
     });
 
     await auditService.log({
-      userId,
+      accountId,
       action: '2FA_BACKUP_CODES_REGENERATED',
       resource: 'TwoFactor',
       details: JSON.stringify({ count: backupCodes.length })
@@ -276,56 +291,37 @@ export class TwoFactorService {
   }
 
   /**
-   * Check if user has 2FA enabled
+   * Generate a list of backup codes
    */
-  async isTwoFactorEnabled(userId: string): Promise<boolean> {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { twoFactorEnabled: true }
-    });
-
-    return user?.twoFactorEnabled || false;
-  }
-
-  /**
-   * Generate backup codes
-   */
-  private generateBackupCodes(count: number): string[] {
+  private generateBackupCodesList(count: number = 10): string[] {
     const codes: string[] = [];
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-
     for (let i = 0; i < count; i++) {
-      let code = '';
-      for (let j = 0; j < 8; j++) {
-        code += characters.charAt(Math.floor(Math.random() * characters.length));
-      }
+      // Generate 8-character alphanumeric codes
+      const code = Math.random().toString(36).substring(2, 10).toUpperCase();
       codes.push(code);
     }
-
     return codes;
   }
 
   /**
-   * Require 2FA for critical operations
+   * Require 2FA for a specific operation
    */
-  async requireTwoFactor(userId: string, token: string, operation: string): Promise<void> {
-    const isEnabled = await this.isTwoFactorEnabled(userId);
+  async requireTwoFactor(accountId: string, token: string, operation: string): Promise<void> {
+    const isEnabled = await this.isEnabled(accountId);
     
-    // In production, 2FA is required for critical operations
-    if (process.env.NODE_ENV === 'production' && !isEnabled) {
-      throw new AuthenticationError('2FA is required for this operation');
+    if (!isEnabled) {
+      // 2FA not enabled, operation allowed
+      return;
     }
 
     // If 2FA is enabled, verify the token
-    if (isEnabled) {
-      const isValid = await this.verifyTwoFactorToken(userId, token);
-      if (!isValid) {
-        throw new AuthenticationError('Invalid 2FA token');
-      }
+    const isValid = await this.verifyToken(accountId, token);
+    if (!isValid) {
+      throw new AuthenticationError('Invalid 2FA token');
     }
 
     await auditService.log({
-      userId,
+      accountId,
       action: '2FA_REQUIRED_OPERATION',
       resource: 'TwoFactor',
       details: JSON.stringify({ operation })

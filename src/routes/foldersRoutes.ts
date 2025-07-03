@@ -1,7 +1,7 @@
 import { Router } from 'express';
-import { foldersController } from '@/controllers/foldersController';
+import { foldersController } from '../controllers/foldersController';
 const { authenticateAccount, optionalAuthenticate } = require('../middleware/authMiddlewareV2');
-import { userRateLimit } from '@/middleware/rateLimiter';
+import { userRateLimit } from '../middleware/rateLimiter';
 
 const router = Router();
 

@@ -25,8 +25,7 @@ export class MpcWebhookController {
       // Update the profile with the actual MPC wallet address
       const updatedProfile = await prisma.smartProfile.update({
         where: { id: profileId },
-        data: { sessionWalletAddress: address },
-        include: { user: true }
+        data: { sessionWalletAddress: address }
       });
 
       // Create key mapping
@@ -60,7 +59,6 @@ export class MpcWebhookController {
           // Create new LinkedAccount for MPC wallet
           await prisma.linkedAccount.create({
             data: {
-              userId: updatedProfile.userId,
               profileId: profileId,
               address: address.toLowerCase(),
               authStrategy: 'mpc',

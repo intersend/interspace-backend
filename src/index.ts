@@ -4,29 +4,30 @@ import helmet from 'helmet';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 
-import { config, validateConfig } from '@/utils/config';
-import { connectDatabase, isDatabaseHealthy } from '@/utils/database';
-import { errorHandler, notFound } from '@/middleware/errorHandler';
-import { apiRateLimit } from '@/middleware/rateLimiter';
-import { distributedApiRateLimit } from '@/middleware/distributedRateLimiter';
-import { scheduler } from '@/utils/scheduler';
-import { getRedisClient, closeRedisConnection } from '@/utils/redis';
+import { config, validateConfig } from './utils/config';
+import { connectDatabase, isDatabaseHealthy } from './utils/database';
+import { errorHandler, notFound } from './middleware/errorHandler';
+import { apiRateLimit } from './middleware/rateLimiter';
+import { distributedApiRateLimit } from './middleware/distributedRateLimiter';
+import { scheduler } from './utils/scheduler';
+import { getRedisClient, closeRedisConnection } from './utils/redis';
 
 // Import V2 routes only
-const authRoutesV2 = require('@/routes/authRoutesV2');
-const profileRoutesV2 = require('@/routes/profileRoutesV2');
-import appsRoutes from '@/routes/appsRoutes';
-import foldersRoutes from '@/routes/foldersRoutes';
-const userRoutesV2 = require('@/routes/userRoutesV2');
-import orbyRoutesV2 from '@/routes/orbyRoutesV2';
-import mpcRoutesV2 from '@/routes/mpcRoutesV2';
-import siweRoutes from '@/routes/siweRoutes';
-import delegationRoutesV2 from '@/routes/delegationRoutesV2';
-import linkedAccountRoutesV2 from '@/routes/linkedAccountRoutesV2';
-import twoFactorRoutesV2 from '@/routes/twoFactorRoutesV2';
-import securityRoutesV2 from '@/routes/securityRoutesV2';
-import mpcWebhookRoutes from '@/routes/mpcWebhookRoutes';
-import wellKnownRoutes from '@/routes/wellKnownRoutes';
+const authRoutesV2 = require('./routes/authRoutesV2');
+const profileRoutesV2 = require('./routes/profileRoutesV2');
+const userRoutesV2 = require('./routes/userRoutesV2');
+const siweRoutesV2 = require('./routes/siweRoutesV2');
+import mpcRoutesV2 from './routes/mpcRoutesV2';
+import mpcWebhookRoutes from './routes/mpcWebhookRoutes';
+import wellKnownRoutes from './routes/wellKnownRoutes';
+import delegationRoutesV2 from './routes/delegationRoutesV2';
+import linkedAccountRoutesV2 from './routes/linkedAccountRoutesV2';
+import orbyRoutesV2 from './routes/orbyRoutesV2';
+import securityRoutesV2 from './routes/securityRoutesV2';
+import twoFactorRoutesV2 from './routes/twoFactorRoutesV2';
+import passkeyRoutesV2 from './routes/passkeyRoutesV2';
+import appsRoutes from './routes/appsRoutes';
+import foldersRoutes from './routes/foldersRoutes';
 
 class Application {
   public app: express.Application;
@@ -398,19 +399,22 @@ class Application {
     // V2 Routes Only - Frontend uses v2 exclusively
     const apiV2Path = '/api/v2';
     this.app.use(`${apiV2Path}/auth`, authRoutesV2);
-    this.app.use(`${apiV2Path}`, appsRoutes); // Apps routes include profile paths
-    this.app.use(`${apiV2Path}`, foldersRoutes); // Folders routes include profile paths
+    this.app.use(`${apiV2Path}/auth/passkey`, passkeyRoutesV2); // Passkey authentication routes
+    this.app.use(`${apiV2Path}/siwe`, siweRoutesV2); // SIWE (Sign-In With Ethereum) routes
     this.app.use(`${apiV2Path}/profiles`, profileRoutesV2); // Use V2 profile routes with V2 auth
     this.app.use(`${apiV2Path}/users`, userRoutesV2); // Use V2 user routes with V2 middleware
-    this.app.use(`${apiV2Path}/siwe`, siweRoutes); // SIWE routes for v2
     this.app.use(`${apiV2Path}/mpc`, mpcRoutesV2); // MPC key management routes v2
     
-    // Blockchain routes
-    this.app.use(`${apiV2Path}/orby`, orbyRoutesV2); // Orby chain abstraction routes (v2 auth)
-    this.app.use(`${apiV2Path}`, delegationRoutesV2); // EIP-7702 delegation routes (v2 auth)
-    this.app.use(`${apiV2Path}`, linkedAccountRoutesV2); // Account routes include profile paths (v2 auth)
-    this.app.use(`${apiV2Path}/2fa`, twoFactorRoutesV2); // Two-factor authentication routes (v2 auth)
-    this.app.use(`${apiV2Path}/security`, securityRoutesV2); // Security monitoring routes (v2 auth)
+    // Apps and Folders routes
+    this.app.use(`${apiV2Path}`, appsRoutes); // Apps management routes
+    this.app.use(`${apiV2Path}`, foldersRoutes); // Folders management routes
+    
+    // Restored V2 Routes
+    this.app.use(`${apiV2Path}`, delegationRoutesV2); // EIP-7702 delegation routes
+    this.app.use(`${apiV2Path}`, linkedAccountRoutesV2); // Linked accounts management
+    this.app.use(`${apiV2Path}`, orbyRoutesV2); // Orby chain abstraction
+    this.app.use(`${apiV2Path}/security`, securityRoutesV2); // Security monitoring
+    this.app.use(`${apiV2Path}/2fa`, twoFactorRoutesV2); // Two-factor authentication
     
     // Webhook routes (no auth middleware, uses webhook secret instead)
     this.app.use('/api/webhooks/mpc', mpcWebhookRoutes); // MPC webhook routes
@@ -453,21 +457,16 @@ Canonical: https://interspace.wallet/.well-known/security.txt
           auth: `/api/v2/auth`,
           users: `/api/v2/users`,
           profiles: `/api/v2/profiles`,
-          siwe: `/api/v2/siwe`,
-          twoFactor: `/api/v2/2fa`,
           
           // Blockchain Features
           mpc: `/api/v2/mpc`,
-          orby: `/api/v2/orby`,
           delegation: `/api/v2/profiles/:profileId/accounts/:accountId/delegate`,
           linkedAccounts: `/api/v2/profiles/:profileId/accounts`,
-          
-          // App Management
-          apps: `/api/v2/profiles/:profileId/apps`,
-          folders: `/api/v2/profiles/:profileId/folders`,
+          orby: `/api/v2/profiles/:profileId/balance`,
           
           // Security
-          security: `/api/v2/security`
+          security: `/api/v2/security`,
+          twoFactor: `/api/v2/2fa`
         },
         features: {
           flatIdentity: true,

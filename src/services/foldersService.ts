@@ -1,4 +1,4 @@
-import { prisma, withTransaction } from '@/utils/database';
+import { prisma, withTransaction } from '../utils/database';
 import { 
   CreateFolderRequest,
   UpdateFolderRequest,
@@ -7,7 +7,7 @@ import {
   NotFoundError,
   ConflictError,
   AuthorizationError 
-} from '@/types';
+} from '../types';
 import { randomBytes } from 'crypto';
 
 export class FoldersService {
@@ -17,19 +17,19 @@ export class FoldersService {
    */
   async createFolder(
     profileId: string, 
-    userId: string, 
+    accountId: string, 
     data: CreateFolderRequest
   ): Promise<FolderResponse> {
     return withTransaction(async (tx) => {
-      // Verify profile ownership
-      const profile = await tx.smartProfile.findFirst({
+      // Verify profile access through ProfileAccount
+      const profileAccount = await tx.profileAccount.findFirst({
         where: { 
-          id: profileId,
-          userId 
+          profileId,
+          accountId 
         }
       });
 
-      if (!profile) {
+      if (!profileAccount) {
         throw new NotFoundError('SmartProfile');
       }
 
@@ -77,7 +77,7 @@ export class FoldersService {
       // Log the folder creation
       await tx.auditLog.create({
         data: {
-          userId,
+          accountId,
           profileId,
           action: 'FOLDER_CREATED',
           resource: 'Folder',
@@ -95,17 +95,17 @@ export class FoldersService {
   /**
    * Get all folders for a profile
    */
-  async getProfileFolders(profileId: string, userId: string): Promise<FolderResponse[]> {
-    // Verify profile ownership
-    const profile = await prisma.smartProfile.findFirst({
+  async getProfileFolders(profileId: string, accountId: string): Promise<FolderResponse[]> {
+    // Verify profile access
+    const profileAccount = await prisma.profileAccount.findFirst({
       where: { 
-        id: profileId,
-        userId 
+        profileId,
+        accountId 
       }
     });
 
-    if (!profile) {
-      // Return empty array for non-existent profile (could be a new user)
+    if (!profileAccount) {
+      // Return empty array for non-existent access
       return [];
     }
 
@@ -133,13 +133,13 @@ export class FoldersService {
   async getFolderById(
     folderId: string, 
     profileId: string, 
-    userId: string
+    accountId: string
   ): Promise<FolderResponse> {
+    // First get the folder
     const folder = await prisma.folder.findFirst({
       where: { 
         id: folderId,
-        profileId,
-        profile: { userId }
+        profileId
       },
       include: {
         apps: {
@@ -156,6 +156,18 @@ export class FoldersService {
     if (!folder) {
       throw new NotFoundError('Folder');
     }
+    
+    // Verify account has access to the profile
+    const profileAccount = await prisma.profileAccount.findFirst({
+      where: {
+        profileId: folder.profileId,
+        accountId
+      }
+    });
+    
+    if (!profileAccount) {
+      throw new AuthorizationError('You do not have access to this folder');
+    }
 
     return this.formatFolderResponse(folder);
   }
@@ -165,21 +177,32 @@ export class FoldersService {
    */
   async updateFolder(
     folderId: string,
-    userId: string,
+    accountId: string,
     data: UpdateFolderRequest
   ): Promise<FolderResponse> {
     return withTransaction(async (tx) => {
-      // Verify folder ownership
+      // Get the folder
       const folder = await tx.folder.findFirst({
         where: { 
-          id: folderId,
-          profile: { userId }
+          id: folderId
         },
         include: { profile: true }
       });
 
       if (!folder) {
         throw new NotFoundError('Folder');
+      }
+      
+      // Verify account has access to the profile
+      const profileAccount = await tx.profileAccount.findFirst({
+        where: {
+          profileId: folder.profileId,
+          accountId
+        }
+      });
+      
+      if (!profileAccount) {
+        throw new AuthorizationError('You do not have access to this folder');
       }
 
       // Check for name conflicts if updating name
@@ -226,13 +249,12 @@ export class FoldersService {
   /**
    * Delete a folder
    */
-  async deleteFolder(folderId: string, userId: string): Promise<void> {
+  async deleteFolder(folderId: string, accountId: string): Promise<void> {
     return withTransaction(async (tx) => {
-      // Verify folder ownership
+      // Get the folder
       const folder = await tx.folder.findFirst({
         where: { 
-          id: folderId,
-          profile: { userId }
+          id: folderId
         },
         include: {
           apps: true
@@ -241,6 +263,18 @@ export class FoldersService {
 
       if (!folder) {
         throw new NotFoundError('Folder');
+      }
+      
+      // Verify account has access to the profile
+      const profileAccount = await tx.profileAccount.findFirst({
+        where: {
+          profileId: folder.profileId,
+          accountId
+        }
+      });
+      
+      if (!profileAccount) {
+        throw new AuthorizationError('You do not have access to this folder');
       }
 
       // Move all apps in this folder to root level (folderId = null)
@@ -266,19 +300,19 @@ export class FoldersService {
    */
   async reorderFolders(
     profileId: string,
-    userId: string,
+    accountId: string,
     folderIds: string[]
   ): Promise<FolderResponse[]> {
     return withTransaction(async (tx) => {
-      // Verify profile ownership
-      const profile = await tx.smartProfile.findFirst({
+      // Verify profile access
+      const profileAccount = await tx.profileAccount.findFirst({
         where: { 
-          id: profileId,
-          userId 
+          profileId,
+          accountId 
         }
       });
 
-      if (!profile) {
+      if (!profileAccount) {
         throw new NotFoundError('SmartProfile');
       }
 
@@ -329,19 +363,30 @@ export class FoldersService {
    */
   async shareFolder(
     folderId: string,
-    userId: string
+    accountId: string
   ): Promise<ShareFolderResponse> {
     return withTransaction(async (tx) => {
-      // Verify folder ownership
+      // Get the folder
       const folder = await tx.folder.findFirst({
         where: { 
-          id: folderId,
-          profile: { userId }
+          id: folderId
         }
       });
 
       if (!folder) {
         throw new NotFoundError('Folder');
+      }
+      
+      // Verify account has access to the profile
+      const profileAccount = await tx.profileAccount.findFirst({
+        where: {
+          profileId: folder.profileId,
+          accountId
+        }
+      });
+      
+      if (!profileAccount) {
+        throw new AuthorizationError('You do not have access to this folder');
       }
 
       // Generate shareable ID if not exists
@@ -377,17 +422,28 @@ export class FoldersService {
   /**
    * Unshare a folder (make private)
    */
-  async unshareFolder(folderId: string, userId: string): Promise<void> {
-    // Verify folder ownership
+  async unshareFolder(folderId: string, accountId: string): Promise<void> {
+    // Get the folder
     const folder = await prisma.folder.findFirst({
       where: { 
-        id: folderId,
-        profile: { userId }
+        id: folderId
       }
     });
 
     if (!folder) {
       throw new NotFoundError('Folder');
+    }
+    
+    // Verify account has access to the profile
+    const profileAccount = await prisma.profileAccount.findFirst({
+      where: {
+        profileId: folder.profileId,
+        accountId
+      }
+    });
+    
+    if (!profileAccount) {
+      throw new AuthorizationError('You do not have access to this folder');
     }
 
     await prisma.folder.update({
@@ -432,20 +488,31 @@ export class FoldersService {
    */
   async getFolderContents(
     folderId: string,
-    userId: string,
+    accountId: string,
     page: number = 1,
     limit: number = 20
   ) {
-    // Verify folder ownership
+    // Get the folder
     const folder = await prisma.folder.findFirst({
       where: { 
-        id: folderId,
-        profile: { userId }
+        id: folderId
       }
     });
 
     if (!folder) {
       throw new NotFoundError('Folder');
+    }
+    
+    // Verify account has access to the profile
+    const profileAccount = await prisma.profileAccount.findFirst({
+      where: {
+        profileId: folder.profileId,
+        accountId
+      }
+    });
+    
+    if (!profileAccount) {
+      throw new AuthorizationError('You do not have access to this folder');
     }
 
     const offset = (page - 1) * limit;

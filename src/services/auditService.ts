@@ -5,7 +5,7 @@ import { logger } from '@/utils/logger';
 import { sanitizeObject } from '@/utils/security';
 
 interface AuditLogEntry {
-  userId?: string;
+  accountId?: string;
   profileId?: string;
   action: string;
   resource: string;
@@ -20,7 +20,7 @@ export class AuditService {
    */
   private generateIntegrityHash(data: any): string {
     const content = JSON.stringify({
-      userId: data.userId,
+      accountId: data.accountId,
       profileId: data.profileId,
       action: data.action,
       resource: data.resource,
@@ -58,7 +58,7 @@ export class AuditService {
       
       await prisma.auditLog.create({
         data: {
-          userId: entry.userId,
+          accountId: entry.accountId,
           profileId: entry.profileId,
           action: entry.action,
           resource: entry.resource,
@@ -74,7 +74,7 @@ export class AuditService {
   }
 
   async getAuditLogs(filters: {
-    userId?: string;
+    accountId?: string;
     profileId?: string;
     action?: string;
     resource?: string;
@@ -84,7 +84,7 @@ export class AuditService {
   }) {
     const where: any = {};
 
-    if (filters.userId) where.userId = filters.userId;
+    if (filters.accountId) where.accountId = filters.accountId;
     if (filters.profileId) where.profileId = filters.profileId;
     if (filters.action) where.action = filters.action;
     if (filters.resource) where.resource = filters.resource;
@@ -110,12 +110,12 @@ export class AuditService {
     });
   }
 
-  async getCriticalEvents(userId: string, hours: number = 24) {
+  async getCriticalEvents(accountId: string, hours: number = 24) {
     const since = new Date();
     since.setHours(since.getHours() - hours);
 
     return this.getAuditLogs({
-      userId,
+      accountId,
       startDate: since,
       action: {
         in: ['MPC_KEY_EXPORT', 'MPC_KEY_ROTATE', 'MPC_KEY_BACKUP']
@@ -139,7 +139,7 @@ export class AuditService {
       
       // Recalculate hash
       const expectedHash = this.generateIntegrityHash({
-        userId: log.userId,
+        accountId: log.accountId,
         profileId: log.profileId,
         action: log.action,
         resource: log.resource,
@@ -160,13 +160,13 @@ export class AuditService {
    */
   async logSecurityEvent(event: {
     type: 'LOGIN_FAILED' | 'INVALID_TOKEN' | 'PERMISSION_DENIED' | 'SUSPICIOUS_ACTIVITY' | 'RATE_LIMIT_EXCEEDED' | 'TOKEN_THEFT_DETECTED';
-    userId?: string;
+    accountId?: string;
     details: any;
     ipAddress?: string;
     userAgent?: string;
   }): Promise<void> {
     await this.log({
-      userId: event.userId,
+      accountId: event.accountId,
       action: `SECURITY_${event.type}`,
       resource: 'Security',
       details: JSON.stringify(event.details),

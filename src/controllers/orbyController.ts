@@ -3,10 +3,22 @@ import { prisma } from '@/utils/database';
 import { orbyService } from '@/services/orbyService';
 import { gasTokenService } from '@/services/gasTokenService';
 import { smartProfileService } from '@/services/smartProfileService';
-import { ApiResponse, AppError, NotFoundError } from '@/types';
+import { ApiResponse, AppError, NotFoundError, AuthenticationError } from '@/types';
 import { CreateOperationsStatus } from '@orb-labs/orby-core';
-import { getChainName } from '@/utils/chainRegistry';
-import { UnifiedBalance, PortfolioResponse, CachedPortfolioItem } from '@/types/portfolio';
+
+/**
+ * Helper: Get chain name from ID
+ */
+function getChainName(chainId: number): string {
+  const chains: Record<number, string> = {
+    1: 'Ethereum',
+    10: 'Optimism',
+    137: 'Polygon',
+    42161: 'Arbitrum',
+    8453: 'Base'
+  };
+  return chains[chainId] || `Chain ${chainId}`;
+}
 
 export class OrbyController {
   /**
@@ -48,92 +60,29 @@ export class OrbyController {
    */
   async getUnifiedBalance(req: Request, res: Response): Promise<void> {
     try {
-      // Handle both V1 routes (id) and V2 routes (profileId)
-      const profileId = req.params.id || req.params.profileId;
-      
-      // Debug logging for authentication context
-      console.log('\n========== BALANCE ENDPOINT DEBUG ==========');
-      console.log('Request params:', req.params);
-      console.log('Profile ID from params:', profileId);
-      console.log('req.account:', (req as any).account);
-      console.log('req.user:', (req as any).user);
-      console.log('req.isV2Auth:', (req as any).isV2Auth);
-      
-      // For V2 auth, the adapter sets req.user.userId
-      // For V1 auth, req.user.userId is set directly
-      let userId: string | undefined;
-      
-      if ((req as any).isV2Auth) {
-        // V2 authentication - adapter sets req.user
-        userId = req.user?.userId;
-        console.log('V2 Auth detected, using req.user.userId:', userId);
-      } else {
-        // V1 authentication
-        userId = req.user?.userId;
-        console.log('V1 Auth detected, using req.user.userId:', userId);
-      }
-      
-      console.log('Extracted userId:', userId);
-      console.log('Authentication type:', (req as any).isV2Auth ? 'V2 (via adapter)' : 'V1 (direct)');
-      
-      if (!userId) {
-        console.error('No userId found in request context');
-        console.error('req.user object:', req.user);
-        console.error('This likely means the V2 auth adapter failed to set req.user');
-        throw new AppError('User not authenticated', 401);
+      const { id: profileId } = req.params;
+      const account = (req as any).account;
+      const accountId = account?.id;
+
+      if (!accountId) {
+        throw new AuthenticationError('Authentication required');
       }
 
-      // Debug database query
-      console.log('\nExecuting database query with:');
-      console.log('  profileId:', profileId);
-      console.log('  userId:', userId);
-      
-      // Get profile with linked accounts
-      const profile = await prisma.smartProfile.findFirst({
-        where: { id: profileId, userId },
-        include: { linkedAccounts: true }
+      // Check access via ProfileAccount
+      const profileAccess = await prisma.profileAccount.findFirst({
+        where: { profileId, accountId },
+        include: {
+          profile: {
+            include: { linkedAccounts: true }
+          }
+        }
       });
 
-      console.log('\nDatabase query result:');
-      console.log('  Profile found:', !!profile);
-      if (profile) {
-        console.log('  Profile ID:', profile.id);
-        console.log('  Profile name:', profile.name);
-        console.log('  Profile userId:', profile.userId);
-        console.log('  Linked accounts count:', profile.linkedAccounts?.length || 0);
-      } else {
-        // Additional debugging when profile not found
-        console.log('\nProfile not found. Running additional checks...');
-        
-        // Check if profile exists without userId filter
-        const profileWithoutUser = await prisma.smartProfile.findFirst({
-          where: { id: profileId }
-        });
-        
-        if (profileWithoutUser) {
-          console.log('  Profile exists but belongs to different user');
-          console.log('  Profile userId:', profileWithoutUser.userId);
-          console.log('  Request userId:', userId);
-        } else {
-          console.log('  Profile does not exist in database');
-        }
-        
-        // Check all profiles for this user
-        const userProfiles = await prisma.smartProfile.findMany({
-          where: { userId },
-          select: { id: true, name: true }
-        });
-        
-        console.log(`\n  User ${userId} has ${userProfiles.length} profiles:`);
-        userProfiles.forEach(p => {
-          console.log(`    - ${p.id}: ${p.name}`);
-        });
+      if (!profileAccess) {
+        throw new NotFoundError('Profile not found or access denied');
       }
-      console.log('============================================\n');
 
-      if (!profile) {
-        throw new NotFoundError('Profile not found');
-      }
+      const profile = profileAccess.profile;
 
       // Cast to include orby fields
       const profileWithOrby = profile as any;
@@ -144,63 +93,28 @@ export class OrbyController {
         profileWithOrby.orbyAccountClusterId = clusterId;
       }
 
-      // Get unified portfolio from Orby (fresh data every time)
-      const portfolio: CachedPortfolioItem[] = await orbyService.getFungibleTokenPortfolio(profileWithOrby);
+      // Get unified portfolio from Orby
+      const portfolio = await orbyService.getFungibleTokenPortfolio(profileWithOrby);
       
-      // Log the portfolio received from Orby
-      console.log('\n========== CONTROLLER PORTFOLIO DEBUG ==========');
-      console.log(`Total tokens received: ${portfolio.length}`);
-      portfolio.forEach((item, index) => {
-        console.log(`Token ${index + 1}: ${item.tokenBalances[0]?.token.symbol || 'Unknown'} - Raw Amount: ${item.totalRawAmount} - USD: ${item.totalValueInFiat}`);
-      });
-      
-      // Calculate total USD value across all tokens
-      let totalPortfolioUsdValue = 0;
-      
-      // Transform to unified balance format (NO FILTERING - show all tokens)
-      const unifiedBalance: UnifiedBalance = {
-        totalUsdValue: '0', // Will be updated after processing all tokens
-        tokens: portfolio.map(item => {
-          const decimals = item.tokenBalances[0]?.token.decimals || 18;
-          
-          // Convert totalValueInFiat with proper decimal handling
-          let totalUsdValue = '0';
-          if (item.totalValueInFiat && item.totalValueInFiat !== '0') {
-            // Orby returns fiat values in smallest unit (e.g., cents for USD)
-            // Default to 2 decimals for USD if not specified
-            const fiatDecimals = 2;
-            const rawFiatValue = parseFloat(item.totalValueInFiat);
-            const divisor = Math.pow(10, fiatDecimals);
-            const usdValue = rawFiatValue / divisor;
-            
-            totalUsdValue = usdValue.toFixed(2);
-            totalPortfolioUsdValue += usdValue;
-            
-            console.log(`Token ${item.tokenBalances[0]?.token.symbol}: Raw fiat=${item.totalValueInFiat}, Formatted=$${totalUsdValue}`);
-          }
-          
-          return {
-            standardizedTokenId: item.standardizedTokenId,
-            symbol: item.tokenBalances[0]?.token.symbol || 'Unknown',
-            name: item.tokenBalances[0]?.token.name || 'Unknown',
-            totalAmount: item.totalRawAmount, // Keep raw amount, frontend will format
-            totalUsdValue,
-            decimals,
-            balancesPerChain: item.tokenBalances.map(tb => ({
-              chainId: Number(tb.chainId),
-              chainName: getChainName(Number(tb.chainId)),
-              amount: tb.rawAmount, // Keep raw amount, frontend will format
-              tokenAddress: tb.token.address,
-              isNative: tb.token.address === '0x0000000000000000000000000000000000000000' ||
-                        tb.token.address === '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE' ||
-                        !tb.token.address || tb.token.address === ''
-            }))
-          };
-        })
+      // Transform Orby response to our format
+      const unifiedBalance = {
+        totalUsdValue: '0', // Would need price API
+        tokens: portfolio.map(item => ({
+          standardizedTokenId: item.standardizedTokenId,
+          symbol: item.tokenBalances[0]?.token.symbol || 'Unknown',
+          name: item.tokenBalances[0]?.token.name || 'Unknown',
+          totalAmount: (item as any).rawAmount?.toString() || '0',
+          totalUsdValue: '0',
+          decimals: item.tokenBalances[0]?.token.decimals || 18,
+          balancesPerChain: item.tokenBalances.map(tb => ({
+            chainId: Number(tb.token.chainId),
+            chainName: getChainName(Number(tb.token.chainId)),
+            amount: (tb as any).rawAmount?.toString() || '0',
+            tokenAddress: tb.token.address,
+            isNative: tb.token.address === '0x0000000000000000000000000000000000000000'
+          }))
+        }))
       };
-      
-      // Update total portfolio USD value
-      unifiedBalance.totalUsdValue = totalPortfolioUsdValue.toFixed(2);
 
       // Get gas analysis
       const gasAnalysis = await gasTokenService.analyzeGasTokens(profileWithOrby);
@@ -212,13 +126,9 @@ export class OrbyController {
           profileName: profile.name,
           unifiedBalance,
           gasAnalysis: {
-            suggestedGasToken: gasAnalysis.suggestedGasToken ? {
-              tokenId: gasAnalysis.suggestedGasToken.tokenId,
-              symbol: gasAnalysis.suggestedGasToken.symbol,
-              score: gasAnalysis.suggestedGasToken.score
-            } : null,
+            suggestedGasToken: gasAnalysis.suggestedGasToken,
             nativeGasAvailable: gasAnalysis.nativeGasAvailable,
-            availableGasTokens: gasAnalysis.availableGasTokens.slice(0, 5).map(token => token.symbol) // Return array of symbols (strings)
+            availableGasTokens: gasAnalysis.availableGasTokens?.slice(0, 5) || [] // Top 5
           },
           linkedAccountsCount: profile.linkedAccounts.length
         }
@@ -236,21 +146,14 @@ export class OrbyController {
    */
   async createIntent(req: Request, res: Response): Promise<void> {
     try {
-      // Handle both V1 routes (id) and V2 routes (profileId)
-      const profileId = req.params.id || req.params.profileId;
-      
-      // Get userId based on auth version
-      let userId: string | undefined;
-      if ((req as any).isV2Auth) {
-        userId = req.user?.userId;
-      } else {
-        userId = req.user?.userId;
-      }
-      
-      if (!userId) {
-        throw new AppError('User not authenticated', 401);
-      }
+      const { id: profileId } = req.params;
+      const account = (req as any).account;
+      const accountId = account?.id;
       const { type, from, to, gasToken } = req.body;
+
+      if (!accountId) {
+        throw new AuthenticationError('Authentication required');
+      }
 
       // Validate profile ID
       if (!profileId) {
@@ -266,15 +169,21 @@ export class OrbyController {
         throw new AppError('Invalid intent type. Must be "transfer" or "swap"', 400);
       }
 
-      // Get profile
-      const profile = await prisma.smartProfile.findFirst({
-        where: { id: profileId, userId },
-        include: { linkedAccounts: true }
+      // Check access via ProfileAccount
+      const profileAccess = await prisma.profileAccount.findFirst({
+        where: { profileId, accountId },
+        include: {
+          profile: {
+            include: { linkedAccounts: true }
+          }
+        }
       });
 
-      if (!profile) {
-        throw new NotFoundError('Profile not found');
+      if (!profileAccess) {
+        throw new NotFoundError('Profile not found or access denied');
       }
+
+      const profile = profileAccess.profile;
 
       // Cast to include orby fields
       const profileWithOrby = profile as any;
@@ -336,7 +245,7 @@ export class OrbyController {
             from,
             to,
             gasToken,
-            createdBy: userId
+            createdBy: accountId
           })
         }
       });
@@ -444,30 +353,28 @@ export class OrbyController {
    */
   async getTransactionHistory(req: Request, res: Response): Promise<void> {
     try {
-      // Handle both V1 routes (id) and V2 routes (profileId)
-      const profileId = req.params.id || req.params.profileId;
-      
-      // Get userId based on auth version
-      let userId: string | undefined;
-      if ((req as any).isV2Auth) {
-        userId = req.user?.userId;
-      } else {
-        userId = req.user?.userId;
-      }
-      
-      if (!userId) {
-        throw new AppError('User not authenticated', 401);
-      }
+      const { id: profileId } = req.params;
+      const account = (req as any).account;
+      const accountId = account?.id;
       const { page = '1', limit = '20', status } = req.query;
 
-      // Verify profile ownership
-      const profile = await prisma.smartProfile.findFirst({
-        where: { id: profileId, userId }
+      if (!accountId) {
+        throw new AuthenticationError('Authentication required');
+      }
+
+      // Check access via ProfileAccount
+      const profileAccess = await prisma.profileAccount.findFirst({
+        where: { profileId, accountId },
+        include: {
+          profile: true
+        }
       });
 
-      if (!profile) {
-        throw new NotFoundError('Profile not found');
+      if (!profileAccess) {
+        throw new NotFoundError('Profile not found or access denied');
       }
+
+      const profile = profileAccess.profile;
 
       // Build query
       const where: any = { profileId };
@@ -537,28 +444,27 @@ export class OrbyController {
    */
   async getGasTokens(req: Request, res: Response): Promise<void> {
     try {
-      // Handle both V1 routes (id) and V2 routes (profileId)
-      const profileId = req.params.id || req.params.profileId;
-      
-      // Get userId based on auth version
-      let userId: string | undefined;
-      if ((req as any).isV2Auth) {
-        userId = req.user?.userId;
-      } else {
-        userId = req.user?.userId;
-      }
-      
-      if (!userId) {
-        throw new AppError('User not authenticated', 401);
+      const { id: profileId } = req.params;
+      const account = (req as any).account;
+      const accountId = account?.id;
+
+      if (!accountId) {
+        throw new AuthenticationError('Authentication required');
       }
 
-      const profile = await prisma.smartProfile.findFirst({
-        where: { id: profileId, userId }
+      // Check access via ProfileAccount
+      const profileAccess = await prisma.profileAccount.findFirst({
+        where: { profileId, accountId },
+        include: {
+          profile: true
+        }
       });
 
-      if (!profile) {
-        throw new NotFoundError('Profile not found');
+      if (!profileAccess) {
+        throw new NotFoundError('Profile not found or access denied');
       }
+
+      const profile = profileAccess.profile;
 
       const gasAnalysis = await gasTokenService.analyzeGasTokens(profile);
 
@@ -579,34 +485,33 @@ export class OrbyController {
    */
   async setPreferredGasToken(req: Request, res: Response): Promise<void> {
     try {
-      // Handle both V1 routes (id) and V2 routes (profileId)
-      const profileId = req.params.id || req.params.profileId;
-      
-      // Get userId based on auth version
-      let userId: string | undefined;
-      if ((req as any).isV2Auth) {
-        userId = req.user?.userId;
-      } else {
-        userId = req.user?.userId;
-      }
-      
-      if (!userId) {
-        throw new AppError('User not authenticated', 401);
-      }
+      const { id: profileId } = req.params;
+      const account = (req as any).account;
+      const accountId = account?.id;
       const { standardizedTokenId, tokenSymbol, chainPreferences } = req.body;
+
+      if (!accountId) {
+        throw new AuthenticationError('Authentication required');
+      }
 
       // Validate profile ID
       if (!profileId) {
         throw new AppError('Profile ID is required', 400);
       }
 
-      const profile = await prisma.smartProfile.findFirst({
-        where: { id: profileId, userId }
+      // Check access via ProfileAccount
+      const profileAccess = await prisma.profileAccount.findFirst({
+        where: { profileId, accountId },
+        include: {
+          profile: true
+        }
       });
 
-      if (!profile) {
-        throw new NotFoundError('Profile not found');
+      if (!profileAccess) {
+        throw new NotFoundError('Profile not found or access denied');
       }
+
+      const profile = profileAccess.profile;
 
       await gasTokenService.setPreferredGasToken(
         profileId,
@@ -631,21 +536,32 @@ export class OrbyController {
    */
   async getVirtualNodeRpcUrl(req: Request, res: Response, next: NextFunction) {
     try {
-      // Handle both V1 routes (id) and V2 routes (profileId)
-      const profileId = req.params.id || req.params.profileId;
+      const { id: profileId } = req.params;
+      const account = (req as any).account;
+      const accountId = account?.id;
       const chainId = parseInt(req.query.chainId as string);
+
+      if (!accountId) {
+        throw new AuthenticationError('Authentication required');
+      }
 
       if (!profileId || isNaN(chainId)) {
         throw new AppError('Profile ID and Chain ID are required', 400);
       }
 
-      const profile = await prisma.smartProfile.findUnique({
-        where: { id: profileId }
+      // Check access via ProfileAccount
+      const profileAccess = await prisma.profileAccount.findFirst({
+        where: { profileId, accountId },
+        include: {
+          profile: true
+        }
       });
 
-      if (!profile) {
-        throw new NotFoundError('Profile not found');
+      if (!profileAccess) {
+        throw new NotFoundError('Profile not found or access denied');
       }
+
+      const profile = profileAccess.profile;
 
       const rpcUrl = await orbyService.getVirtualNodeRpcUrl(profile, chainId);
 

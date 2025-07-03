@@ -1,5 +1,5 @@
 import { prisma, withTransaction } from '@/utils/database';
-import { generateAccessToken, generateRefreshToken } from '@/utils/jwt';
+const { generateTokens } = require('@/utils/tokenUtils');
 import { OAuth2Client } from 'google-auth-library';
 import { verifyIdToken } from 'apple-signin-auth';
 import { passkeyService } from './passkeyService';
@@ -11,6 +11,7 @@ import {
   ConflictError,
   NotFoundError 
 } from '@/types';
+import { randomBytes } from 'crypto';
 
 export interface SocialAuthRequest {
   authToken: string; // OAuth or passkey token
@@ -61,47 +62,60 @@ export class SocialAuthService {
       }
 
       return withTransaction(async (tx) => {
-        let user;
+        let account;
         
-        // Find or create user based on auth strategy
+        // Find or create account based on auth strategy
         switch (data.authStrategy) {
           case 'email':
-            user = await this.handleEmailAuth(tx, data);
+            account = await this.handleEmailAuth(tx, data);
             break;
           case 'wallet':
-            user = await this.handleWalletAuth(tx, data);
+            account = await this.handleWalletAuth(tx, data);
             break;
           case 'guest':
-            user = await this.handleGuestAuth(tx, data);
+            account = await this.handleGuestAuth(tx, data);
             break;
           default:
             // Social auth (google, discord, etc.)
-            user = await this.handleSocialAuth(tx, data);
+            account = await this.handleSocialAuth(tx, data);
             break;
         }
 
+        // Create session
+        const sessionToken = randomBytes(32).toString('hex');
+        const sessionId = `ses_${randomBytes(16).toString('hex')}`;
+        const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // 30 days
+        
+        await tx.accountSession.create({
+          data: {
+            accountId: account.id,
+            sessionId,
+            deviceId: data.deviceId,
+            deviceName: data.deviceName,
+            ipAddress: data.ipAddress,
+            userAgent: data.userAgent,
+            privacyMode: 'linked',
+            expiresAt
+          }
+        });
+
         // Handle device registration (optional)
         if (data.deviceId) {
-          await this.handleDeviceRegistration(tx, user.id, data);
+          await this.handleDeviceRegistration(tx, account.id, data);
         }
 
         // Generate tokens
-        const accessToken = generateAccessToken(user.id, data.deviceId || undefined);
-        const refreshToken = generateRefreshToken(user.id, data.deviceId || undefined);
-
-        // Store refresh token
-        await tx.refreshToken.create({
-          data: {
-            userId: user.id,
-            token: refreshToken,
-            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
-          }
+        const tokens = generateTokens({
+          accountId: account.id,
+          sessionToken,
+          deviceId: data.deviceId || undefined,
+          activeProfileId: undefined // Can be set later when profile is selected
         });
 
         // Log successful authentication
         await auditService.log({
-          userId: user.id,
-          action: 'USER_LOGIN',
+          accountId: account.id,
+          action: 'ACCOUNT_LOGIN',
           resource: 'Authentication',
           details: JSON.stringify({
             authStrategy: data.authStrategy,
@@ -112,11 +126,7 @@ export class SocialAuthService {
           userAgent: data.userAgent
         });
 
-        return {
-          accessToken,
-          refreshToken,
-          expiresIn: 15 * 60 // 15 minutes
-        };
+        return tokens;
       });
     } catch (error) {
       console.error('Social authentication error:', error);
@@ -139,35 +149,28 @@ export class SocialAuthService {
     // The email verification is handled separately by the /auth/email/verify-code endpoint
     // Once verified, users can authenticate with just their email
 
-    // Find existing user by email
-    let user = await tx.user.findUnique({
-      where: { email: normalizedEmail }
+    // Find existing account by email
+    let account = await tx.account.findUnique({
+      where: { 
+        type_identifier: {
+          type: 'email',
+          identifier: normalizedEmail
+        }
+      }
     });
 
-    if (!user) {
-      // For email auth, we only create users after they've verified their email
+    if (!account) {
+      // For email auth, we only create accounts after they've verified their email
       // This happens in the email verification flow
       throw new AuthenticationError('Email not found. Please verify your email first.');
     }
 
     // Check if email is verified
-    if (!user.emailVerified) {
+    if (!account.verified) {
       throw new AuthenticationError('Email not verified. Please verify your email first.');
     }
 
-    // Update auth strategies if needed
-    const currentStrategies = JSON.parse(user.authStrategies || '[]');
-    if (!currentStrategies.includes('email')) {
-      currentStrategies.push('email');
-      await tx.user.update({
-        where: { id: user.id },
-        data: { 
-          authStrategies: JSON.stringify(currentStrategies)
-        }
-      });
-    }
-
-    return user;
+    return account;
   }
 
   /**
@@ -178,105 +181,55 @@ export class SocialAuthService {
       throw new AuthenticationError('Wallet address required for wallet auth strategy');
     }
 
-    // Find existing linked account
-    const linkedAccount = await tx.linkedAccount.findFirst({
-      where: { address: data.walletAddress.toLowerCase() },
-      include: { 
-        user: {
-          include: {
-            smartProfiles: {
-              orderBy: { createdAt: 'desc' },
-              take: 1
-            }
-          }
+    const normalizedWallet = data.walletAddress.toLowerCase();
+
+    // Find existing account by wallet
+    let account = await tx.account.findUnique({
+      where: { 
+        type_identifier: {
+          type: 'wallet',
+          identifier: normalizedWallet
         }
       }
     });
 
-    let user;
-    if (linkedAccount) {
-      user = linkedAccount.user;
-      // Update auth strategies
-      const currentStrategies = JSON.parse(user.authStrategies || '[]');
-      if (!currentStrategies.includes('wallet')) {
-        currentStrategies.push('wallet');
-        await tx.user.update({
-          where: { id: user.id },
-          data: { authStrategies: JSON.stringify(currentStrategies) }
-        });
-      }
-    } else {
-      // Create new user and linked account
-      user = await tx.user.create({
+    if (!account) {
+      // Create new account
+      account = await tx.account.create({
         data: {
-          authStrategies: JSON.stringify(['wallet']),
-          isGuest: false
-        }
-      });
-
-      // Check if user has any profiles
-      const userProfiles = await tx.smartProfile.findMany({
-        where: { userId: user.id },
-        orderBy: { createdAt: 'desc' }
-      });
-
-      // If user has profiles, link to the most recent one (which should be the one they just created)
-      const profileId = userProfiles.length > 0 ? userProfiles[0].id : null;
-
-      await tx.linkedAccount.create({
-        data: {
-          userId: user.id,
-          profileId: profileId, // Link to profile if exists
-          address: data.walletAddress.toLowerCase(),
-          authStrategy: 'wallet',
-          walletType: 'external',
-          isActive: true
-        }
-      });
-    }
-
-    // Check if this is an orphan wallet (has account but no profile linked)
-    if (!linkedAccount?.profileId) {
-      // Find the user's most recent profile without a wallet
-      const unlinkedProfile = await tx.smartProfile.findFirst({
-        where: {
-          userId: user.id,
-          linkedAccounts: {
-            none: {
-              authStrategy: 'wallet'
-            }
+          type: 'wallet',
+          identifier: normalizedWallet,
+          verified: true, // Wallet auth is verified by signature
+          metadata: {
+            walletType: data.socialData?.provider || 'external'
           }
-        },
-        orderBy: { createdAt: 'desc' }
-      });
-
-      if (unlinkedProfile) {
-        // Link this wallet to the unlinked profile
-        if (linkedAccount) {
-          await tx.linkedAccount.update({
-            where: { id: linkedAccount.id },
-            data: { profileId: unlinkedProfile.id }
-          });
         }
-      }
+      });
     }
 
-    return user;
+    return account;
   }
 
   /**
    * Handle guest authentication
    */
   private async handleGuestAuth(tx: any, data: SocialAuthRequest) {
-    // Create guest user
-    const user = await tx.user.create({
+    // Create guest account with unique identifier
+    const guestId = `guest_${randomBytes(16).toString('hex')}`;
+    
+    const account = await tx.account.create({
       data: {
-        authStrategies: JSON.stringify(['guest']),
-        isGuest: true
+        type: 'guest',
+        identifier: guestId,
+        verified: true,
+        metadata: {
+          deviceId: data.deviceId,
+          createdFrom: data.deviceType
+        }
       }
     });
 
-    return user;
+    return account;
   }
 
   /**
@@ -300,73 +253,62 @@ export class SocialAuthService {
 
     const { provider, providerId } = data.socialData;
 
-    // Find existing user by wallet address first (for Telegram)
-    let user;
-    if (data.walletAddress && (provider === 'telegram' || data.authStrategy === 'telegram')) {
-      const linkedAccount = await tx.linkedAccount.findFirst({
-        where: { 
-          address: data.walletAddress.toLowerCase(),
-          authStrategy: 'telegram'
-        },
-        include: { user: true }
-      });
-      
-      if (linkedAccount) {
-        user = linkedAccount.user;
-      }
-    }
-    
-    // If not found by wallet, try finding by auth strategy
-    if (!user) {
-      user = await tx.user.findFirst({
-        where: {
-          authStrategies: {
-            contains: provider
-          }
+    // Find existing account
+    let account = await tx.account.findUnique({
+      where: { 
+        type_identifier: {
+          type: 'social',
+          identifier: `${provider}:${providerId}`
         }
-      });
-    }
+      }
+    });
 
-    if (!user) {
-      // Create new user
-      user = await tx.user.create({
+    if (!account) {
+      // Create new account
+      account = await tx.account.create({
         data: {
-          authStrategies: JSON.stringify([provider]),
-          isGuest: false
+          type: 'social',
+          identifier: `${provider}:${providerId}`,
+          provider: provider,
+          verified: true, // Social accounts are verified by OAuth provider
+          metadata: {
+            username: data.socialData.username,
+            displayName: data.socialData.displayName,
+            avatarUrl: data.socialData.avatarUrl,
+            email: data.email
+          }
         }
       });
-      
-      // For Telegram, also create a linked account with the wallet address
-      if (data.walletAddress && (provider === 'telegram' || data.authStrategy === 'telegram')) {
-        await tx.linkedAccount.create({
-          data: {
-            userId: user.id,
-            address: data.walletAddress.toLowerCase(),
-            authStrategy: 'telegram',
-            walletType: 'external',
-            isActive: true
-          }
-        });
-      }
     } else {
-      // Update auth strategies
-      const currentStrategies = JSON.parse(user.authStrategies || '[]');
-      if (!currentStrategies.includes(provider)) {
-        currentStrategies.push(provider);
-        await tx.user.update({
-          where: { id: user.id },
-          data: { authStrategies: JSON.stringify(currentStrategies) }
-        });
+      // Update metadata if needed
+      const updatedMetadata = {
+        ...(account.metadata as any || {}),
+        lastLogin: new Date().toISOString()
+      };
+      
+      if (data.socialData.displayName) {
+        updatedMetadata.displayName = data.socialData.displayName;
       }
+      if (data.socialData.avatarUrl) {
+        updatedMetadata.avatarUrl = data.socialData.avatarUrl;
+      }
+      if (data.email) {
+        updatedMetadata.email = data.email;
+      }
+
+      await tx.account.update({
+        where: { id: account.id },
+        data: { metadata: updatedMetadata }
+      });
     }
 
-    return user;
+    return account;
   }
 
   /**
    * Handle device registration
    */
-  private async handleDeviceRegistration(tx: any, userId: string, data: SocialAuthRequest) {
+  private async handleDeviceRegistration(tx: any, accountId: string, data: SocialAuthRequest) {
     // Only register device if deviceId is provided
     if (!data.deviceId) {
       return; // Skip device registration
@@ -375,14 +317,14 @@ export class SocialAuthService {
     await tx.deviceRegistration.upsert({
       where: { deviceId: data.deviceId },
       update: {
-        userId: userId, // Always update userId to current user
+        accountId: accountId, // Always update accountId to current account
         deviceName: data.deviceName,
         deviceType: data.deviceType,
         isActive: true,
         lastActiveAt: new Date()
       },
       create: {
-        userId,
+        accountId,
         deviceId: data.deviceId,
         deviceName: data.deviceName,
         deviceType: data.deviceType,
@@ -485,9 +427,9 @@ export class SocialAuthService {
   }
 
   /**
-   * Link additional auth method to existing user
+   * Link additional auth method to existing account
    */
-  async linkAuthMethod(userId: string, data: Omit<SocialAuthRequest, 'deviceId' | 'deviceName' | 'deviceType'>): Promise<void> {
+  async linkAuthMethod(accountId: string, data: Omit<SocialAuthRequest, 'deviceId' | 'deviceName' | 'deviceType'>): Promise<void> {
     const verificationResult = await this.verifySocialAuth(data.authToken, data.authStrategy);
     
     if (!verificationResult.isValid) {
@@ -503,94 +445,166 @@ export class SocialAuthService {
     }
 
     await withTransaction(async (tx) => {
-      const user = await tx.user.findUnique({
-        where: { id: userId }
+      const existingAccount = await tx.account.findUnique({
+        where: { id: accountId }
       });
 
-      if (!user) {
-        throw new NotFoundError('User');
+      if (!existingAccount) {
+        throw new NotFoundError('Account');
       }
 
-      // Update auth strategies
-      const currentStrategies = JSON.parse(user.authStrategies || '[]');
-      if (!currentStrategies.includes(data.authStrategy)) {
-        currentStrategies.push(data.authStrategy);
-        
-        await tx.user.update({
-          where: { id: userId },
-          data: { 
-            authStrategies: JSON.stringify(currentStrategies),
-            isGuest: false // Upgrade from guest if linking auth
-          }
-        });
+      // Check if this auth method already exists
+      let identifier: string;
+      let type: string;
+      
+      switch (data.authStrategy) {
+        case 'email':
+          if (!data.email) throw new AuthenticationError('Email required');
+          type = 'email';
+          identifier = data.email.toLowerCase();
+          break;
+        case 'wallet':
+          if (!data.walletAddress) throw new AuthenticationError('Wallet address required');
+          type = 'wallet';
+          identifier = data.walletAddress.toLowerCase();
+          break;
+        case 'google':
+        case 'apple':
+        case 'discord':
+        case 'telegram':
+          if (!data.socialData) throw new AuthenticationError('Social data required');
+          type = 'social';
+          identifier = `${data.socialData.provider}:${data.socialData.providerId}`;
+          break;
+        default:
+          throw new AuthenticationError('Unsupported auth strategy');
       }
 
-      // Handle wallet linking if wallet auth
-      if (data.authStrategy === 'wallet' && data.walletAddress) {
-        const existingLinkedAccount = await tx.linkedAccount.findFirst({
-          where: { 
-            address: data.walletAddress.toLowerCase(),
-            userId: userId
+      // Check if this identity already exists
+      const existingIdentity = await tx.account.findUnique({
+        where: {
+          type_identifier: {
+            type,
+            identifier
           }
-        });
-
-        if (!existingLinkedAccount) {
-          await tx.linkedAccount.create({
-            data: {
-              userId,
-              address: data.walletAddress.toLowerCase(),
-              authStrategy: 'wallet',
-              walletType: 'external',
-              isActive: true
-            }
-          });
         }
+      });
+
+      if (existingIdentity) {
+        if (existingIdentity.id === accountId) {
+          // Already linked to this account
+          return;
+        }
+        
+        // Link the two accounts
+        await tx.identityLink.create({
+          data: {
+            accountAId: accountId,
+            accountBId: existingIdentity.id,
+            linkType: 'direct',
+            privacyMode: 'linked'
+          }
+        });
+      } else {
+        // Create new account for this identity and link it
+        const newAccount = await tx.account.create({
+          data: {
+            type,
+            identifier,
+            provider: type === 'social' ? data.socialData?.provider : undefined,
+            verified: true,
+            metadata: type === 'social' ? {
+              username: data.socialData?.username,
+              displayName: data.socialData?.displayName,
+              avatarUrl: data.socialData?.avatarUrl,
+              email: data.email
+            } : {}
+          }
+        });
+
+        // Link the accounts
+        await tx.identityLink.create({
+          data: {
+            accountAId: accountId,
+            accountBId: newAccount.id,
+            linkType: 'direct',
+            privacyMode: 'linked'
+          }
+        });
       }
     });
   }
 
   /**
-   * Get user by ID with auth info
+   * Get account by ID with auth info
    */
-  async getUserById(userId: string) {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
+  async getAccountById(accountId: string) {
+    const account = await prisma.account.findUnique({
+      where: { id: accountId },
       include: {
         devices: {
           where: { isActive: true },
           orderBy: { lastActiveAt: 'desc' }
         },
-        smartProfiles: {
+        profileAccounts: {
           include: {
-            _count: {
-              select: {
-                linkedAccounts: true,
-                apps: true,
-                folders: true
+            profile: {
+              include: {
+                _count: {
+                  select: {
+                    linkedAccounts: true,
+                    apps: true,
+                    folders: true
+                  }
+                }
               }
             }
           }
         },
-        linkedAccounts: {
-          where: { isActive: true }
+        identityLinksA: {
+          include: {
+            accountB: true
+          }
+        },
+        identityLinksB: {
+          include: {
+            accountA: true
+          }
+        },
+        sessions: {
+          where: {
+            expiresAt: {
+              gt: new Date()
+            }
+          },
+          orderBy: { createdAt: 'desc' }
         }
       }
     });
 
-    if (!user) {
-      throw new NotFoundError('User');
+    if (!account) {
+      throw new NotFoundError('Account');
     }
 
+    // Gather all linked accounts
+    const linkedAccounts = [
+      ...account.identityLinksA.map(link => link.accountB),
+      ...account.identityLinksB.map(link => link.accountA)
+    ];
+
     return {
-      id: user.id,
-      email: user.email,
-      authStrategies: JSON.parse(user.authStrategies || '[]'),
-      isGuest: user.isGuest,
-      profilesCount: user.smartProfiles.length,
-      linkedAccountsCount: user.linkedAccounts.length,
-      activeDevicesCount: user.devices.length,
-      createdAt: user.createdAt.toISOString(),
-      updatedAt: user.updatedAt.toISOString()
+      id: account.id,
+      type: account.type,
+      identifier: account.identifier,
+      provider: account.provider,
+      verified: account.verified,
+      metadata: account.metadata,
+      profilesCount: account.profileAccounts.length,
+      linkedAccountsCount: linkedAccounts.length,
+      activeDevicesCount: account.devices.length,
+      activeSessionsCount: account.sessions.length,
+      createdAt: account.createdAt.toISOString(),
+      updatedAt: account.updatedAt.toISOString()
     };
   }
 }

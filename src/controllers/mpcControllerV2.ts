@@ -60,7 +60,7 @@ export class MpcControllerV2 {
 
       // Audit log the key generation request
       await auditService.log({
-        userId: accountId,
+        accountId: accountId,
         profileId,
         action: 'MPC_KEY_GENERATION_INITIATED',
         resource: 'mpc_key',
@@ -133,7 +133,7 @@ export class MpcControllerV2 {
 
       // Audit log the backup operation
       await auditService.log({
-        userId: accountId, // Using accountId as userId for compatibility
+        accountId: accountId,
         profileId,
         action: 'MPC_KEY_BACKUP',
         resource: 'mpc_key',
@@ -209,7 +209,7 @@ export class MpcControllerV2 {
 
       // Audit log the export operation - this is a critical security event
       await auditService.log({
-        userId: accountId, // Using accountId as userId for compatibility
+        accountId: accountId,
         profileId,
         action: 'MPC_KEY_EXPORT',
         resource: 'mpc_key',
@@ -322,7 +322,7 @@ export class MpcControllerV2 {
 
       // Audit log the rotation
       await auditService.log({
-        userId: accountId, // Using accountId as userId for compatibility
+        accountId: accountId,
         profileId,
         action: 'MPC_KEY_ROTATE',
         resource: 'mpc_key',
@@ -401,7 +401,7 @@ export class MpcControllerV2 {
 
       // Audit log
       await auditService.log({
-        userId: accountId,
+        accountId: accountId,
         profileId,
         action: 'MPC_KEY_GENERATION_COMPLETED',
         resource: 'mpc_key',
@@ -510,7 +510,7 @@ export class MpcControllerV2 {
 
       // Audit log
       await auditService.log({
-        userId: accountId,
+        accountId: accountId,
         profileId,
         action: 'MPC_SIGNING_COMPLETED',
         resource: 'mpc_key',
@@ -652,7 +652,6 @@ export class MpcControllerV2 {
           // Create new LinkedAccount for MPC wallet
           await prisma.linkedAccount.create({
             data: {
-              userId: profile.userId,
               profileId: profileId,
               address: address.toLowerCase(),
               authStrategy: 'mpc',
@@ -687,7 +686,7 @@ export class MpcControllerV2 {
 
       // Audit log
       await auditService.log({
-        userId: accountId,
+        accountId: accountId,
         profileId,
         action: 'MPC_KEY_GENERATED',
         resource: 'mpc_key',

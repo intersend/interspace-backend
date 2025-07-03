@@ -62,7 +62,6 @@ const authenticateAccount = async (req, res, next) => {
       decoded = jwt.verify(token, process.env.JWT_SECRET);
       logger.info('AuthMiddlewareV2.authenticateAccount - Token verified', {
         accountId: decoded.accountId,
-        userId: decoded.userId,
         sessionToken: decoded.sessionToken,
         tokenType: decoded.type,
         version: decoded.version
@@ -96,128 +95,46 @@ const authenticateAccount = async (req, res, next) => {
     // Get account and session
     let account, session;
 
-    if (decoded.accountId && decoded.sessionToken) {
-      // New token format with accountId
-      account = await prisma.account.findUnique({
-        where: { id: decoded.accountId }
-      });
-
-      session = await prisma.accountSession.findUnique({
-        where: { sessionId: decoded.sessionToken }
-      });
-
-      if (!session || session.accountId !== decoded.accountId) {
-        throw new AppError('Invalid session', 401);
-      }
-
-      if (new Date() > session.expiresAt) {
-        throw new AppError('Session expired', 401);
-      }
-
-      // Update last active (updatedAt is automatically updated by Prisma)
-      await prisma.accountSession.update({
-        where: { id: session.id },
-        data: { } // Just touching the record updates updatedAt
-      });
-
-    } else if (decoded.userId) {
-      // Legacy token format - handle backward compatibility
-      const user = await prisma.user.findUnique({
-        where: { id: decoded.userId }
-      });
-
-      if (!user) {
-        throw new AppError('User not found', 401);
-      }
-
-      // Find or create account for legacy user
-      if (user.email) {
-        account = await prisma.account.findUnique({
-          where: {
-            type_identifier: {
-              type: 'email',
-              identifier: user.email.toLowerCase()
-            }
-          }
-        });
-      } else if (user.walletAddress) {
-        account = await prisma.account.findUnique({
-          where: {
-            type_identifier: {
-              type: 'wallet',
-              identifier: user.walletAddress.toLowerCase()
-            }
-          }
-        });
-      } else {
-        // Guest users might not have email or wallet
-        console.warn('User has neither email nor wallet address:', user.id);
-      }
-
-      if (!account) {
-        // Create account for legacy user
-        const identifier = user.email || user.walletAddress;
-        if (!identifier) {
-          throw new AppError('No email or wallet address found for user', 401);
-        }
-        
-        const accountService = require('../services/accountService');
-        account = await accountService.findOrCreateAccount({
-          type: user.email ? 'email' : 'wallet',
-          identifier: identifier.toLowerCase(),
-          metadata: { migratedFromLegacy: true, userId: user.id }
-        });
-      }
-
-      // Create a temporary session for legacy token
-      session = {
-        privacyMode: 'linked',
-        activeProfile: null
-      };
-    } else {
+    if (!decoded.accountId || !decoded.sessionToken) {
       throw new AppError('Invalid token format', 401);
     }
 
-    if (!account) {
-      throw new AppError('Account not found', 401);
+    // New token format with accountId
+    account = await prisma.account.findUnique({
+      where: { id: decoded.accountId }
+    });
+
+    session = await prisma.accountSession.findUnique({
+      where: { sessionId: decoded.sessionToken }
+    });
+
+    if (!session || session.accountId !== decoded.accountId) {
+      throw new AppError('Invalid session', 401);
     }
 
-    // For V2 accounts, find the associated user for backward compatibility
-    let userId = decoded.userId; // From legacy tokens
-    if (!userId && account) {
-      // Try to find user associated with this account
-      const user = await prisma.user.findFirst({
-        where: {
-          OR: [
-            { email: account.type === 'email' ? account.identifier : undefined },
-            { walletAddress: account.type === 'wallet' ? account.identifier : undefined }
-          ]
-        }
-      });
-      
-      if (user) {
-        userId = user.id;
-      } else {
-        // Log warning but don't fail - some V2 accounts might not have users
-        logger.warn('No user found for account:', {
-          accountId: account.id,
-          type: account.type,
-          identifier: account.identifier
-        });
-      }
+    if (new Date() > session.expiresAt) {
+      throw new AppError('Session expired', 401);
+    }
+
+    // Update last active (updatedAt is automatically updated by Prisma)
+    await prisma.accountSession.update({
+      where: { id: session.id },
+      data: { } // Just touching the record updates updatedAt
+    });
+
+    if (!account) {
+      throw new AppError('Account not found', 401);
     }
 
     // Attach to request
     req.account = account;
     req.session = session;
     req.sessionToken = decoded.sessionToken;
-    req.user = { id: userId, userId: userId }; // For backward compatibility - provide both id and userId
 
     logger.info('AuthMiddlewareV2.authenticateAccount - Setting req.account:', {
       accountId: account.id,
       accountType: account.type,
-      hasSession: !!session,
-      userId: userId
+      hasSession: !!session
     });
 
     // Get active profile if available

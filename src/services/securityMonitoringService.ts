@@ -15,7 +15,7 @@ export interface SecurityMetrics {
 export interface SecurityAlert {
   type: 'BRUTE_FORCE' | 'TOKEN_THEFT' | 'ANOMALY' | 'MPC_ABUSE' | 'RATE_LIMIT_ABUSE';
   severity: 'low' | 'medium' | 'high' | 'critical';
-  userId?: string;
+  accountId?: string;
   ipAddress?: string;
   details: any;
 }
@@ -101,7 +101,7 @@ export class SecurityMonitoringService {
   /**
    * Check for brute force attempts
    */
-  async checkBruteForce(userId?: string, ipAddress?: string): Promise<boolean> {
+  async checkBruteForce(accountId?: string, ipAddress?: string): Promise<boolean> {
     const since = new Date(Date.now() - this.alertThresholds.failedLogins.window);
     
     const query: any = {
@@ -109,7 +109,7 @@ export class SecurityMonitoringService {
       createdAt: { gte: since }
     };
 
-    if (userId) query.userId = userId;
+    if (accountId) query.accountId = accountId;
     if (ipAddress) query.ipAddress = ipAddress;
 
     const count = await prisma.auditLog.count({ where: query });
@@ -118,7 +118,7 @@ export class SecurityMonitoringService {
       await this.createAlert({
         type: 'BRUTE_FORCE',
         severity: 'high',
-        userId,
+        accountId,
         ipAddress,
         details: { 
           failedAttempts: count, 
@@ -134,7 +134,7 @@ export class SecurityMonitoringService {
   /**
    * Check for rate limit abuse
    */
-  async checkRateLimitAbuse(userId?: string, ipAddress?: string): Promise<boolean> {
+  async checkRateLimitAbuse(accountId?: string, ipAddress?: string): Promise<boolean> {
     const since = new Date(Date.now() - this.alertThresholds.rateLimitViolations.window);
     
     const query: any = {
@@ -142,7 +142,7 @@ export class SecurityMonitoringService {
       createdAt: { gte: since }
     };
 
-    if (userId) query.userId = userId;
+    if (accountId) query.accountId = accountId;
     if (ipAddress) query.ipAddress = ipAddress;
 
     const count = await prisma.auditLog.count({ where: query });
@@ -151,7 +151,7 @@ export class SecurityMonitoringService {
       await this.createAlert({
         type: 'RATE_LIMIT_ABUSE',
         severity: 'medium',
-        userId,
+        accountId,
         ipAddress,
         details: { 
           violations: count, 
@@ -167,12 +167,12 @@ export class SecurityMonitoringService {
   /**
    * Check for MPC operation abuse
    */
-  async checkMpcAbuse(userId: string): Promise<boolean> {
+  async checkMpcAbuse(accountId: string): Promise<boolean> {
     const since = new Date(Date.now() - this.alertThresholds.mpcOperations.window);
     
     const count = await prisma.auditLog.count({
       where: {
-        userId,
+        accountId,
         action: {
           in: ['MPC_KEY_EXPORT', 'MPC_KEY_ROTATE', 'MPC_KEY_BACKUP']
         },
@@ -184,7 +184,7 @@ export class SecurityMonitoringService {
       await this.createAlert({
         type: 'MPC_ABUSE',
         severity: 'critical',
-        userId,
+        accountId,
         details: { 
           operations: count, 
           timeWindow: '1 hour',
@@ -205,7 +205,7 @@ export class SecurityMonitoringService {
       // Log the alert
       logger.warn(`Security Alert: ${alert.type}`, {
         severity: alert.severity,
-        userId: alert.userId,
+        accountId: alert.accountId,
         ipAddress: alert.ipAddress,
         details: alert.details
       });
@@ -213,7 +213,7 @@ export class SecurityMonitoringService {
       // Create audit log entry
       await auditService.logSecurityEvent({
         type: 'SUSPICIOUS_ACTIVITY',
-        userId: alert.userId,
+        accountId: alert.accountId,
         details: {
           alertType: alert.type,
           severity: alert.severity,
@@ -264,7 +264,7 @@ export class SecurityMonitoringService {
         id: alert.id,
         type: details.alertType,
         severity: details.severity,
-        userId: alert.userId,
+        accountId: alert.accountId,
         ipAddress: alert.ipAddress,
         details: details,
         createdAt: alert.createdAt
@@ -275,12 +275,12 @@ export class SecurityMonitoringService {
   /**
    * Anomaly detection for unusual patterns
    */
-  async detectAnomalies(userId: string): Promise<void> {
+  async detectAnomalies(accountId: string): Promise<void> {
     try {
       // Check for unusual login patterns
       const recentLogins = await prisma.auditLog.findMany({
         where: {
-          userId,
+          accountId,
           action: 'LOGIN_SUCCESS',
           createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
         },
@@ -297,7 +297,7 @@ export class SecurityMonitoringService {
         await this.createAlert({
           type: 'ANOMALY',
           severity: 'medium',
-          userId,
+          accountId,
           details: {
             anomalyType: 'multiple_ips',
             ipCount: uniqueIps.size,
@@ -316,7 +316,7 @@ export class SecurityMonitoringService {
         await this.createAlert({
           type: 'ANOMALY',
           severity: 'low',
-          userId,
+          accountId,
           details: {
             anomalyType: 'unusual_time',
             count: unusualTimeLogins.length,
@@ -325,7 +325,7 @@ export class SecurityMonitoringService {
         });
       }
     } catch (error) {
-      logger.error('Failed to detect anomalies', { error, userId });
+      logger.error('Failed to detect anomalies', { error, accountId });
     }
   }
 

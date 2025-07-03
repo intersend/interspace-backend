@@ -10,45 +10,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id             String   @id @default(cuid())
-  email          String?  @unique
-  hashedPassword String? // For traditional email/password auth
-  emailVerified  Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  // Multi-auth support
-  authStrategies String? // JSON string of auth methods
-  isGuest        Boolean @default(false)
-  walletAddress  String? // Primary wallet address (for SIWE)
-
-  // Multi-device support
-  devices          DeviceRegistration[]
-  refreshTokens    RefreshToken[]
-
-  // Profiles owned by this user
-  smartProfiles  SmartProfile[]
-  linkedAccounts LinkedAccount[]
-  socialProfiles SocialProfile[]
-
-  // Email verifications
-  emailVerifications EmailVerification[]
-
-  // Two-factor authentication
-  twoFactorEnabled     Boolean   @default(false)
-  twoFactorSecret      String? // Encrypted TOTP secret
-  twoFactorBackupCodes String? // Encrypted JSON array of backup codes
-  twoFactorEnabledAt   DateTime?
-
-  // Passkeys are now stored as Account entries with type='passkey' in V2
-
-  @@map("users")
-}
+// User model removed - using flat identity model with Account instead
 
 model DeviceRegistration {
   id           String   @id @default(cuid())
-  userId       String
+  accountId    String   // Changed from userId to accountId
   deviceId     String   @unique
   deviceName   String
   deviceType   String // "ios", "android", "web"
@@ -57,25 +23,12 @@ model DeviceRegistration {
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account Account @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   @@map("device_registrations")
 }
 
-model RefreshToken {
-  id        String   @id @default(cuid())
-  userId    String
-  token     String   @unique
-  familyId  String?  // Token family for rotation detection
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  rotatedAt DateTime? // When this token was rotated
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([familyId])
-  @@map("refresh_tokens")
-}
+// RefreshToken removed - tokens are now managed through AccountSession in flat identity model
 
 model BlacklistedToken {
   id         String   @id @default(cuid())
@@ -94,7 +47,6 @@ model BlacklistedToken {
 
 model SmartProfile {
   id                   String   @id @default(cuid())
-  userId               String
   name                 String
   sessionWalletAddress String   @unique // ERC-7702 proxy address
   isActive             Boolean  @default(false)
@@ -104,7 +56,6 @@ model SmartProfile {
   updatedAt            DateTime @updatedAt
 
   // Relationships
-  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   linkedAccounts    LinkedAccount[]
   folders           Folder[]
   apps              BookmarkedApp[]
@@ -123,8 +74,7 @@ model SmartProfile {
 
 model LinkedAccount {
   id           String   @id @default(cuid())
-  userId       String
-  profileId    String?
+  profileId    String
   address      String // Removed @unique to allow same EOA in multiple profiles
   authStrategy String // "wallet", "social", etc.
   walletType   String? // "metamask", "coinbase", "walletconnect", etc.
@@ -142,10 +92,9 @@ model LinkedAccount {
   // EIP-7702 delegations
   delegations AccountDelegation[]
 
-  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  profile SmartProfile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  profile SmartProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, address, profileId]) // Prevent same EOA linked twice to same profile
+  @@unique([profileId, address]) // Prevent same EOA linked twice to same profile
   @@map("linked_accounts")
 }
 
@@ -200,25 +149,7 @@ model BookmarkedApp {
   @@map("bookmarked_apps")
 }
 
-model SocialProfile {
-  id           String   @id @default(cuid())
-  userId       String // Changed from profileId to userId
-  provider     String // "farcaster", "telegram", "twitter", etc.
-  providerId   String // External provider's user ID
-  username     String?
-  displayName  String?
-  avatarUrl    String?
-  accessToken  String? // Encrypted
-  refreshToken String? // Encrypted
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, provider])
-  @@unique([provider, providerId])
-  @@map("social_profiles")
-}
+// SocialProfile removed - social logins now create Accounts in flat identity model
 
 model Transaction {
   id             String    @id @default(cuid())
@@ -284,7 +215,7 @@ model SessionWalletFactory {
 // Audit log for security
 model AuditLog {
   id        String   @id @default(cuid())
-  userId    String?
+  accountId String?  // Changed from userId to accountId
   profileId String?
   action    String
   resource  String
@@ -293,6 +224,7 @@ model AuditLog {
   userAgent String?
   createdAt DateTime @default(now())
 
+  account Account?      @relation(fields: [accountId], references: [id], onDelete: SetNull)
   profile SmartProfile? @relation(fields: [profileId], references: [id], onDelete: SetNull)
 
   @@map("audit_logs")
@@ -412,10 +344,6 @@ model EmailVerification {
   // Rate limiting
   lastAttemptAt DateTime?
   
-  // Link to user if verification is for existing user
-  userId String?
-  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
   @@index([email, code])
   @@index([expiresAt])
   @@map("email_verifications")
@@ -424,7 +352,6 @@ model EmailVerification {
 model DragOperation {
   id        String   @id @default(cuid())
   profileId String
-  userId    String
   type      String   // "reorder", "move", "batch_move", "batch_update"
   before    Json     // State before the operation
   after     Json     // State after the operation
@@ -455,6 +382,8 @@ model Account {
   profileAccounts   ProfileAccount[]
   sessions          AccountSession[]
   blacklistedTokens BlacklistedToken[]
+  devices           DeviceRegistration[]
+  auditLogs         AuditLog[]
 
   @@unique([type, identifier])
   @@map("accounts")

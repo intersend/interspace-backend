@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
-import { foldersService } from '@/services/foldersService';
-import { ApiResponse } from '@/types';
-const { getAuthorizationId, verifyProfileAccess } = require('@/utils/profileAccessV2');
+import { foldersService } from '../services/foldersService';
+import { ApiResponse } from '../types';
+const { getAuthorizationId, verifyProfileAccess } = require('../utils/profileAccessV2');
 
 export class FoldersController {
   
@@ -32,7 +32,7 @@ export class FoldersController {
       }
 
       // Verify access to profile
-      const { hasAccess } = await verifyProfileAccess(profileId, authInfo.id, authInfo.isV2);
+      const { hasAccess } = await verifyProfileAccess(profileId, authInfo.id);
       if (!hasAccess) {
         res.status(403).json({
           success: false,
@@ -41,7 +41,7 @@ export class FoldersController {
         return;
       }
 
-      const folder = await foldersService.createFolder(profileId, authInfo.userId || authInfo.id, {
+      const folder = await foldersService.createFolder(profileId, authInfo.id, {
         name,
         position,
         color
@@ -87,7 +87,7 @@ export class FoldersController {
       }
 
       // Verify access to profile
-      const { hasAccess } = await verifyProfileAccess(profileId, authInfo.id, authInfo.isV2);
+      const { hasAccess } = await verifyProfileAccess(profileId, authInfo.id);
       if (!hasAccess) {
         res.status(403).json({
           success: false,
@@ -96,7 +96,7 @@ export class FoldersController {
         return;
       }
 
-      const folders = await foldersService.getProfileFolders(profileId, authInfo.userId || authInfo.id);
+      const folders = await foldersService.getProfileFolders(profileId, authInfo.id);
 
       res.status(200).json({
         success: true,
@@ -137,7 +137,7 @@ export class FoldersController {
       }
 
       // Verify access to profile
-      const { hasAccess } = await verifyProfileAccess(profileId, authInfo.id, authInfo.isV2);
+      const { hasAccess } = await verifyProfileAccess(profileId, authInfo.id);
       if (!hasAccess) {
         res.status(403).json({
           success: false,
@@ -146,7 +146,7 @@ export class FoldersController {
         return;
       }
 
-      const folder = await foldersService.getFolderById(folderId, profileId, authInfo.userId || authInfo.id);
+      const folder = await foldersService.getFolderById(folderId, profileId, authInfo.id);
 
       res.status(200).json({
         success: true,
@@ -187,7 +187,7 @@ export class FoldersController {
         return;
       }
 
-      const folder = await foldersService.updateFolder(folderId, authInfo.userId || authInfo.id, {
+      const folder = await foldersService.updateFolder(folderId, authInfo.id, {
         name,
         color
       });
@@ -231,7 +231,7 @@ export class FoldersController {
         return;
       }
 
-      await foldersService.deleteFolder(folderId, authInfo.userId || authInfo.id);
+      await foldersService.deleteFolder(folderId, authInfo.id);
 
       res.status(200).json({
         success: true,
@@ -273,7 +273,7 @@ export class FoldersController {
       }
 
       // Verify access to profile
-      const { hasAccess } = await verifyProfileAccess(profileId, authInfo.id, authInfo.isV2);
+      const { hasAccess } = await verifyProfileAccess(profileId, authInfo.id);
       if (!hasAccess) {
         res.status(403).json({
           success: false,
@@ -282,7 +282,7 @@ export class FoldersController {
         return;
       }
 
-      await foldersService.reorderFolders(profileId, authInfo.userId || authInfo.id, folderOrders);
+      await foldersService.reorderFolders(profileId, authInfo.id, folderOrders);
 
       res.status(200).json({
         success: true,
@@ -322,7 +322,7 @@ export class FoldersController {
         return;
       }
 
-      const folder = await foldersService.shareFolder(folderId, authInfo.userId || authInfo.id);
+      const folder = await foldersService.shareFolder(folderId, authInfo.id);
 
       res.status(200).json({
         success: true,
@@ -363,7 +363,7 @@ export class FoldersController {
         return;
       }
 
-      const folder = await foldersService.unshareFolder(folderId, authInfo.userId || authInfo.id);
+      const folder = await foldersService.unshareFolder(folderId, authInfo.id);
 
       res.status(200).json({
         success: true,
@@ -434,7 +434,7 @@ export class FoldersController {
         return;
       }
 
-      const contents = await foldersService.getFolderContents(folderId, authInfo.userId || authInfo.id);
+      const contents = await foldersService.getFolderContents(folderId, authInfo.id);
 
       res.status(200).json({
         success: true,

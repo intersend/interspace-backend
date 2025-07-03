@@ -1,4 +1,4 @@
-import { prisma, withTransaction } from '@/utils/database';
+import { prisma, withTransaction } from '../utils/database';
 import { 
   CreateBookmarkedAppRequest,
   UpdateBookmarkedAppRequest,
@@ -7,7 +7,7 @@ import {
   NotFoundError,
   ConflictError,
   AuthorizationError 
-} from '@/types';
+} from '../types';
 
 export class AppsService {
   
@@ -16,18 +16,27 @@ export class AppsService {
    */
   async createApp(
     profileId: string, 
-    userId: string, 
+    accountId: string, 
     data: CreateBookmarkedAppRequest
   ): Promise<BookmarkedAppResponse> {
     return withTransaction(async (tx) => {
-      // Verify profile ownership
-      const profile = await tx.smartProfile.findFirst({
+      // Verify profile access through ProfileAccount
+      const profileAccount = await tx.profileAccount.findFirst({
         where: { 
-          id: profileId,
-          userId 
+          profileId,
+          accountId 
         }
       });
 
+      if (!profileAccount) {
+        throw new NotFoundError('SmartProfile');
+      }
+      
+      // Get the profile
+      const profile = await tx.smartProfile.findUnique({
+        where: { id: profileId }
+      });
+      
       if (!profile) {
         throw new NotFoundError('SmartProfile');
       }
@@ -81,7 +90,7 @@ export class AppsService {
       // Log the app creation
       await tx.auditLog.create({
         data: {
-          userId,
+          accountId,
           profileId,
           action: 'APP_BOOKMARKED',
           resource: 'BookmarkedApp',
@@ -100,17 +109,17 @@ export class AppsService {
   /**
    * Get all apps for a profile
    */
-  async getProfileApps(profileId: string, userId: string): Promise<BookmarkedAppResponse[]> {
-    // Verify profile ownership
-    const profile = await prisma.smartProfile.findFirst({
+  async getProfileApps(profileId: string, accountId: string): Promise<BookmarkedAppResponse[]> {
+    // Verify profile access through ProfileAccount
+    const profileAccount = await prisma.profileAccount.findFirst({
       where: { 
-        id: profileId,
-        userId 
+        profileId,
+        accountId 
       }
     });
 
-    if (!profile) {
-      // Return empty array for non-existent profile (could be a new user)
+    if (!profileAccount) {
+      // Return empty array for non-existent access
       return [];
     }
 
@@ -138,14 +147,25 @@ export class AppsService {
   async getFolderApps(
     folderId: string, 
     profileId: string, 
-    userId: string
+    accountId: string
   ): Promise<BookmarkedAppResponse[]> {
-    // Verify profile ownership and folder exists
+    // Verify profile access
+    const profileAccount = await prisma.profileAccount.findFirst({
+      where: { 
+        profileId,
+        accountId 
+      }
+    });
+
+    if (!profileAccount) {
+      return [];
+    }
+    
+    // Verify folder exists and belongs to the profile
     const folder = await prisma.folder.findFirst({
       where: { 
         id: folderId,
-        profileId,
-        profile: { userId }
+        profileId
       },
       include: {
         profile: true
@@ -177,16 +197,16 @@ export class AppsService {
   /**
    * Get apps not in any folder (root level)
    */
-  async getRootApps(profileId: string, userId: string): Promise<BookmarkedAppResponse[]> {
-    // Verify profile ownership
-    const profile = await prisma.smartProfile.findFirst({
+  async getRootApps(profileId: string, accountId: string): Promise<BookmarkedAppResponse[]> {
+    // Verify profile access
+    const profileAccount = await prisma.profileAccount.findFirst({
       where: { 
-        id: profileId,
-        userId 
+        profileId,
+        accountId 
       }
     });
 
-    if (!profile) {
+    if (!profileAccount) {
       throw new NotFoundError('SmartProfile');
     }
 
@@ -206,21 +226,32 @@ export class AppsService {
    */
   async updateApp(
     appId: string,
-    userId: string,
+    accountId: string,
     data: UpdateBookmarkedAppRequest
   ): Promise<BookmarkedAppResponse> {
     return withTransaction(async (tx) => {
-      // Verify app ownership
+      // Verify app ownership through profile access
       const app = await tx.bookmarkedApp.findFirst({
         where: { 
-          id: appId,
-          profile: { userId }
+          id: appId
         },
         include: { profile: true }
       });
 
       if (!app) {
         throw new NotFoundError('BookmarkedApp');
+      }
+      
+      // Verify account has access to the profile
+      const profileAccount = await tx.profileAccount.findFirst({
+        where: {
+          profileId: app.profileId,
+          accountId
+        }
+      });
+      
+      if (!profileAccount) {
+        throw new AuthorizationError('You do not have access to this app');
       }
 
       // If moving to a folder, verify it exists and belongs to the same profile
@@ -264,17 +295,26 @@ export class AppsService {
   /**
    * Delete a bookmarked app
    */
-  async deleteApp(appId: string, userId: string): Promise<void> {
-    // Verify app ownership
-    const app = await prisma.bookmarkedApp.findFirst({
-      where: { 
-        id: appId,
-        profile: { userId }
-      }
+  async deleteApp(appId: string, accountId: string): Promise<void> {
+    // Verify app exists and get profile ID
+    const app = await prisma.bookmarkedApp.findUnique({
+      where: { id: appId }
     });
 
     if (!app) {
       throw new NotFoundError('BookmarkedApp');
+    }
+    
+    // Verify account has access to the profile
+    const profileAccount = await prisma.profileAccount.findFirst({
+      where: {
+        profileId: app.profileId,
+        accountId
+      }
+    });
+    
+    if (!profileAccount) {
+      throw new AuthorizationError('You do not have access to this app');
     }
 
     await prisma.bookmarkedApp.delete({
@@ -287,20 +327,20 @@ export class AppsService {
    */
   async reorderApps(
     profileId: string,
-    userId: string,
+    accountId: string,
     data: ReorderAppsRequest,
     folderId?: string
   ): Promise<BookmarkedAppResponse[]> {
     return withTransaction(async (tx) => {
-      // Verify profile ownership
-      const profile = await tx.smartProfile.findFirst({
+      // Verify profile access
+      const profileAccount = await tx.profileAccount.findFirst({
         where: { 
-          id: profileId,
-          userId 
+          profileId,
+          accountId 
         }
       });
 
-      if (!profile) {
+      if (!profileAccount) {
         throw new NotFoundError('SmartProfile');
       }
 
@@ -366,22 +406,33 @@ export class AppsService {
    */
   async moveAppToFolder(
     appId: string,
-    userId: string,
+    accountId: string,
     targetFolderId: string | null,
     position?: number
   ): Promise<BookmarkedAppResponse> {
     return withTransaction(async (tx) => {
-      // Verify app ownership
+      // Verify app exists
       const app = await tx.bookmarkedApp.findFirst({
         where: { 
-          id: appId,
-          profile: { userId }
+          id: appId
         },
         include: { profile: true }
       });
 
       if (!app) {
         throw new NotFoundError('BookmarkedApp');
+      }
+      
+      // Verify account has access to the profile
+      const profileAccount = await tx.profileAccount.findFirst({
+        where: {
+          profileId: app.profileId,
+          accountId
+        }
+      });
+      
+      if (!profileAccount) {
+        throw new AuthorizationError('You do not have access to this app');
       }
 
       // If moving to a folder, verify it exists
@@ -437,18 +488,18 @@ export class AppsService {
    */
   async searchApps(
     profileId: string,
-    userId: string,
+    accountId: string,
     query: string
   ): Promise<BookmarkedAppResponse[]> {
-    // Verify profile ownership
-    const profile = await prisma.smartProfile.findFirst({
+    // Verify profile access
+    const profileAccount = await prisma.profileAccount.findFirst({
       where: { 
-        id: profileId,
-        userId 
+        profileId,
+        accountId 
       }
     });
 
-    if (!profile) {
+    if (!profileAccount) {
       throw new NotFoundError('SmartProfile');
     }
 

@@ -3,12 +3,8 @@ const { body } = require('express-validator');
 const authControllerV2 = require('../controllers/authControllerV2');
 const { authenticateAccount } = require('../middleware/authMiddlewareV2');
 const { authRateLimit, userRateLimit } = require('../middleware/rateLimiter');
-const passkeyRoutes = require('./passkeyRoutes').default;
 
 const router = express.Router();
-
-// Passkey authentication routes
-router.use('/passkey', passkeyRoutes);
 
 /**
  * @route   POST /api/v2/auth/authenticate
