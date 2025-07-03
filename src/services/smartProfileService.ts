@@ -9,6 +9,7 @@ import {
 } from '@/types';
 import { sessionWalletService } from '@/blockchain/sessionWalletService';
 import { orbyService } from '@/services/orbyService';
+import { websocketService } from '@/services/websocketService';
 import { config as defaultConfig, type Config } from '@/utils/config';
 
 export class SmartProfileService {
@@ -249,12 +250,16 @@ export class SmartProfileService {
       console.log('Skipping Orby integration for development wallet');
     }
 
-    const response = this.formatProfileResponse(updatedProfile);
+    const response = await this.formatProfileResponse(updatedProfile);
     
     // Include clientShare only for development wallets
     if (isDevMode && developmentClientShare) {
       response.clientShare = developmentClientShare;
     }
+    
+    // Emit WebSocket event for profile creation
+    // This helps iOS know when to trigger MPC generation
+    websocketService.emitProfileCreated(accountId, response, response.needsMpcGeneration || false);
     
     return response;
   }
@@ -289,7 +294,7 @@ export class SmartProfileService {
       orderBy: { profile: { createdAt: 'desc' } }
     });
 
-    return profileAccounts.map(pa => this.formatProfileResponse(pa.profile));
+    return Promise.all(profileAccounts.map(pa => this.formatProfileResponse(pa.profile)));
   }
 
   /**
@@ -320,7 +325,7 @@ export class SmartProfileService {
       throw new NotFoundError('SmartProfile');
     }
 
-    return this.formatProfileResponse(profileAccount.profile);
+    return await this.formatProfileResponse(profileAccount.profile);
   }
 
   /**
@@ -401,7 +406,7 @@ export class SmartProfileService {
         }
       });
 
-      return this.formatProfileResponse(updatedProfile);
+      return await this.formatProfileResponse(updatedProfile);
     });
   }
 
@@ -481,7 +486,7 @@ export class SmartProfileService {
       }
     });
 
-    return activeProfileAccount ? this.formatProfileResponse(activeProfileAccount.profile) : null;
+    return activeProfileAccount ? await this.formatProfileResponse(activeProfileAccount.profile) : null;
   }
 
   /**
@@ -546,7 +551,7 @@ export class SmartProfileService {
         }
       });
 
-      return this.formatProfileResponse(updatedProfile);
+      return await this.formatProfileResponse(updatedProfile);
     });
   }
 
@@ -667,7 +672,16 @@ export class SmartProfileService {
   /**
    * Format profile data for API response
    */
-  private formatProfileResponse(profile: any): SmartProfileResponse {
+  private async formatProfileResponse(profile: any): Promise<SmartProfileResponse> {
+    // Check if profile has an MPC key mapping (indicates real MPC wallet)
+    let needsMpcGeneration = false;
+    if (!profile.developmentMode) {
+      const mpcKeyMapping = await prisma.mpcKeyMapping.findUnique({
+        where: { profileId: profile.id }
+      });
+      needsMpcGeneration = !mpcKeyMapping;
+    }
+
     return {
       id: profile.id,
       name: profile.name,
@@ -678,6 +692,7 @@ export class SmartProfileService {
       foldersCount: profile._count?.folders || 0,
       developmentMode: profile.developmentMode || false,
       isDevelopmentWallet: profile.developmentMode || false, // For iOS compatibility
+      needsMpcGeneration,
       createdAt: profile.createdAt.toISOString(),
       updatedAt: profile.updatedAt.toISOString(),
     };

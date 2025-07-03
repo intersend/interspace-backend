@@ -181,6 +181,24 @@ export class WebSocketService {
       timestamp: new Date().toISOString()
     });
   }
+
+  /**
+   * Emit profile created event
+   */
+  emitProfileCreated(accountId: string, profile: any, needsMpcGeneration: boolean) {
+    if (!this.io) return;
+    
+    // Emit to the account's room (iOS client should join account room on login)
+    this.io.to(`account:${accountId}`).emit('profile_created', {
+      type: 'profile_created',
+      accountId,
+      data: {
+        profile,
+        needsMpcGeneration
+      },
+      timestamp: new Date().toISOString()
+    });
+  }
 }
 
 export const websocketService = new WebSocketService();

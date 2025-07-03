@@ -509,6 +509,23 @@ Canonical: https://interspace.wallet/.well-known/security.txt
     this.io.on('connection', (socket) => {
       console.log('✅ Client connected:', socket.id);
 
+      // Account room management (for account-level events like profile creation)
+      socket.on('join_account', (accountId: string) => {
+        socket.join(`account:${accountId}`);
+        console.log(`📱 Client ${socket.id} joined account room: ${accountId}`);
+        
+        // Emit confirmation
+        socket.emit('account_joined', { accountId, timestamp: new Date().toISOString() });
+      });
+
+      socket.on('leave_account', (accountId: string) => {
+        socket.leave(`account:${accountId}`);
+        console.log(`📱 Client ${socket.id} left account room: ${accountId}`);
+        
+        // Emit confirmation
+        socket.emit('account_left', { accountId, timestamp: new Date().toISOString() });
+      });
+
       // Profile room management
       socket.on('join_profile', (profileId: string) => {
         socket.join(`profile:${profileId}`);
@@ -538,6 +555,10 @@ Canonical: https://interspace.wallet/.well-known/security.txt
 
     // Global broadcast method for service layer
     this.app.set('io', this.io);
+    
+    // Initialize websocket service
+    const { websocketService } = require('./services/websocketService');
+    websocketService.initialize(this.app);
   }
 
   private initializeErrorHandling(): void {

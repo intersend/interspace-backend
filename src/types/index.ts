@@ -90,6 +90,7 @@ export interface SmartProfileResponse {
   foldersCount: number;
   developmentMode?: boolean; // Indicates if this profile uses a development wallet
   isDevelopmentWallet?: boolean; // For iOS compatibility (same as developmentMode)
+  needsMpcGeneration?: boolean; // Indicates if MPC wallet generation is pending
   clientShare?: any; // Returned only for development wallets
   createdAt: string;
   updatedAt: string;
