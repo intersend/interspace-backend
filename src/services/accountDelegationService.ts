@@ -1,6 +1,6 @@
 import { prisma } from '@/utils/database';
 import { ethers } from 'ethers';
-import { AccountDelegation, AccountDelegationStatus } from '@prisma/client';
+import { AccountDelegation } from '@prisma/client';
 
 interface DelegationPermissions {
   canTransfer: boolean;
@@ -14,9 +14,11 @@ interface DelegationPermissions {
 }
 
 interface CreateDelegationParams {
-  profileId: string;
-  delegatedAddress: string;
+  linkedAccountId: string;
+  sessionWallet: string;
+  chainId: number;
   permissions: DelegationPermissions;
+  authorizationData: any;
   description?: string;
 }
 
@@ -25,21 +27,20 @@ class AccountDelegationService {
    * Create a new delegation authorization
    */
   async createDelegationAuthorization(params: CreateDelegationParams): Promise<AccountDelegation> {
-    const { profileId, delegatedAddress, permissions, description } = params;
+    const { linkedAccountId, sessionWallet, chainId, permissions, authorizationData } = params;
     
     // Create delegation record
     const delegation = await prisma.accountDelegation.create({
       data: {
-        profileId,
-        delegatorAddress: '', // Will be set when profile's MPC wallet signs
-        delegatedAddress,
-        permissions: JSON.stringify(permissions),
+        linkedAccountId,
+        sessionWallet,
+        chainId,
+        delegationType: 'eip7702',
+        authorizationData,
+        permissions: permissions as any,
+        nonce: BigInt(Math.floor(Math.random() * 1000000)),
         expiresAt: permissions.expiresAt,
-        status: AccountDelegationStatus.PENDING,
-        nonce: Math.floor(Math.random() * 1000000).toString(),
-        chainId: permissions.allowedChains[0] || 1,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        isActive: false
       }
     });
     
@@ -50,13 +51,14 @@ class AccountDelegationService {
    * Build delegation message for signing
    */
   buildDelegationMessage(delegation: AccountDelegation): string {
-    const permissions = JSON.parse(delegation.permissions as string);
+    const permissions = delegation.permissions as any;
     
     const message = [
       'Interspace Wallet Delegation',
-      `Delegated Address: ${delegation.delegatedAddress}`,
+      `Session Wallet: ${delegation.sessionWallet}`,
+      `Chain ID: ${delegation.chainId}`,
       `Nonce: ${delegation.nonce}`,
-      `Expires: ${delegation.expiresAt.toISOString()}`,
+      `Expires: ${delegation.expiresAt?.toISOString() || 'Never'}`,
       `Permissions: ${JSON.stringify(permissions)}`
     ].join('\n');
     
@@ -66,12 +68,11 @@ class AccountDelegationService {
   /**
    * Update delegation with signature
    */
-  async updateDelegationSignature(delegationId: string, signature: string): Promise<AccountDelegation> {
+  async activateDelegation(delegationId: string): Promise<AccountDelegation> {
     const delegation = await prisma.accountDelegation.update({
       where: { id: delegationId },
       data: {
-        signature,
-        status: AccountDelegationStatus.ACTIVE,
+        isActive: true,
         updatedAt: new Date()
       }
     });
@@ -90,33 +91,34 @@ class AccountDelegationService {
     if (!delegation) return false;
     
     // Check if expired
-    if (new Date() > delegation.expiresAt) {
+    if (delegation.expiresAt && new Date() > delegation.expiresAt) {
       await prisma.accountDelegation.update({
         where: { id: delegationId },
-        data: { status: AccountDelegationStatus.EXPIRED }
+        data: { isActive: false }
       });
       return false;
     }
     
     // Check if revoked
-    if (delegation.status === AccountDelegationStatus.REVOKED) {
+    if (delegation.revokedAt) {
       return false;
     }
     
-    return delegation.status === AccountDelegationStatus.ACTIVE;
+    return delegation.isActive;
   }
 
   /**
-   * Get active delegations for a profile
+   * Get active delegations for a linked account
    */
-  async getActiveDelegations(profileId: string): Promise<AccountDelegation[]> {
+  async getActiveDelegations(linkedAccountId: string): Promise<AccountDelegation[]> {
     const delegations = await prisma.accountDelegation.findMany({
       where: {
-        profileId,
-        status: AccountDelegationStatus.ACTIVE,
-        expiresAt: {
-          gt: new Date()
-        }
+        linkedAccountId,
+        isActive: true,
+        OR: [
+          { expiresAt: null },
+          { expiresAt: { gt: new Date() } }
+        ]
       }
     });
     
@@ -130,7 +132,7 @@ class AccountDelegationService {
     const delegation = await prisma.accountDelegation.update({
       where: { id: delegationId },
       data: {
-        status: AccountDelegationStatus.REVOKED,
+        isActive: false,
         revokedAt: new Date(),
         updatedAt: new Date()
       }

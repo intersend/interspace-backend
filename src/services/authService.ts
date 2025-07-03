@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { prisma, withTransaction } from '@/utils/database';
-import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '@/utils/jwt';
+import { generateTokens, verifyRefreshToken } from '@/utils/tokenUtils';
 import { auditService } from './auditService';
 import { tokenBlacklistService } from './tokenBlacklistService';
 import { securityMonitoringService } from './securityMonitoringService';
@@ -18,8 +18,13 @@ export class AuthService {
   async register(data: RegisterRequest): Promise<AuthTokens> {
     return withTransaction(async (tx) => {
       // Check if account already exists
-      const existingAccount = await tx.user.findUnique({
-        where: { email: data.email }
+      const existingAccount = await tx.account.findUnique({
+        where: { 
+          type_identifier: {
+            type: 'email',
+            identifier: data.email.toLowerCase()
+          }
+        }
       });
 
       if (existingAccount) {
@@ -38,19 +43,22 @@ export class AuthService {
       // Hash password
       const hashedPassword = await bcrypt.hash(data.password, 12);
 
-      // Create account (using legacy user table)
-      const account = await tx.user.create({
+      // Create account
+      const account = await tx.account.create({
         data: {
-          email: data.email,
-          hashedPassword,
-          emailVerified: false
+          type: 'email',
+          identifier: data.email.toLowerCase(),
+          verified: false,
+          metadata: {
+            hashedPassword
+          }
         }
       });
 
       // Register device
       await tx.deviceRegistration.create({
         data: {
-          userId: account.id,  // Field name remains userId for DB compatibility
+          accountId: account.id,
           deviceId: data.deviceId,
           deviceName: data.deviceName,
           deviceType: data.deviceType,
@@ -58,33 +66,38 @@ export class AuthService {
         }
       });
 
-      // Generate tokens with token family
-      const familyId = uuidv4();
-      const accessToken = generateAccessToken(account.id, data.deviceId);
-      const refreshToken = generateRefreshToken(account.id, data.deviceId);
-
-      // Store refresh token with family ID
-      await tx.refreshToken.create({
+      // Create session
+      const sessionId = uuidv4();
+      await tx.accountSession.create({
         data: {
-          userId: account.id,  // Field name remains userId for DB compatibility
-          token: refreshToken,
-          familyId,
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+          accountId: account.id,
+          sessionId,
+          deviceId: data.deviceId,
+          deviceName: data.deviceName,
+          expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
         }
       });
 
-      return {
-        accessToken,
-        refreshToken,
-        expiresIn: 15 * 60 // 15 minutes
-      };
+      // Generate tokens
+      const tokens = generateTokens({
+        accountId: account.id,
+        sessionToken: sessionId,
+        deviceId: data.deviceId
+      });
+
+      return tokens;
     });
   }
 
   async login(data: LoginRequest): Promise<AuthTokens> {
     // Find account with email
-    const account = await prisma.user.findUnique({
-      where: { email: data.email },
+    const account = await prisma.account.findUnique({
+      where: { 
+        type_identifier: {
+          type: 'email',
+          identifier: data.email.toLowerCase()
+        }
+      },
       include: {
         devices: {
           where: { deviceId: data.deviceId }
@@ -92,7 +105,9 @@ export class AuthService {
       }
     });
 
-    if (!account || !account.hashedPassword) {
+    const hashedPassword = (account?.metadata as any)?.hashedPassword as string;
+    
+    if (!account || !hashedPassword) {
       // Log failed login attempt
       await auditService.logSecurityEvent({
         type: 'LOGIN_FAILED',
@@ -108,12 +123,12 @@ export class AuthService {
     }
 
     // Verify password
-    const isValidPassword = await bcrypt.compare(data.password, account.hashedPassword);
+    const isValidPassword = await bcrypt.compare(data.password, hashedPassword);
     if (!isValidPassword) {
       // Log failed login attempt
       await auditService.logSecurityEvent({
         type: 'LOGIN_FAILED',
-        userId: account.id,  // Field name remains userId for DB compatibility
+        accountId: account.id,
         details: { email: data.email, reason: 'invalid_password' },
         ipAddress: data.ipAddress,
         userAgent: data.userAgent
@@ -131,7 +146,7 @@ export class AuthService {
         // Register new device
         await tx.deviceRegistration.create({
           data: {
-            userId: account.id,  // Field name remains userId for DB compatibility
+            accountId: account.id,
             deviceId: data.deviceId,
             deviceName: data.deviceName,
             deviceType: data.deviceType,
@@ -151,34 +166,26 @@ export class AuthService {
         });
       }
 
-      // Generate tokens with token family
-      const familyId = uuidv4();
-      const accessToken = generateAccessToken(account.id, data.deviceId);
-      const refreshToken = generateRefreshToken(account.id, data.deviceId);
-
-      // Clean up old refresh tokens for this account
-      await tx.refreshToken.deleteMany({
-        where: {
-          userId: account.id,  // Field name remains userId for DB compatibility
-          expiresAt: { lt: new Date() }
-        }
-      });
-
-      // Store new refresh token with family ID
-      await tx.refreshToken.create({
+      // Create session
+      const sessionId = uuidv4();
+      await tx.accountSession.create({
         data: {
-          userId: account.id,  // Field name remains userId for DB compatibility
-          token: refreshToken,
-          familyId,
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+          accountId: account.id,
+          sessionId,
+          deviceId: data.deviceId,
+          deviceName: data.deviceName,
+          expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) // 30 days
         }
       });
 
-      return {
-        accessToken,
-        refreshToken,
-        expiresIn: 15 * 60 // 15 minutes
-      };
+      // Generate tokens
+      const tokens = generateTokens({
+        accountId: account.id,
+        sessionToken: sessionId,
+        deviceId: data.deviceId
+      });
+
+      return tokens;
     });
   }
 
@@ -187,137 +194,115 @@ export class AuthService {
     const payload = verifyRefreshToken(refreshToken);
 
     return withTransaction(async (tx) => {
-      // Check if refresh token exists in database
-      const storedToken = await tx.refreshToken.findUnique({
-        where: { token: refreshToken },
-        include: { user: true }  // Legacy table reference
+      // Get session
+      const session = await tx.accountSession.findUnique({
+        where: { sessionId: payload.sessionToken },
+        include: { account: true }
       });
 
-      if (!storedToken || storedToken.expiresAt < new Date()) {
-        throw new AuthenticationError('Invalid or expired refresh token');
+      if (!session || session.expiresAt < new Date()) {
+        throw new AuthenticationError('Invalid or expired session');
       }
 
-      // Check if token has already been rotated (replay attack detection)
-      if (storedToken.rotatedAt) {
-        // Token has been used before - possible token theft
-        // Invalidate entire token family
-        if (storedToken.familyId) {
-          await tx.refreshToken.deleteMany({
-            where: { familyId: storedToken.familyId }
-          });
-        }
-        
-        // Log security event
-        await auditService.logSecurityEvent({
-          type: 'TOKEN_THEFT_DETECTED',
-          userId: storedToken.userId,  // Field name remains userId for DB compatibility
-          details: { 
-            familyId: storedToken.familyId,
-            tokenId: storedToken.id 
-          }
+      // Verify account matches
+      if (session.accountId !== payload.accountId) {
+        throw new AuthenticationError('Session account mismatch');
+      }
+
+      // Verify device is still active if deviceId is provided
+      if (payload.deviceId) {
+        const device = await tx.deviceRegistration.findUnique({
+          where: { deviceId: payload.deviceId }
         });
-        
-        throw new AuthenticationError('Token has been compromised');
+
+        if (!device || !device.isActive) {
+          throw new AuthenticationError('Device not registered or inactive');
+        }
       }
 
-      // Verify device is still active
-      const device = await tx.deviceRegistration.findUnique({
-        where: { deviceId: payload.deviceId }
+      // Generate new tokens with same session
+      const newTokens = generateTokens({
+        accountId: session.accountId,
+        sessionToken: session.sessionId,
+        deviceId: payload.deviceId,
+        activeProfileId: (session as any).activeProfileId
       });
 
-      if (!device || !device.isActive) {
-        throw new AuthenticationError('Device not registered or inactive');
-      }
-
-      // Generate new tokens
-      const newAccessToken = generateAccessToken(payload.userId, payload.deviceId);  // payload field name unchanged
-      const newRefreshToken = generateRefreshToken(payload.userId, payload.deviceId);  // payload field name unchanged
-
-      // Mark old token as rotated
-      await tx.refreshToken.update({
-        where: { token: refreshToken },
-        data: {
-          rotatedAt: new Date()
-        }
-      });
-
-      // Create new refresh token in the same family
-      await tx.refreshToken.create({
-        data: {
-          userId: storedToken.userId,  // Field name remains userId for DB compatibility
-          token: newRefreshToken,
-          familyId: storedToken.familyId,
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-        }
+      // Update session last activity
+      await tx.accountSession.update({
+        where: { id: session.id },
+        data: { } // Just touching the record updates updatedAt
       });
 
       // Blacklist the old refresh token
       await tokenBlacklistService.blacklistToken(
         refreshToken,
-        'refresh',
-        storedToken.userId,  // Field name remains userId for DB compatibility
-        { reason: 'rotation' }
+        'rotation' as any,
+        session.accountId
       );
 
-      return {
-        accessToken: newAccessToken,
-        refreshToken: newRefreshToken,
-        expiresIn: 15 * 60
-      };
+      return newTokens;
     });
   }
 
   async logout(refreshToken: string): Promise<void> {
     try {
-      const token = await prisma.refreshToken.findUnique({
-        where: { token: refreshToken }
-      });
-
-      if (token) {
-        // Blacklist the token
-        await tokenBlacklistService.blacklistToken(
-          refreshToken,
-          'refresh',
-          token.userId,  // Field name remains userId for DB compatibility
-          { reason: 'logout' }
-        );
-
-        // Delete the refresh token
-        await prisma.refreshToken.delete({
-          where: { token: refreshToken }
+      const payload = verifyRefreshToken(refreshToken);
+      
+      if (payload.sessionToken) {
+        // Find and delete the session
+        const session = await prisma.accountSession.findUnique({
+          where: { sessionId: payload.sessionToken }
         });
+        
+        if (session) {
+          // Blacklist the token
+          await tokenBlacklistService.blacklistToken(
+            refreshToken,
+            'logout' as any,
+            session.accountId
+          );
+          
+          // Delete the session
+          await prisma.accountSession.delete({
+            where: { sessionId: payload.sessionToken }
+          });
+        }
       }
     } catch (error) {
-      // Ignore errors if token doesn't exist
+      // Ignore errors if token doesn't exist or is invalid
     }
   }
 
   async logoutAllDevices(accountId: string): Promise<void> {
     // Blacklist all account tokens
-    await tokenBlacklistService.blacklistAllUserTokens(
+    await tokenBlacklistService.blacklistAllAccountTokens(
       accountId,
-      { reason: 'logout' }
+      'logout' as any
     );
 
-    // Delete all refresh tokens for this account
-    await prisma.refreshToken.deleteMany({
-      where: { userId: accountId }  // Field name remains userId for DB compatibility
+    // Delete all sessions for this account
+    await prisma.accountSession.deleteMany({
+      where: { accountId }
     });
 
     // Deactivate all devices
     await prisma.deviceRegistration.updateMany({
-      where: { userId: accountId },  // Field name remains userId for DB compatibility
+      where: { accountId },
       data: { isActive: false }
     });
   }
 
   async getAccountById(accountId: string) {
-    const account = await prisma.user.findUnique({
+    const account = await prisma.account.findUnique({
       where: { id: accountId },
       select: {
         id: true,
-        email: true,
-        emailVerified: true,
+        type: true,
+        identifier: true,
+        provider: true,
+        verified: true,
+        metadata: true,
         createdAt: true,
         updatedAt: true
       }
@@ -331,12 +316,20 @@ export class AuthService {
   }
 
   async findAccountByEmail(email: string) {
-    return prisma.user.findUnique({
-      where: { email },
+    return prisma.account.findUnique({
+      where: { 
+        type_identifier: {
+          type: 'email',
+          identifier: email.toLowerCase()
+        }
+      },
       select: {
         id: true,
-        email: true,
-        emailVerified: true,
+        type: true,
+        identifier: true,
+        provider: true,
+        verified: true,
+        metadata: true,
         createdAt: true,
         updatedAt: true
       }
@@ -346,9 +339,24 @@ export class AuthService {
   async updatePassword(accountId: string, newPassword: string): Promise<void> {
     const hashedPassword = await bcrypt.hash(newPassword, 12);
 
-    await prisma.user.update({
+    // Get current account to preserve other metadata
+    const account = await prisma.account.findUnique({
+      where: { id: accountId }
+    });
+
+    if (!account) {
+      throw new NotFoundError('Account not found');
+    }
+
+    // Update password in metadata
+    await prisma.account.update({
       where: { id: accountId },
-      data: { hashedPassword }
+      data: { 
+        metadata: {
+          ...((account.metadata as any) || {}),
+          hashedPassword
+        }
+      }
     });
 
     // Invalidate all existing tokens
