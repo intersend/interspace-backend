@@ -56,6 +56,9 @@ class AccountService {
 
   /**
    * Get all linked accounts through identity graph
+   * WARNING: This method traverses the entire identity graph!
+   * DO NOT use this for authentication - use getDirectlyLinkedProfiles instead
+   * Use cases: identity graph visualization, account unlinking, debugging
    */
   async getLinkedAccounts(accountId) {
     try {
@@ -141,7 +144,10 @@ class AccountService {
   }
 
   /**
-   * Get all accessible profiles for an account
+   * Get all accessible profiles for an account through identity graph traversal
+   * WARNING: This method traverses the entire identity graph!
+   * DO NOT use this for authentication - use getDirectlyLinkedProfiles instead
+   * Use cases: profile switching, showing all accessible profiles in account settings
    */
   async getAccessibleProfiles(accountId) {
     try {
@@ -201,6 +207,64 @@ class AccountService {
       return profiles;
     } catch (error) {
       logger.error('Error in getAccessibleProfiles:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get profiles directly linked to a specific account (not through identity graph)
+   * SECURITY: This is the ONLY method that should be used during authentication
+   * This ensures users only see profiles where their authenticating account is directly linked
+   * 
+   * Example: If a user signs in with MetaMask, they should only see profiles where
+   * that specific MetaMask wallet has a ProfileAccount entry, NOT all profiles
+   * accessible through their linked email or other accounts in the identity graph.
+   */
+  async getDirectlyLinkedProfiles(accountId) {
+    try {
+      logger.debug(`Getting directly linked profiles for account ${accountId}`);
+
+      // Get only profiles where this specific account has a ProfileAccount entry
+      const profileAccounts = await prisma.profileAccount.findMany({
+        where: {
+          accountId: accountId // Only this specific account, not linked accounts
+        },
+        include: {
+          profile: {
+            include: {
+              linkedAccounts: true,
+              folders: {
+                include: {
+                  apps: true
+                }
+              }
+            }
+          }
+        }
+      });
+      
+      logger.debug(`Found direct ProfileAccount entries`, {
+        accountId,
+        profileAccountCount: profileAccounts.length,
+        profileAccountDetails: profileAccounts.map(pa => ({
+          accountId: pa.accountId,
+          profileId: pa.profileId,
+          profileName: pa.profile?.name
+        }))
+      });
+
+      // Extract profiles
+      const profiles = profileAccounts.map(pa => pa.profile);
+      
+      logger.debug(`Returning directly linked profiles`, {
+        accountId,
+        profileCount: profiles.length,
+        profiles: profiles.map(p => ({ id: p.id, name: p.name }))
+      });
+
+      return profiles;
+    } catch (error) {
+      logger.error('Error in getDirectlyLinkedProfiles:', error);
       throw error;
     }
   }
@@ -487,6 +551,25 @@ class AccountService {
     } catch (error) {
       logger.error('Error in findAccountByIdentifier:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Check if an account has access to a specific profile
+   * @param {string} accountId - The account ID
+   * @param {string} profileId - The profile ID to check access for
+   * @returns {Promise<boolean>} - True if the account has access, false otherwise
+   */
+  async hasAccessToProfile(accountId, profileId) {
+    try {
+      // Get all profiles accessible to this account
+      const accessibleProfiles = await this.getAccessibleProfiles(accountId);
+      
+      // Check if the requested profile is in the list
+      return accessibleProfiles.some(profile => profile.id === profileId);
+    } catch (error) {
+      logger.error('Error checking profile access:', { accountId, profileId, error });
+      return false;
     }
   }
 }

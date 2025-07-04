@@ -118,20 +118,7 @@ export class LinkedAccountService {
         }
       });
 
-      // Update Orby account cluster with the newly linked account
-      try {
-        await orbyService.updateAccountCluster(profileId, tx);
-      } catch (err) {
-        logger.error('Failed to update Orby cluster after linking account:', err);
-        // Throw the error to rollback the transaction
-        throw new AppError(
-          'Failed to update account cluster. Please try again.',
-          500,
-          'ORBY_CLUSTER_UPDATE_FAILED',
-          //@ts-ignore
-          { originalError: err.message }
-        );
-      }
+      // Note: Orby cluster will be created fresh with all accounts when needed
 
       return this.formatLinkedAccountResponse(linkedAccount);
     });
@@ -393,20 +380,7 @@ export class LinkedAccountService {
         });
       }
 
-      // Update Orby cluster to reflect removed account
-      try {
-        await orbyService.updateAccountCluster(linkedAccount.profileId, tx);
-      } catch (err) {
-        logger.error('Failed to update Orby cluster after unlinking account:', err);
-        // Throw the error to rollback the transaction
-        throw new AppError(
-          'Failed to update account cluster. Please try again.',
-          500,
-          'ORBY_CLUSTER_UPDATE_FAILED',
-          //@ts-ignore
-          { originalError: err.message }
-        );
-      }
+      // Note: Orby cluster will be created fresh with all accounts when needed
     });
   }
 

@@ -33,13 +33,32 @@ export class TokenBlacklistService {
   /**
    * Add a token to the blacklist
    */
-  async blacklistToken(token: string, reason: BlacklistReason, accountId?: string, ttlSeconds?: number): Promise<void> {
+  async blacklistToken(token: string, reason: BlacklistReason, accountId?: string, ttlSeconds?: number, tokenType: 'access' | 'refresh' = 'access'): Promise<void> {
     try {
-      const expiresAt = new Date(Date.now() + (ttlSeconds || 86400) * 1000); // Default 24 hours
+      // Validate and sanitize ttlSeconds
+      let validTtlSeconds = 86400; // Default 24 hours
+      
+      if (ttlSeconds !== undefined && ttlSeconds !== null) {
+        const parsed = Number(ttlSeconds);
+        if (!isNaN(parsed) && parsed > 0) {
+          validTtlSeconds = Math.floor(parsed);
+        } else {
+          logger.warn('Invalid ttlSeconds provided, using default', { ttlSeconds, defaultUsed: validTtlSeconds });
+        }
+      }
+      
+      // Calculate expiration date with validated ttlSeconds
+      const expiresAt = new Date(Date.now() + validTtlSeconds * 1000);
+      
+      // Verify the date is valid
+      if (isNaN(expiresAt.getTime())) {
+        throw new Error(`Failed to create valid expiration date with ttlSeconds: ${ttlSeconds}`);
+      }
       
       // Store in database
       const tokenData: any = {
         token,
+        tokenType,
         reason,
         expiresAt
       };
@@ -55,7 +74,7 @@ export class TokenBlacklistService {
       // Also store in Redis for fast lookups
       if (this.redis && this.redis.status === 'ready') {
         const key = `${this.BLACKLIST_PREFIX}${token}`;
-        await this.redis.setex(key, ttlSeconds || 86400, JSON.stringify({ accountId, reason }));
+        await this.redis.setex(key, validTtlSeconds, JSON.stringify({ accountId, reason }));
         await this.redis.sadd(this.BLACKLIST_SET, token);
       }
 

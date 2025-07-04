@@ -234,11 +234,13 @@ export class AuthService {
         data: { } // Just touching the record updates updatedAt
       });
 
-      // Blacklist the old refresh token
+      // Blacklist the old refresh token (for 30 days to match refresh token expiry)
       await tokenBlacklistService.blacklistToken(
         refreshToken,
         'rotation' as any,
-        session.accountId
+        session.accountId,
+        30 * 24 * 60 * 60, // 30 days in seconds
+        'refresh' // This is a refresh token
       );
 
       return newTokens;
@@ -256,11 +258,17 @@ export class AuthService {
         });
         
         if (session) {
-          // Blacklist the token
+          // Blacklist the token (for remaining session duration)
+          const remainingTtl = Math.max(
+            Math.floor((session.expiresAt.getTime() - Date.now()) / 1000),
+            86400 // minimum 24 hours
+          );
           await tokenBlacklistService.blacklistToken(
             refreshToken,
             'logout' as any,
-            session.accountId
+            session.accountId,
+            remainingTtl,
+            'refresh' // This is a refresh token
           );
           
           // Delete the session

@@ -191,11 +191,30 @@ router.post('/logout',
         const userId = req.account?.id || req.user?.id || req.user?.userId;
         
         if (userId) {
+          // Extract expiration from JWT token
+          const jwt = require('jsonwebtoken');
+          let ttlSeconds = 86400; // Default 24 hours
+          
+          try {
+            const decoded = jwt.decode(token);
+            if (decoded && decoded.exp) {
+              // Calculate remaining TTL in seconds
+              const expirationTime = decoded.exp * 1000; // Convert to milliseconds
+              const remainingTime = expirationTime - Date.now();
+              if (remainingTime > 0) {
+                ttlSeconds = Math.ceil(remainingTime / 1000);
+              }
+            }
+          } catch (error) {
+            console.log('Failed to decode token for TTL, using default:', error.message);
+          }
+          
           await tokenBlacklistService.blacklistToken(
             token,
-            'access',
+            'logout',  // Use valid BlacklistReason
             userId,
-            { reason: 'logout' }
+            ttlSeconds,
+            'access'  // Token type from Authorization header is always access token
           );
         }
       }
@@ -207,6 +226,15 @@ router.post('/logout',
       res.json({ success: true, message: 'Logged out' });
     }
   }
+);
+
+/**
+ * @route   GET /api/v2/auth/oauth/callback/:provider
+ * @desc    OAuth callback handler for providers that don't support custom URL schemes
+ * @access  Public
+ */
+router.get('/oauth/callback/:provider',
+  require('../controllers/oauthCallbackController').handleOAuthCallback
 );
 
 // Development only routes

@@ -17,6 +17,7 @@ const authRoutesV2 = require('./routes/authRoutesV2');
 const profileRoutesV2 = require('./routes/profileRoutesV2');
 const userRoutesV2 = require('./routes/userRoutesV2');
 const siweRoutesV2 = require('./routes/siweRoutesV2');
+const farcasterAuthRoutes = require('./routes/farcasterAuthRoutes');
 import mpcRoutesV2 from './routes/mpcRoutesV2';
 import mpcWebhookRoutes from './routes/mpcWebhookRoutes';
 import wellKnownRoutes from './routes/wellKnownRoutes';
@@ -400,6 +401,7 @@ class Application {
     const apiV2Path = '/api/v2';
     this.app.use(`${apiV2Path}/auth`, authRoutesV2);
     this.app.use(`${apiV2Path}/auth/passkey`, passkeyRoutesV2); // Passkey authentication routes
+    this.app.use(`${apiV2Path}/auth/farcaster`, farcasterAuthRoutes); // Farcaster authentication routes
     this.app.use(`${apiV2Path}/siwe`, siweRoutesV2); // SIWE (Sign-In With Ethereum) routes
     this.app.use(`${apiV2Path}/profiles`, profileRoutesV2); // Use V2 profile routes with V2 auth
     this.app.use(`${apiV2Path}/users`, userRoutesV2); // Use V2 user routes with V2 middleware

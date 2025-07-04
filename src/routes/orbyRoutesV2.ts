@@ -61,8 +61,8 @@ router.get(
       return;
     }
 
-    // Using createOrGetAccountCluster with profile object
-    const cluster = await orbyService.createOrGetAccountCluster(profile);
+    // Create fresh cluster with all linked accounts
+    const cluster = await orbyService.createFreshAccountCluster(profile);
 
     res.json({
       success: true,
@@ -71,38 +71,7 @@ router.get(
   })
 );
 
-// Update account cluster
-router.patch(
-  '/profiles/:profileId/cluster',
-  apiRateLimit,
-  param('profileId').isString().notEmpty(),
-  body('accounts').isArray().notEmpty(),
-  body('accounts.*.address').isEthereumAddress(),
-  body('accounts.*.accountType').isIn(['EOA', 'CONTRACT', 'SESSION']),
-  validateRequest,
-  asyncHandler(ensureProfileAccess),
-  asyncHandler(async (req: Request, res: Response) => {
-    const { profileId } = req.params;
-    const { accounts } = req.body;
-
-    if (!profileId) {
-      res.status(400).json({
-        success: false,
-        error: 'Profile ID is required'
-      });
-      return;
-    }
-
-    // updateAccountCluster accepts profileId as string
-    await orbyService.updateAccountCluster(profileId);
-    const result = { success: true, accounts };
-
-    res.json({
-      success: true,
-      data: result
-    });
-  })
-);
+// Note: We no longer update clusters - they are created fresh each time
 
 // Get virtual node RPC URL
 router.get(
@@ -115,10 +84,11 @@ router.get(
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { profileId, chainId } = req.params;
 
-    // Fetch the profile
+    // Fetch the profile with linked accounts
     const { prisma } = await import('@/utils/database');
     const profile = await prisma.smartProfile.findUnique({
-      where: { id: profileId }
+      where: { id: profileId },
+      include: { linkedAccounts: { where: { isActive: true } } }
     });
     
     if (!profile) {
@@ -129,9 +99,12 @@ router.get(
       return;
     }
 
+    // Create fresh cluster and get RPC URL
+    const clusterId = await orbyService.createFreshAccountCluster(profile);
     const rpcInfo = await orbyService.getVirtualNodeRpcUrl(
-      profile,
-      Number(chainId)
+      clusterId,
+      Number(chainId),
+      profile.sessionWalletAddress
     );
 
     res.json({

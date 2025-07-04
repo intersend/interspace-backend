@@ -674,15 +674,7 @@ export class MpcControllerV2 {
         console.error('[MPC] Failed to create/update LinkedAccount', { profileId, error });
       }
 
-      // Update Orby cluster with the new wallet address
-      try {
-        const { orbyService } = await import('@/services/orbyService');
-        await orbyService.updateAccountCluster(profileId);
-        console.log('[MPC] Orby cluster updated successfully', { profileId });
-      } catch (error) {
-        // Log error but don't fail the request
-        console.error('[MPC] Failed to update Orby cluster', { profileId, error });
-      }
+      // Orby clusters are created fresh on each operation, no need to update here
 
       // Audit log
       await auditService.log({

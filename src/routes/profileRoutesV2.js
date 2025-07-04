@@ -123,6 +123,22 @@ router.get('/:profileId/accounts',
 );
 
 /**
+ * @route   POST /api/v2/profiles/:profileId/accounts
+ * @desc    Link a new account (wallet) to a profile
+ * @access  Private
+ */
+router.post('/:profileId/accounts',
+  [
+    param('profileId').isString().notEmpty(),
+    body('address').isEthereumAddress().withMessage('Valid Ethereum address required'),
+    body('walletType').optional().isString(),
+    body('signature').notEmpty().withMessage('Signature required'),
+    body('message').notEmpty().withMessage('Message required')
+  ],
+  profileControllerV2.linkAccountToProfile
+);
+
+/**
  * @route   GET /api/v2/profiles/:profileId/balance
  * @desc    Get unified balance for a profile
  * @access  Private

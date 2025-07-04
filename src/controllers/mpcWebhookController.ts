@@ -80,14 +80,7 @@ export class MpcWebhookController {
         logger.error('Failed to create/update MPC LinkedAccount', { profileId, error });
       }
 
-      // Update Orby cluster with the new wallet address
-      try {
-        await orbyService.updateAccountCluster(profileId);
-        logger.info('Orby cluster updated successfully', { profileId });
-      } catch (error) {
-        // Log error but don't fail the webhook
-        logger.error('Failed to update Orby cluster', { profileId, error });
-      }
+      // Orby clusters are created fresh on each operation, no need to update here
 
       // Audit log
       await auditService.log({

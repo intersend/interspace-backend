@@ -59,6 +59,11 @@ export interface AuthTokens {
   expiresIn: number;
 }
 
+export interface AuthResult extends AuthTokens {
+  account?: any; // Account object from database
+  isNewAccount?: boolean;
+}
+
 export interface JwtPayload {
   accountId: string;
   sessionToken?: string;

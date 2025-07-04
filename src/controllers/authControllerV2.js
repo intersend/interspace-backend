@@ -481,56 +481,19 @@ const authenticateV2 = async (req, res, next) => {
         }
         
         try {
-          // Get user info from GitHub
-          const githubResponse = await fetch('https://api.github.com/user', {
-            headers: {
-              'Authorization': `Bearer ${authData.accessToken}`,
-              'Accept': 'application/vnd.github.v3+json'
-            }
+          // Use socialAuthService to verify GitHub token and authenticate
+          authResult = await socialAuthService.authenticate({
+            authToken: authData.accessToken,
+            authStrategy: 'github',
+            deviceId: deviceInfo.deviceId,
+            deviceName: authData.deviceName || 'Unknown Device',
+            deviceType: authData.deviceType || 'web',
+            ipAddress: deviceInfo.ipAddress,
+            userAgent: deviceInfo.userAgent
           });
           
-          if (!githubResponse.ok) {
-            throw new Error('Invalid GitHub token');
-          }
-          
-          const githubUser = await githubResponse.json();
-          
-          // Get primary email if available
-          const emailsResponse = await fetch('https://api.github.com/user/emails', {
-            headers: {
-              'Authorization': `Bearer ${authData.accessToken}`,
-              'Accept': 'application/vnd.github.v3+json'
-            }
-          });
-          
-          let primaryEmail = githubUser.email;
-          if (emailsResponse.ok) {
-            const emails = await emailsResponse.json();
-            const primary = emails.find(e => e.primary && e.verified);
-            if (primary) {
-              primaryEmail = primary.email;
-            }
-          }
-          
-          // Create or find account
-          account = await accountService.findOrCreateAccount({
-            type: 'social',
-            identifier: githubUser.id.toString(),
-            provider: 'github',
-            metadata: { 
-              email: primaryEmail,
-              emailVerified: true,
-              login: githubUser.login,
-              name: githubUser.name,
-              avatar_url: githubUser.avatar_url,
-              bio: githubUser.bio,
-              company: githubUser.company,
-              location: githubUser.location
-            }
-          });
-          
-          // Mark account as verified
-          await accountService.verifyAccount(account.id);
+          // Extract account from authResult
+          account = authResult.account;
           
         } catch (error) {
           logger.error('GitHub auth error:', error);
@@ -551,36 +514,19 @@ const authenticateV2 = async (req, res, next) => {
         }
         
         try {
-          // Get user info from Twitter API v2
-          const twitterResponse = await fetch('https://api.twitter.com/2/users/me?user.fields=profile_image_url,description,created_at,verified', {
-            headers: {
-              'Authorization': `Bearer ${authData.accessToken}`
-            }
+          // Use socialAuthService to verify Twitter token and authenticate
+          authResult = await socialAuthService.authenticate({
+            authToken: authData.accessToken,
+            authStrategy: 'twitter',
+            deviceId: deviceInfo.deviceId,
+            deviceName: authData.deviceName || 'Unknown Device',
+            deviceType: authData.deviceType || 'web',
+            ipAddress: deviceInfo.ipAddress,
+            userAgent: deviceInfo.userAgent
           });
           
-          if (!twitterResponse.ok) {
-            throw new Error('Invalid Twitter token');
-          }
-          
-          const twitterData = await twitterResponse.json();
-          const twitterUser = twitterData.data;
-          
-          // Create or find account
-          account = await accountService.findOrCreateAccount({
-            type: 'social',
-            identifier: twitterUser.id,
-            provider: 'twitter',
-            metadata: { 
-              username: twitterUser.username,
-              name: twitterUser.name,
-              profile_image_url: twitterUser.profile_image_url,
-              description: twitterUser.description,
-              verified: twitterUser.verified
-            }
-          });
-          
-          // Mark account as verified
-          await accountService.verifyAccount(account.id);
+          // Extract account from authResult
+          account = authResult.account;
           
         } catch (error) {
           logger.error('Twitter auth error:', error);
@@ -601,31 +547,19 @@ const authenticateV2 = async (req, res, next) => {
         }
         
         try {
-          // Get user info from Facebook Graph API
-          const fbResponse = await fetch(`https://graph.facebook.com/v18.0/me?fields=id,name,email,picture&access_token=${authData.accessToken}`);
-          
-          if (!fbResponse.ok) {
-            throw new Error('Invalid Facebook token');
-          }
-          
-          const fbUser = await fbResponse.json();
-          
-          // Create or find account
-          account = await accountService.findOrCreateAccount({
-            type: 'social',
-            identifier: fbUser.id,
-            provider: 'facebook',
-            metadata: { 
-              email: fbUser.email,
-              name: fbUser.name,
-              picture: fbUser.picture?.data?.url
-            }
+          // Use socialAuthService to verify Facebook token and authenticate
+          authResult = await socialAuthService.authenticate({
+            authToken: authData.accessToken,
+            authStrategy: 'facebook',
+            deviceId: deviceInfo.deviceId,
+            deviceName: authData.deviceName || 'Unknown Device',
+            deviceType: authData.deviceType || 'web',
+            ipAddress: deviceInfo.ipAddress,
+            userAgent: deviceInfo.userAgent
           });
           
-          // Mark account as verified if email is available
-          if (fbUser.email) {
-            await accountService.verifyAccount(account.id);
-          }
+          // Extract account from authResult
+          account = authResult.account;
           
         } catch (error) {
           logger.error('Facebook auth error:', error);
@@ -646,34 +580,19 @@ const authenticateV2 = async (req, res, next) => {
         }
         
         try {
-          // Get user info from TikTok API
-          const tiktokResponse = await fetch('https://open.tiktokapis.com/v2/user/info/', {
-            headers: {
-              'Authorization': `Bearer ${authData.accessToken}`
-            }
+          // Use socialAuthService to verify TikTok token and authenticate
+          authResult = await socialAuthService.authenticate({
+            authToken: authData.accessToken,
+            authStrategy: 'tiktok',
+            deviceId: deviceInfo.deviceId,
+            deviceName: authData.deviceName || 'Unknown Device',
+            deviceType: authData.deviceType || 'web',
+            ipAddress: deviceInfo.ipAddress,
+            userAgent: deviceInfo.userAgent
           });
           
-          if (!tiktokResponse.ok) {
-            throw new Error('Invalid TikTok token');
-          }
-          
-          const tiktokData = await tiktokResponse.json();
-          const tiktokUser = tiktokData.data.user;
-          
-          // Create or find account
-          account = await accountService.findOrCreateAccount({
-            type: 'social',
-            identifier: tiktokUser.open_id,
-            provider: 'tiktok',
-            metadata: { 
-              union_id: tiktokUser.union_id,
-              avatar_url: tiktokUser.avatar_url,
-              display_name: tiktokUser.display_name
-            }
-          });
-          
-          // Mark account as verified
-          await accountService.verifyAccount(account.id);
+          // Extract account from authResult
+          account = authResult.account;
           
         } catch (error) {
           logger.error('TikTok auth error:', error);
@@ -694,36 +613,19 @@ const authenticateV2 = async (req, res, next) => {
         }
         
         try {
-          // Get user info from Epic Games API
-          const epicResponse = await fetch('https://api.epicgames.dev/epic/oauth/v2/userInfo', {
-            headers: {
-              'Authorization': `Bearer ${authData.accessToken}`
-            }
+          // Use socialAuthService to verify Epic Games token and authenticate
+          authResult = await socialAuthService.authenticate({
+            authToken: authData.accessToken,
+            authStrategy: 'epicgames',
+            deviceId: deviceInfo.deviceId,
+            deviceName: authData.deviceName || 'Unknown Device',
+            deviceType: authData.deviceType || 'web',
+            ipAddress: deviceInfo.ipAddress,
+            userAgent: deviceInfo.userAgent
           });
           
-          if (!epicResponse.ok) {
-            throw new Error('Invalid Epic Games token');
-          }
-          
-          const epicUser = await epicResponse.json();
-          
-          // Create or find account
-          account = await accountService.findOrCreateAccount({
-            type: 'social',
-            identifier: epicUser.sub,
-            provider: 'epicgames',
-            metadata: { 
-              email: epicUser.email,
-              emailVerified: epicUser.email_verified,
-              displayName: epicUser.preferred_username || epicUser.name,
-              name: epicUser.name
-            }
-          });
-          
-          // Mark account as verified if email is verified
-          if (epicUser.email_verified) {
-            await accountService.verifyAccount(account.id);
-          }
+          // Extract account from authResult
+          account = authResult.account;
           
         } catch (error) {
           logger.error('Epic Games auth error:', error);
@@ -744,38 +646,24 @@ const authenticateV2 = async (req, res, next) => {
         }
         
         try {
-          // Get shop info from Shopify Admin API
-          const shopifyResponse = await fetch(`https://${authData.shopDomain}/admin/api/2024-01/shop.json`, {
-            headers: {
-              'X-Shopify-Access-Token': authData.accessToken
+          // Use socialAuthService to verify Shopify token and authenticate
+          authResult = await socialAuthService.authenticate({
+            authToken: authData.accessToken,
+            authStrategy: 'shopify',
+            deviceId: deviceInfo.deviceId,
+            deviceName: authData.deviceName || 'Unknown Device',
+            deviceType: authData.deviceType || 'web',
+            ipAddress: deviceInfo.ipAddress,
+            userAgent: deviceInfo.userAgent,
+            socialData: {
+              provider: 'shopify',
+              providerId: authData.shopDomain,
+              metadata: { shopDomain: authData.shopDomain }
             }
           });
           
-          if (!shopifyResponse.ok) {
-            throw new Error('Invalid Shopify token');
-          }
-          
-          const shopifyData = await shopifyResponse.json();
-          const shop = shopifyData.shop;
-          
-          // Create or find account
-          account = await accountService.findOrCreateAccount({
-            type: 'social',
-            identifier: shop.id.toString(),
-            provider: 'shopify',
-            metadata: { 
-              email: shop.email,
-              domain: shop.domain,
-              name: shop.name,
-              shop_owner: shop.shop_owner,
-              timezone: shop.timezone,
-              currency: shop.currency,
-              country_name: shop.country_name
-            }
-          });
-          
-          // Mark account as verified
-          await accountService.verifyAccount(account.id);
+          // Extract account from authResult
+          account = authResult.account;
           
         } catch (error) {
           logger.error('Shopify auth error:', error);
@@ -842,6 +730,81 @@ const authenticateV2 = async (req, res, next) => {
         }
         break;
 
+      case 'farcaster':
+        // Farcaster authentication requires signature and message
+        if (!authData.signature || !authData.message) {
+          return res.status(400).json({ 
+            success: false, 
+            error: 'Farcaster signature and message required' 
+          });
+        }
+        
+        try {
+          // Import farcasterAuthService
+          const { farcasterAuthService } = require('../services/farcasterAuthService');
+          
+          // Verify Farcaster auth
+          const farcasterResult = await farcasterAuthService.verifyFarcasterAuth({
+            message: authData.message,
+            signature: authData.signature,
+            expectedFid: authData.fid,
+            ipAddress: deviceInfo.ipAddress,
+            userAgent: deviceInfo.userAgent
+          });
+          
+          if (!farcasterResult.valid || !farcasterResult.userData) {
+            logger.warn('Farcaster authentication failed', {
+              error: farcasterResult.error,
+              ipAddress: deviceInfo.ipAddress
+            });
+            
+            await auditService.logSecurityEvent({
+              type: 'AUTH_FAILED',
+              details: {
+                strategy: 'farcaster',
+                reason: farcasterResult.error || 'invalid_signature',
+                ipAddress: deviceInfo.ipAddress
+              },
+              ipAddress: deviceInfo.ipAddress,
+              userAgent: deviceInfo.userAgent
+            });
+            
+            return res.status(401).json({ 
+              success: false, 
+              error: farcasterResult.error || 'Farcaster authentication failed' 
+            });
+          }
+          
+          const userData = farcasterResult.userData;
+          
+          // Create or find account
+          account = await accountService.findOrCreateAccount({
+            type: 'social',
+            identifier: userData.fid, // Use FID as identifier
+            provider: 'farcaster',
+            metadata: { 
+              fid: userData.fid,
+              username: userData.username,
+              displayName: userData.displayName,
+              bio: userData.bio,
+              pfpUrl: userData.pfpUrl,
+              custody: userData.custody,
+              verifications: userData.verifications
+            }
+          });
+          
+          // Mark account as verified (Farcaster ownership is proven)
+          await accountService.verifyAccount(account.id);
+          
+        } catch (error) {
+          logger.error('Farcaster auth error:', error);
+          return res.status(401).json({ 
+            success: false, 
+            error: 'Farcaster authentication failed' 
+          });
+        }
+        break;
+
       // Add other strategies as needed
 
       default:
@@ -852,8 +815,12 @@ const authenticateV2 = async (req, res, next) => {
     }
 
     // Step 2: Get linked profiles
+    // CRITICAL SECURITY: Only get profiles directly linked to the authenticating account
+    // This ensures users only see profiles where their specific auth method (e.g., MetaMask wallet)
+    // is actually linked to the profile, not all profiles accessible through the identity graph
+    // DO NOT use getAccessibleProfiles() here as it traverses the identity graph!
     const linkedAccountIds = await accountService.getLinkedAccounts(account.id);
-    logger.info(`Authentication - found linked accounts`, {
+    logger.info(`Authentication - found linked accounts (for logging only)`, {
       accountId: account.id,
       accountType: account.type,
       identifier: account.identifier,
@@ -861,8 +828,9 @@ const authenticateV2 = async (req, res, next) => {
       linkedAccountIds
     });
     
-    const profiles = await accountService.getAccessibleProfiles(account.id);
-    logger.info(`Authentication - found accessible profiles`, {
+    // SECURITY: Use getDirectlyLinkedProfiles, NOT getAccessibleProfiles
+    const profiles = await accountService.getDirectlyLinkedProfiles(account.id);
+    logger.info(`Authentication - found directly linked profiles`, {
       accountId: account.id,
       profileCount: profiles.length,
       profileIds: profiles.map(p => p.id),
@@ -874,26 +842,60 @@ const authenticateV2 = async (req, res, next) => {
     let activeProfile = null;
 
     if (profiles.length === 0) {
-      isNewAccount = true;
+      // Check if this is truly a new account
+      const accountCreatedAt = new Date(account.createdAt);
+      const accountAgeInMinutes = (Date.now() - accountCreatedAt.getTime()) / (1000 * 60);
       
-      // Generate a temporary profile ID first
-      const { v4: uuidv4 } = require('uuid');
-      const profileId = uuidv4();
+      // Consider it a new account if created less than 5 minutes ago
+      isNewAccount = accountAgeInMinutes < 5;
       
-      // Create session wallet with the profile ID
-      // For automatic profiles during email auth, we create a placeholder wallet
-      // The real MPC wallet will be created when the iOS client initiates key generation
-      // via /api/v2/mpc/generate endpoint
-      const sessionWallet = await sessionWalletService.createSessionWallet(profileId, null, false);
+      logger.info(`Account ${account.id} has no profiles (account age: ${accountAgeInMinutes.toFixed(1)} minutes, isNewAccount: ${isNewAccount})`);
       
-      // Create automatic profile with session wallet
-      // This now includes auto-linking wallet accounts
-      activeProfile = await accountService.createAutomaticProfile(account, sessionWallet, profileId);
+      // No automatic profile creation - user must manually create profile
+      // Create a minimal session without a profile
+      const session = await accountService.createSession(account.id, {
+        ...deviceInfo,
+        privacyMode: authData.privacyMode || 'linked'
+      });
       
-      // Add to profiles array
-      profiles.push(activeProfile);
+      // Generate JWT tokens without activeProfileId
+      const { accessToken, refreshToken, expiresIn } = await generateTokens({
+        userId: account.userId || undefined,
+        accountId: account.id,
+        sessionToken: session.sessionToken,
+        activeProfileId: null, // No active profile
+        deviceId: deviceInfo.deviceId
+      });
       
-      logger.info(`New account detected. Created automatic profile: ${activeProfile.id}`);
+      // Response that tells iOS to show profile creation
+      return res.json({
+        success: true,
+        account: {
+          id: account.id,
+          strategy: account.type,
+          identifier: account.identifier,
+          metadata: account.metadata || {},
+          createdAt: account.createdAt.toISOString(),
+          updatedAt: account.updatedAt.toISOString()
+        },
+        user: {
+          id: account.userId || account.id, // Use account ID if no user ID
+          email: account.type === 'email' ? account.identifier : null,
+          isGuest: account.type === 'guest'
+        },
+        profiles: [], // Empty profiles array
+        activeProfile: null,
+        tokens: {
+          accessToken,
+          refreshToken,
+          expiresIn
+        },
+        requiresProfile: true,
+        isNewAccount,
+        sessionId: session.id,
+        privacyMode: session.privacyMode,
+        message: isNewAccount ? 'Welcome! Please create your first profile to continue' : 'Please create a new profile to continue'
+      });
     } else {
       // Use the most recently active profile
       activeProfile = profiles.find(p => p.isActive) || profiles[0];
@@ -1056,8 +1058,10 @@ const refreshTokenV2 = async (req, res, next) => {
       });
     }
 
-    // Get all accessible profiles
-    const profiles = await accountService.getAccessibleProfiles(account.id);
+    // Get directly linked profiles for the account
+    // CRITICAL SECURITY: Only return profiles where the account is directly linked
+    // DO NOT use getAccessibleProfiles() here as it would traverse the identity graph
+    const profiles = await accountService.getDirectlyLinkedProfiles(account.id);
     
     // Find active profile
     const activeProfile = decoded.activeProfileId 
@@ -1253,6 +1257,94 @@ const linkAccounts = async (req, res, next) => {
       });
     }
     
+    // For Farcaster accounts, require SIWE verification
+    if (targetType === 'social' && targetProvider === 'farcaster') {
+      const { message, signature, fid } = req.body;
+      
+      if (!message || !signature) {
+        return res.status(400).json({
+          success: false,
+          error: 'Farcaster authentication requires message and signature'
+        });
+      }
+      
+      // Verify Farcaster authentication
+      const { farcasterAuthService } = require('../services/farcasterAuthService');
+      const farcasterResult = await farcasterAuthService.verifyFarcasterAuth({
+        message,
+        signature,
+        expectedFid: fid || targetIdentifier,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent']
+      });
+      
+      if (!farcasterResult.valid || !farcasterResult.userData) {
+        await auditService.logSecurityEvent({
+          type: 'LINK_FAILED',
+          details: {
+            reason: 'invalid_farcaster_auth',
+            error: farcasterResult.error,
+            targetType: 'farcaster',
+            ipAddress: req.ip
+          },
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent']
+        });
+        
+        return res.status(401).json({
+          success: false,
+          error: farcasterResult.error || 'Invalid Farcaster authentication'
+        });
+      }
+      
+      // Use the verified FID as the identifier
+      targetIdentifier = farcasterResult.userData.fid;
+    }
+    
+    // For wallet accounts, require SIWE verification
+    if (targetType === 'wallet') {
+      const { message, signature } = req.body;
+      
+      if (!message || !signature) {
+        return res.status(400).json({
+          success: false,
+          error: 'Wallet linking requires message and signature'
+        });
+      }
+      
+      // Verify SIWE message and signature
+      const verifyResult = await siweService.verifyMessage({
+        message,
+        signature,
+        expectedAddress: targetIdentifier,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent']
+      });
+      
+      if (!verifyResult.valid) {
+        await auditService.logSecurityEvent({
+          type: 'LINK_FAILED',
+          details: {
+            reason: 'invalid_wallet_signature',
+            error: verifyResult.error,
+            targetType: 'wallet',
+            walletAddress: targetIdentifier,
+            ipAddress: req.ip
+          },
+          ipAddress: req.ip,
+          userAgent: req.headers['user-agent']
+        });
+        
+        return res.status(401).json({
+          success: false,
+          error: verifyResult.error || 'Invalid wallet signature'
+        });
+      }
+      
+      // Use the verified address
+      targetIdentifier = verifyResult.address.toLowerCase();
+    }
+    
     // Find or create target account
     const targetAccount = await accountService.findOrCreateAccount({
       type: targetType,
@@ -1261,6 +1353,16 @@ const linkAccounts = async (req, res, next) => {
       metadata: targetType === 'email' ? { 
         emailVerified: "true",
         verifiedAt: new Date().toISOString()
+      } : targetType === 'wallet' ? {
+        walletType: req.body.walletType || targetProvider || 'metamask',
+        chainId: req.body.chainId || 1  // Default to Ethereum mainnet
+      } : targetType === 'social' && targetProvider === 'farcaster' && req.body.farcasterData ? {
+        fid: req.body.farcasterData.fid || targetIdentifier,
+        username: req.body.farcasterData.username,
+        displayName: req.body.farcasterData.displayName,
+        bio: req.body.farcasterData.bio,
+        pfpUrl: req.body.farcasterData.pfpUrl,
+        custody: req.body.farcasterData.custody
       } : {}
     });
 
@@ -1275,28 +1377,29 @@ const linkAccounts = async (req, res, next) => {
     });
 
     if (existingLink) {
-      return res.status(409).json({
-        success: false,
-        error: 'Accounts are already linked'
+      // These specific accounts are already linked in the identity graph
+      // But we still need to check if the target account needs to be linked to more profiles
+      logger.info('Accounts already linked in identity graph, checking profile links', {
+        currentAccountId,
+        targetAccountId: targetAccount.id,
+        existingLinkId: existingLink.id
       });
     }
 
-    // Check if target account is already linked to a different identity
-    const targetLinks = await accountService.getLinkedAccounts(targetAccount.id);
-    if (targetLinks.length > 1) { // More than just itself
-      return res.status(409).json({
-        success: false,
-        error: 'Target account is already linked to another identity'
-      });
-    }
+    // We allow the same email/wallet to be linked to multiple profiles
+    // This is a key feature of the identity graph design
+    // Only prevent circular links or linking the same accounts twice
 
-    // Link the accounts
-    const link = await accountService.linkAccounts(
-      currentAccountId,
-      targetAccount.id,
-      linkType,
-      privacyMode
-    );
+    // Link the accounts if not already linked
+    let link = existingLink;
+    if (!existingLink) {
+      link = await accountService.linkAccounts(
+        currentAccountId,
+        targetAccount.id,
+        linkType,
+        privacyMode
+      );
+    }
 
     // Log the linking action
     await auditService.log({
@@ -1313,10 +1416,11 @@ const linkAccounts = async (req, res, next) => {
       userAgent: req.headers['user-agent']
     });
 
-    // Get updated accessible profiles
-    const profiles = await accountService.getAccessibleProfiles(currentAccountId);
+    // SECURITY FIX: Only link to profiles where the current account is directly linked
+    // Do NOT traverse the identity graph to find all accessible profiles
+    const profiles = await accountService.getDirectlyLinkedProfiles(currentAccountId);
     
-    logger.info(`Linking ${targetType} account to profiles`, {
+    logger.info(`Linking ${targetType} account to directly linked profiles only`, {
       currentAccountId,
       targetAccountId: targetAccount.id,
       targetType,
@@ -1324,8 +1428,9 @@ const linkAccounts = async (req, res, next) => {
       profileIds: profiles.map(p => p.id)
     });
     
-    // Link the new account to all accessible profiles
-    // This ensures the newly linked account shows up in profile accounts
+    // Link the new account ONLY to profiles where the current account is directly linked
+    // This prevents the security issue where linking an email would give access to all
+    // profiles accessible through the identity graph
     for (const profile of profiles) {
       try {
         await accountService.linkProfileToAccount(targetAccount.id, profile.id);

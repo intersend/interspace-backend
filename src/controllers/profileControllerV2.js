@@ -341,6 +341,157 @@ class ProfileControllerV2 {
       next(error);
     }
   }
+
+  /**
+   * Link a new account (wallet) to a profile
+   */
+  async linkAccountToProfile(req, res, next) {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({
+          success: false,
+          errors: errors.array()
+        });
+      }
+
+      const { profileId } = req.params;
+      const { address, walletType, signature, message } = req.body;
+      const accountId = req.account?.id;
+
+      logger.info('ProfileControllerV2.linkAccountToProfile - Request:', {
+        profileId,
+        accountId,
+        address,
+        walletType,
+        hasSignature: !!signature,
+        hasMessage: !!message
+      });
+
+      if (!accountId) {
+        return res.status(401).json({
+          success: false,
+          error: 'Authentication required'
+        });
+      }
+
+      // Check if the account has access to this profile
+      const hasAccess = await accountService.hasAccessToProfile(accountId, profileId);
+      if (!hasAccess) {
+        return res.status(403).json({
+          success: false,
+          error: 'Access denied to this profile'
+        });
+      }
+
+      // Verify the wallet signature
+      const { siweService } = require('../services/siweService');
+      const verificationResult = await siweService.verifyMessage({
+        message,
+        signature
+      });
+
+      if (!verificationResult.valid || verificationResult.address.toLowerCase() !== address.toLowerCase()) {
+        return res.status(401).json({
+          success: false,
+          error: 'Invalid wallet signature'
+        });
+      }
+
+      // Check if this wallet is already linked to this specific profile
+      const { prisma } = require('../utils/database');
+      const existingLinkedAccount = await prisma.linkedAccount.findFirst({
+        where: {
+          address: address.toLowerCase(),
+          profileId: profileId,
+          isActive: true
+        }
+      });
+
+      if (existingLinkedAccount) {
+        return res.status(409).json({
+          success: false,
+          error: 'This wallet is already linked to this profile'
+        });
+      }
+
+      // Get the profile to find the userId
+      const profile = await prisma.smartProfile.findUnique({
+        where: { id: profileId }
+      });
+
+      if (!profile) {
+        return res.status(404).json({
+          success: false,
+          error: 'Profile not found'
+        });
+      }
+
+      // Create the linked account
+      const linkedAccount = await prisma.linkedAccount.create({
+        data: {
+          userId: profile.userId,
+          profileId: profileId,
+          address: address.toLowerCase(),
+          authStrategy: 'wallet',
+          walletType: walletType || 'unknown',
+          isPrimary: false, // New linked accounts are not primary by default
+          isActive: true,
+          metadata: JSON.stringify({
+            linkedAt: new Date().toISOString(),
+            linkedBy: accountId
+          })
+        }
+      });
+
+      // Also create/link the wallet account in the identity graph
+      const walletAccount = await accountService.findOrCreateAccount({
+        type: 'wallet',
+        identifier: address.toLowerCase(),
+        verified: true,
+        metadata: {
+          walletType: walletType || 'unknown'
+        }
+      });
+
+      // Link to the current account in the identity graph
+      await accountService.linkAccounts(
+        accountId,
+        walletAccount.id,
+        'direct',
+        'linked'
+      );
+
+      logger.info('ProfileControllerV2.linkAccountToProfile - Success:', {
+        profileId,
+        linkedAccountId: linkedAccount.id,
+        walletAccountId: walletAccount.id,
+        address: linkedAccount.address
+      });
+
+      res.json({
+        success: true,
+        data: {
+          id: linkedAccount.id,
+          userId: linkedAccount.userId,
+          profileId: linkedAccount.profileId,
+          address: linkedAccount.address,
+          authStrategy: linkedAccount.authStrategy,
+          walletType: linkedAccount.walletType,
+          customName: linkedAccount.customName,
+          isPrimary: linkedAccount.isPrimary,
+          isActive: linkedAccount.isActive,
+          chainId: linkedAccount.chainId,
+          metadata: linkedAccount.metadata,
+          createdAt: linkedAccount.createdAt,
+          updatedAt: linkedAccount.updatedAt
+        }
+      });
+    } catch (error) {
+      logger.error('Link account to profile error:', error);
+      next(error);
+    }
+  }
 }
 
 module.exports = new ProfileControllerV2();
