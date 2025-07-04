@@ -51,7 +51,6 @@ model SmartProfile {
   sessionWalletAddress String   @unique // ERC-7702 proxy address
   isActive             Boolean  @default(false)
   developmentMode      Boolean  @default(false) // True if using mock wallet for development
-  orbyAccountClusterId String?  @unique
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
@@ -241,6 +240,35 @@ model SiweNonce {
   @@map("siwe_nonces")
 }
 
+model FarcasterAuthChannel {
+  id           String    @id @default(cuid())
+  channelToken String    @unique
+  nonce        String
+  domain       String
+  siweUri      String
+  status       String    @default("pending") // pending, completed, expired
+  
+  // SIWE message and signature
+  message      String?
+  signature    String?
+  
+  // Farcaster user data
+  fid          String?
+  username     String?
+  displayName  String?
+  bio          String?
+  pfpUrl       String?
+  custody      String?   // Custody address that signed
+  
+  createdAt    DateTime  @default(now())
+  expiresAt    DateTime
+  completedAt  DateTime?
+
+  @@index([expiresAt])
+  @@index([status])
+  @@map("farcaster_auth_channels")
+}
+
 // Orby Integration Models
 model PreferredGasToken {
   id                  String   @id @default(cuid())
@@ -417,7 +445,7 @@ model ProfileAccount {
   updatedAt   DateTime @updatedAt
 
   // Relationships
-  profile SmartProfile @relation(fields: [profileId], references: [id])
+  profile SmartProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
   account Account      @relation(fields: [accountId], references: [id])
 
   @@unique([profileId, accountId])

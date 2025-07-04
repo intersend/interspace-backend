@@ -40,7 +40,8 @@ router.get('/me', async (req, res, next) => {
     const socialAccounts = await prisma.account.findMany({
       where: { 
         id: { in: linkedAccountIds },
-        type: { in: ['google', 'apple', 'twitter', 'discord'] }
+        type: 'social',
+        provider: { in: ['google', 'apple', 'twitter', 'discord'] }
       }
     });
     
@@ -57,9 +58,12 @@ router.get('/me', async (req, res, next) => {
     if (account.type === 'email') authStrategies.push('email');
     if (account.type === 'wallet') authStrategies.push('wallet');
     if (account.type === 'guest') authStrategies.push('guest');
+    if (account.type === 'social' && account.provider) authStrategies.push(account.provider);
     // Add social strategies from linked accounts
     for (const social of socialAccounts) {
-      authStrategies.push(social.type);
+      if (social.provider && !authStrategies.includes(social.provider)) {
+        authStrategies.push(social.provider);
+      }
     }
     
     // Build response data matching iOS User struct
@@ -74,7 +78,7 @@ router.get('/me', async (req, res, next) => {
       activeDevicesCount: activeDevicesCount,
       socialAccounts: socialAccounts.map(acc => ({
         id: acc.id,
-        provider: acc.type,
+        provider: acc.provider,
         email: acc.identifier,
         displayName: acc.metadata?.displayName || null,
         avatarUrl: acc.metadata?.avatarUrl || null
@@ -112,7 +116,8 @@ router.get('/me/social-accounts', async (req, res, next) => {
     const socialAccounts = await prisma.account.findMany({
       where: { 
         id: { in: linkedAccountIds },
-        type: { in: ['google', 'apple', 'twitter', 'discord'] }
+        type: 'social',
+        provider: { in: ['google', 'apple', 'twitter', 'discord'] }
       }
     });
 
@@ -121,6 +126,7 @@ router.get('/me/social-accounts', async (req, res, next) => {
       data: socialAccounts.map(acc => ({
         id: acc.id,
         type: acc.type,
+        provider: acc.provider,
         identifier: acc.identifier,
         verified: acc.verified,
         metadata: acc.metadata || {},
@@ -165,8 +171,9 @@ router.post('/me/social-accounts', async (req, res, next) => {
     // Find or create the social account
     const accountService = require('../services/accountService');
     const socialAccount = await accountService.findOrCreateAccount({
-      type,
+      type: 'social',
       identifier,
+      provider: type, // The 'type' parameter contains the provider name
       metadata
     });
 
@@ -183,6 +190,7 @@ router.post('/me/social-accounts', async (req, res, next) => {
       socialAccount: {
         id: socialAccount.id,
         type: socialAccount.type,
+        provider: socialAccount.provider,
         identifier: socialAccount.identifier,
         verified: socialAccount.verified,
         metadata: socialAccount.metadata || {},

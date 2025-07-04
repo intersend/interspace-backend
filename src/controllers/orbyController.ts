@@ -7,15 +7,75 @@ import { ApiResponse, AppError, NotFoundError, AuthenticationError } from '@/typ
 import { CreateOperationsStatus } from '@orb-labs/orby-core';
 
 /**
+ * Helper: Check if an account has access to a profile through various paths
+ */
+async function checkProfileAccess(profileId: string, accountId: string) {
+  // First check if the profile exists
+  const profile = await prisma.smartProfile.findUnique({
+    where: { id: profileId },
+    include: { linkedAccounts: true }
+  });
+
+  if (!profile) {
+    throw new NotFoundError('Profile not found');
+  }
+
+  // Check access through multiple paths:
+  // 1. Direct ProfileAccount access
+  const hasProfileAccount = await prisma.profileAccount.findFirst({
+    where: { profileId, accountId }
+  });
+
+  // 2. LinkedAccount access (account is linked to this profile)
+  const account = await prisma.account.findUnique({
+    where: { id: accountId }
+  });
+  
+  const hasLinkedAccount = profile.linkedAccounts.some(
+    la => la.address.toLowerCase() === account?.identifier.toLowerCase() && la.isActive
+  );
+
+  // 3. Identity link access (account is linked to another account that has access)
+  const accountService = require('@/services/accountService');
+  const linkedAccountIds = await accountService.getLinkedAccounts(accountId);
+  
+  const hasIndirectAccess = await prisma.profileAccount.findFirst({
+    where: { 
+      profileId,
+      accountId: { in: linkedAccountIds }
+    }
+  });
+
+  if (!hasProfileAccount && !hasLinkedAccount && !hasIndirectAccess) {
+    throw new NotFoundError('Profile not found or access denied');
+  }
+
+  return profile;
+}
+
+/**
  * Helper: Get chain name from ID
  */
 function getChainName(chainId: number): string {
   const chains: Record<number, string> = {
+    // Mainnet chains
     1: 'Ethereum',
     10: 'Optimism',
+    56: 'BSC',
     137: 'Polygon',
     42161: 'Arbitrum',
-    8453: 'Base'
+    8453: 'Base',
+    
+    // Testnet chains
+    5: 'Goerli',
+    11155111: 'Sepolia',
+    17000: 'Holesky',
+    84532: 'Base Sepolia',
+    421614: 'Arbitrum Sepolia',
+    11155420: 'Optimism Sepolia',
+    80001: 'Mumbai',
+    80002: 'Amoy',
+    97: 'BSC Testnet'
   };
   return chains[chainId] || `Chain ${chainId}`;
 }
@@ -68,56 +128,75 @@ export class OrbyController {
         throw new AuthenticationError('Authentication required');
       }
 
-      // Check access via ProfileAccount
-      const profileAccess = await prisma.profileAccount.findFirst({
-        where: { profileId, accountId },
-        include: {
-          profile: {
-            include: { linkedAccounts: true }
-          }
-        }
-      });
+      // Check access and get profile
+      // @ts-ignore - accountId is guaranteed to be defined after the check above
+      const profile = await checkProfileAccess(profileId, accountId);
 
-      if (!profileAccess) {
-        throw new NotFoundError('Profile not found or access denied');
-      }
-
-      const profile = profileAccess.profile;
-
-      // Cast to include orby fields
-      const profileWithOrby = profile as any;
-
-      // Ensure account cluster exists
-      if (!profileWithOrby.orbyAccountClusterId) {
-        const clusterId = await orbyService.createOrGetAccountCluster(profile);
-        profileWithOrby.orbyAccountClusterId = clusterId;
-      }
-
-      // Get unified portfolio from Orby
-      const portfolio = await orbyService.getFungibleTokenPortfolio(profileWithOrby);
+      // Get unified portfolio from Orby (will create fresh cluster internally)
+      const portfolio = await orbyService.getFungibleTokenPortfolio(profile);
       
-      // Transform Orby response to our format
+      // Calculate total USD value from all tokens
+      let totalUsdValueRaw = BigInt(0);
+      const fiatDecimals = 6; // USD typically has 6 decimals in the Orby response
+      
+      // Transform Orby response to simplified format for wallet page
+      const tokens = portfolio.map(item => {
+        // Get token info from first balance
+        const firstBalance = item.tokenBalances[0];
+        const symbol = firstBalance?.token.symbol || 'Unknown';
+        const name = firstBalance?.token.name || 'Unknown';
+        const decimals = firstBalance?.token.decimals || 18;
+        
+        // Calculate USD value for this token
+        const tokenUsdValueRaw = item.totalValueInFiat || '0';
+        let tokenUsdValue = '0';
+        
+        if (tokenUsdValueRaw !== '0') {
+          totalUsdValueRaw = totalUsdValueRaw + BigInt(tokenUsdValueRaw);
+          tokenUsdValue = (Number(tokenUsdValueRaw) / Math.pow(10, fiatDecimals)).toFixed(2);
+        }
+        
+        // Get standardized token ID - it's on the item itself, not on the token
+        const standardizedTokenId = item.standardizedTokenId || `${symbol.toLowerCase()}_token`;
+        
+        // Get total amount (raw amount with decimals)
+        const totalAmount = item.totalRawAmount || '0';
+        
+        // Get balances per chain
+        const balancesPerChain = item.tokenBalancesOnChains?.map((chainBalance: any) => ({
+          chainId: parseInt(chainBalance.chainId),
+          chainName: getChainName(parseInt(chainBalance.chainId)),
+          amount: chainBalance.rawAmount,
+          tokenAddress: '', // Not available in current data structure
+          isNative: symbol === 'ETH' // Simple check for native token
+        })) || [];
+        
+        return {
+          standardizedTokenId,
+          name,
+          symbol,
+          totalAmount,
+          totalUsdValue: tokenUsdValue,
+          decimals,
+          balancesPerChain
+        };
+      }).filter(token => 
+        // Only show tokens with non-zero USD value
+        token.totalUsdValue !== '0' && token.totalUsdValue !== '0.00'
+      );
+      
+      // Calculate total USD value
+      const totalUsdValue = totalUsdValueRaw !== BigInt(0)
+        ? (Number(totalUsdValueRaw) / Math.pow(10, fiatDecimals)).toFixed(2)
+        : '0';
+      
       const unifiedBalance = {
-        totalUsdValue: '0', // Would need price API
-        tokens: portfolio.map(item => ({
-          standardizedTokenId: item.standardizedTokenId,
-          symbol: item.tokenBalances[0]?.token.symbol || 'Unknown',
-          name: item.tokenBalances[0]?.token.name || 'Unknown',
-          totalAmount: (item as any).rawAmount?.toString() || '0',
-          totalUsdValue: '0',
-          decimals: item.tokenBalances[0]?.token.decimals || 18,
-          balancesPerChain: item.tokenBalances.map(tb => ({
-            chainId: Number(tb.token.chainId),
-            chainName: getChainName(Number(tb.token.chainId)),
-            amount: (tb as any).rawAmount?.toString() || '0',
-            tokenAddress: tb.token.address,
-            isNative: tb.token.address === '0x0000000000000000000000000000000000000000'
-          }))
-        }))
+        totalUsdValue,
+        tokens
       };
 
       // Get gas analysis
-      const gasAnalysis = await gasTokenService.analyzeGasTokens(profileWithOrby);
+      const gasAnalysis = await gasTokenService.analyzeGasTokens(profile);
 
       const response: ApiResponse = {
         success: true,
@@ -126,9 +205,13 @@ export class OrbyController {
           profileName: profile.name,
           unifiedBalance,
           gasAnalysis: {
-            suggestedGasToken: gasAnalysis.suggestedGasToken,
+            suggestedGasToken: gasAnalysis.suggestedGasToken ? {
+              tokenId: gasAnalysis.suggestedGasToken.tokenId,
+              symbol: gasAnalysis.suggestedGasToken.symbol,
+              score: gasAnalysis.suggestedGasToken.score
+            } : undefined,
             nativeGasAvailable: gasAnalysis.nativeGasAvailable,
-            availableGasTokens: gasAnalysis.availableGasTokens?.slice(0, 5) || [] // Top 5
+            availableGasTokens: gasAnalysis.availableGasTokens?.map(token => token.symbol) || [] // Array of token symbols
           },
           linkedAccountsCount: profile.linkedAccounts.length
         }
@@ -169,30 +252,9 @@ export class OrbyController {
         throw new AppError('Invalid intent type. Must be "transfer" or "swap"', 400);
       }
 
-      // Check access via ProfileAccount
-      const profileAccess = await prisma.profileAccount.findFirst({
-        where: { profileId, accountId },
-        include: {
-          profile: {
-            include: { linkedAccounts: true }
-          }
-        }
-      });
-
-      if (!profileAccess) {
-        throw new NotFoundError('Profile not found or access denied');
-      }
-
-      const profile = profileAccess.profile;
-
-      // Cast to include orby fields
-      const profileWithOrby = profile as any;
-
-      // Ensure account cluster exists
-      if (!profileWithOrby.orbyAccountClusterId) {
-        const clusterId = await orbyService.createOrGetAccountCluster(profile);
-        profileWithOrby.orbyAccountClusterId = clusterId;
-      }
+      // Check access and get profile
+      // @ts-ignore - accountId is guaranteed to be defined after the check above
+      const profile = await checkProfileAccess(profileId, accountId);
 
       // Build operations based on type
       let operations;
@@ -362,19 +424,9 @@ export class OrbyController {
         throw new AuthenticationError('Authentication required');
       }
 
-      // Check access via ProfileAccount
-      const profileAccess = await prisma.profileAccount.findFirst({
-        where: { profileId, accountId },
-        include: {
-          profile: true
-        }
-      });
-
-      if (!profileAccess) {
-        throw new NotFoundError('Profile not found or access denied');
-      }
-
-      const profile = profileAccess.profile;
+      // Check access and get profile
+      // @ts-ignore - accountId is guaranteed to be defined after the check above
+      const profile = await checkProfileAccess(profileId, accountId);
 
       // Build query
       const where: any = { profileId };
@@ -452,19 +504,9 @@ export class OrbyController {
         throw new AuthenticationError('Authentication required');
       }
 
-      // Check access via ProfileAccount
-      const profileAccess = await prisma.profileAccount.findFirst({
-        where: { profileId, accountId },
-        include: {
-          profile: true
-        }
-      });
-
-      if (!profileAccess) {
-        throw new NotFoundError('Profile not found or access denied');
-      }
-
-      const profile = profileAccess.profile;
+      // Check access and get profile
+      // @ts-ignore - accountId is guaranteed to be defined after the check above
+      const profile = await checkProfileAccess(profileId, accountId);
 
       const gasAnalysis = await gasTokenService.analyzeGasTokens(profile);
 
@@ -499,19 +541,9 @@ export class OrbyController {
         throw new AppError('Profile ID is required', 400);
       }
 
-      // Check access via ProfileAccount
-      const profileAccess = await prisma.profileAccount.findFirst({
-        where: { profileId, accountId },
-        include: {
-          profile: true
-        }
-      });
-
-      if (!profileAccess) {
-        throw new NotFoundError('Profile not found or access denied');
-      }
-
-      const profile = profileAccess.profile;
+      // Check access and get profile
+      // @ts-ignore - accountId is guaranteed to be defined after the check above
+      const profile = await checkProfileAccess(profileId, accountId);
 
       await gasTokenService.setPreferredGasToken(
         profileId,
@@ -549,21 +581,13 @@ export class OrbyController {
         throw new AppError('Profile ID and Chain ID are required', 400);
       }
 
-      // Check access via ProfileAccount
-      const profileAccess = await prisma.profileAccount.findFirst({
-        where: { profileId, accountId },
-        include: {
-          profile: true
-        }
-      });
+      // Check access and get profile
+      // @ts-ignore - accountId is guaranteed to be defined after the check above
+      const profile = await checkProfileAccess(profileId, accountId);
 
-      if (!profileAccess) {
-        throw new NotFoundError('Profile not found or access denied');
-      }
-
-      const profile = profileAccess.profile;
-
-      const rpcUrl = await orbyService.getVirtualNodeRpcUrl(profile, chainId);
+      // Create fresh cluster and get RPC URL
+      const clusterId = await orbyService.createFreshAccountCluster(profile);
+      const rpcUrl = await orbyService.getVirtualNodeRpcUrl(clusterId, chainId, profile.sessionWalletAddress);
 
       res.json({ success: true, data: { rpcUrl } });
     } catch (error) {

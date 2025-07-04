@@ -53,12 +53,17 @@ export class SessionWalletService {
       return this.providers.get(key)!;
     }
 
-    const profile = await prisma.smartProfile.findUnique({ where: { id: profileId } });
+    const profile = await prisma.smartProfile.findUnique({ 
+      where: { id: profileId },
+      include: { linkedAccounts: { where: { isActive: true } } }
+    });
     if (!profile) {
       throw new Error('Profile not found');
     }
 
-    const rpcUrl = await orbyService.getVirtualNodeRpcUrl(profile, chainId);
+    // Create fresh cluster and get RPC URL
+    const clusterId = await orbyService.createFreshAccountCluster(profile);
+    const rpcUrl = await orbyService.getVirtualNodeRpcUrl(clusterId, chainId, profile.sessionWalletAddress);
     const provider = new OrbyProvider(rpcUrl);
     
     this.providers.set(key, provider);

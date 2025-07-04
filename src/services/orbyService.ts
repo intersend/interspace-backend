@@ -9,6 +9,7 @@ import { ethers } from 'ethers';
 import { cacheService } from './cacheService';
 import { logger } from '@/utils/logger';
 import { CachedPortfolioItem, TokenInfo, TokenBalance } from '@/types/portfolio';
+import { getTokenMetadata, STANDARDIZED_TOKEN_SYMBOLS } from '@/utils/tokenMappings';
 
 // Define the response type based on Orby SDK structure
 interface CreateOperationsResponse {
@@ -72,6 +73,8 @@ export class OrbyService {
   private virtualNodes: Map<string, OrbyProvider> = new Map();
   private config: OrbyConfig;
   private iface: ethers.Interface;
+  private readonly MAX_RETRIES = 3;
+  private readonly RETRY_DELAY_MS = 1000;
 
   constructor() {
     this.config = {
@@ -105,22 +108,46 @@ export class OrbyService {
   }
 
   /**
-   * Create or get an account cluster for a profile
-   * @param profile - The profile with linked accounts
-   * @param tx - Optional transaction context to use instead of global prisma
+   * Retry an async operation with exponential backoff
    */
-  async createOrGetAccountCluster(
-    profile: SmartProfile & { linkedAccounts: LinkedAccount[] },
-    tx?: any
-  ): Promise<string> {
-    // Cast profile to include orby fields
-    const profileWithOrby = profile as SmartProfileWithOrby & { linkedAccounts: LinkedAccount[] };
+  private async retryWithBackoff<T>(
+    operation: () => Promise<T>, 
+    operationName: string,
+    maxRetries: number = this.MAX_RETRIES
+  ): Promise<T> {
+    let lastError: Error | null = null;
     
-    // If cluster already exists, return it
-    if (profileWithOrby.orbyAccountClusterId) {
-      return profileWithOrby.orbyAccountClusterId;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error as Error;
+        logger.warn(`${operationName} failed on attempt ${attempt}/${maxRetries}:`, error);
+        
+        if (attempt < maxRetries) {
+          const delay = this.RETRY_DELAY_MS * Math.pow(2, attempt - 1);
+          logger.info(`Retrying ${operationName} in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
     }
+    
+    throw new AppError(
+      `${operationName} failed after ${maxRetries} attempts`,
+      500,
+      'ORBY_OPERATION_FAILED',
+      { lastError: lastError?.message }
+    );
+  }
 
+  /**
+   * Create a fresh account cluster for a profile with ALL linked accounts
+   * Always creates a new cluster to ensure we have the latest account configuration
+   * @param profile - The profile with linked accounts
+   */
+  async createFreshAccountCluster(
+    profile: SmartProfile & { linkedAccounts?: LinkedAccount[] }
+  ): Promise<string> {
     // Convert linked accounts to Orby format
     const accounts: Account[] = [];
     
@@ -136,6 +163,7 @@ export class OrbyService {
 
     // Add all linked EOAs (check if linkedAccounts exists)
     if (profile.linkedAccounts && profile.linkedAccounts.length > 0) {
+      logger.info(`Adding ${profile.linkedAccounts.length} linked accounts to cluster`);
       for (const linkedAccount of profile.linkedAccounts) {
         if (linkedAccount.isActive) {
           accounts.push(
@@ -146,9 +174,12 @@ export class OrbyService {
               chainId: `EIP155-${linkedAccount.chainId || 1}` // Use linked account's chainId or default to mainnet (Orby format)
             })
           );
+          logger.info(`Added linked account: ${linkedAccount.address}`);
         }
       }
     }
+
+    logger.info(`Creating fresh Orby cluster with ${accounts.length} accounts for profile ${profile.id}`);
 
     // Create account cluster
     const cluster = await this.getProvider().createAccountCluster(accounts);
@@ -156,63 +187,23 @@ export class OrbyService {
       throw new AppError('Failed to create Orby account cluster', 500);
     }
 
-    // Use transaction context if provided, otherwise use global prisma
-    const dbContext = tx || prisma;
-
-    // Update profile with cluster ID using the correct database context
-    await dbContext.smartProfile.update({
-      where: { id: profile.id },
-      data: { orbyAccountClusterId: cluster.accountClusterId } as any
-    });
-
+    logger.info(`Created fresh Orby cluster: ${cluster.accountClusterId}`);
     return cluster.accountClusterId;
   }
 
-  /**
-   * Update account cluster when accounts are linked/unlinked
-   * @param profileId - The profile ID to update
-   * @param tx - Optional transaction context to use instead of global prisma
-   */
-  async updateAccountCluster(profileId: string, tx?: any): Promise<void> {
-    const dbContext = tx || prisma;
-    
-    const profile = await dbContext.smartProfile.findUnique({
-      where: { id: profileId },
-      include: { linkedAccounts: true }
-    });
-
-    const profileWithOrby = profile as (SmartProfileWithOrby & { linkedAccounts: LinkedAccount[] }) | null;
-    
-    if (!profileWithOrby || !profileWithOrby.orbyAccountClusterId) {
-      return;
-    }
-
-    // Recreate cluster with updated accounts
-    await dbContext.smartProfile.update({
-      where: { id: profileId },
-      data: { orbyAccountClusterId: null } as any
-    });
-
-    await this.createOrGetAccountCluster(profileWithOrby, tx);
-  }
 
   /**
    * Retrieve the RPC URL for a virtual node on a specific chain
    */
   async getVirtualNodeRpcUrl(
-    profile: SmartProfile,
-    chainId: number
+    clusterId: string,
+    chainId: number,
+    sessionWalletAddress: string
   ): Promise<string> {
-    const profileWithOrby = profile as SmartProfileWithOrby;
-
-    if (!profileWithOrby.orbyAccountClusterId) {
-      throw new AppError('Profile does not have an Orby account cluster', 400);
-    }
-
     const rpcUrl = await this.getProvider().getVirtualNodeRpcUrl(
-      profileWithOrby.orbyAccountClusterId,
+      clusterId,
       BigInt(chainId),
-      profile.sessionWalletAddress
+      sessionWalletAddress
     );
 
     if (!rpcUrl) {
@@ -226,44 +217,14 @@ export class OrbyService {
    * Get or create virtual node for a specific chain
    */
   async getVirtualNode(
-    profile: SmartProfile,
-    chainId: number
+    clusterId: string,
+    chainId: number,
+    sessionWalletAddress: string
   ): Promise<OrbyProvider> {
-    const key = `${profile.id}-${chainId}`;
-    
-    if (this.virtualNodes.has(key)) {
-      return this.virtualNodes.get(key)!;
-    }
-
-    const rpcUrl = await this.getVirtualNodeRpcUrl(profile, chainId);
+    const rpcUrl = await this.getVirtualNodeRpcUrl(clusterId, chainId, sessionWalletAddress);
 
     // Create virtual node provider
     const virtualNode = new OrbyProvider(rpcUrl);
-
-    // Cache the virtual node
-    this.virtualNodes.set(key, virtualNode);
-
-    // Store in database
-    await prisma.orbyVirtualNode.upsert({
-      where: {
-        profileId_chainId: {
-          profileId: profile.id,
-          chainId
-        }
-      },
-      update: {
-        rpcUrl,
-        address: profile.sessionWalletAddress,
-        isActive: true
-      },
-      create: {
-        profileId: profile.id,
-        chainId,
-        rpcUrl,
-        address: profile.sessionWalletAddress,
-        isActive: true
-      }
-    });
 
     return virtualNode;
   }
@@ -272,16 +233,13 @@ export class OrbyService {
    * Get fungible token portfolio for a profile
    */
   async getFungibleTokenPortfolio(profile: SmartProfile & { linkedAccounts?: LinkedAccount[] }, chainId: number = config.DEFAULT_CHAIN_ID): Promise<CachedPortfolioItem[]> {
-    const profileWithOrby = profile as SmartProfileWithOrby;
-    
-    if (!profileWithOrby.orbyAccountClusterId) {
-      throw new AppError('Profile does not have an Orby account cluster', 400);
-    }
+    // Create a fresh cluster with all linked accounts
+    const clusterId = await this.createFreshAccountCluster(profile);
 
     // Log the profile and linked accounts
     console.log('\n========== PROFILE DEBUG ==========');
     console.log(`Profile ID: ${profile.id}`);
-    console.log(`Orby Cluster ID: ${profileWithOrby.orbyAccountClusterId}`);
+    console.log(`Fresh Orby Cluster ID: ${clusterId}`);
     console.log(`Session Wallet: ${profile.sessionWalletAddress}`);
     if (profile.linkedAccounts) {
       console.log(`Linked Accounts: ${profile.linkedAccounts.length}`);
@@ -291,13 +249,12 @@ export class OrbyService {
     }
     console.log('===================================\n');
 
-    // Always fetch fresh data from Orby (no caching for balance data)
     // Get virtual node for the chain
-    const virtualNode = await this.getVirtualNode(profile, chainId);
+    const virtualNode = await this.getVirtualNode(clusterId, chainId, profile.sessionWalletAddress);
 
     // Use the raw RPC method to get portfolio with proper parameters
     const response = await virtualNode.send('orby_getFungibleTokenPortfolio', [{
-      accountClusterId: profileWithOrby.orbyAccountClusterId!,
+      accountClusterId: clusterId,
       offset: 0,
       limit: 100 // Get more tokens to ensure we get all balances
     }]);
@@ -331,27 +288,100 @@ export class OrbyService {
 
     // Transform Orby response to our format based on actual API structure
     const transformedPortfolio: CachedPortfolioItem[] = portfolio.map((item: any) => {
-      // Extract total amount from totalTokenAmount object
+      // Extract total amount from total or totalTokenAmount object
       let totalRawAmount = '0';
       let tokenInfo: any = {};
       let decimals = 18;
       
       try {
+        // Try to get the amount from 'total' field first (actual Orby response)
+        // Note: Orby uses 'value' field, not 'amount' field
+        if (item.total?.value !== undefined) {
+          totalRawAmount = item.total.value.toString();
+        } else if (item.total?.amount !== undefined) {
+          totalRawAmount = item.total.amount.toString();
+        }
+        // First, try to get token info from the first chain balance if available
+        if (item.tokenBalancesOnChains && item.tokenBalancesOnChains.length > 0) {
+          const firstChainBalance = item.tokenBalancesOnChains[0];
+          
+          // Try to get from currency.asset structure (actual Orby response format)
+          if (firstChainBalance.token?.currency?.asset) {
+            const asset = firstChainBalance.token.currency.asset;
+            tokenInfo = {
+              symbol: asset.symbol || 'Unknown',
+              name: asset.name || 'Unknown',
+              decimals: firstChainBalance.token.currency.decimals || 18
+            };
+            decimals = firstChainBalance.token.currency.decimals || 18;
+          }
+          // Fallback to metadata structure if available
+          else if (firstChainBalance.token?.metadata) {
+            const metadata = firstChainBalance.token.metadata;
+            tokenInfo = {
+              symbol: metadata.symbol || 'Unknown',
+              name: metadata.name || 'Unknown',
+              decimals: metadata.decimals || 18
+            };
+            decimals = metadata.decimals || 18;
+          }
+          
+          // If still no token info, try to get from token mappings
+          if ((!tokenInfo.symbol || tokenInfo.symbol === 'Unknown') && firstChainBalance.token) {
+            const chainIdStr = firstChainBalance.token.chainId || 'EIP155-1';
+            const chainId = Number(chainIdStr.toString().replace('EIP155-', ''));
+            const tokenAddress = firstChainBalance.token.address || '0x0000000000000000000000000000000000000000';
+            
+            const mappedMetadata = getTokenMetadata(tokenAddress, chainId);
+            if (mappedMetadata) {
+              tokenInfo = mappedMetadata;
+              decimals = mappedMetadata.decimals;
+            }
+          }
+        }
+        
+        // Also check if token info is in the total field
+        if ((!tokenInfo.symbol || tokenInfo.symbol === 'Unknown') && item.total?.currency) {
+          const currency = item.total.currency;
+          if (currency.asset) {
+            tokenInfo = {
+              symbol: currency.asset.symbol || tokenInfo.symbol || 'Unknown',
+              name: currency.asset.name || tokenInfo.name || 'Unknown',
+              decimals: currency.decimals || tokenInfo.decimals || 18
+            };
+            decimals = currency.decimals || decimals;
+          }
+        }
+        
+        // Try to get symbol from standardized token ID mapping
+        if ((!tokenInfo.symbol || tokenInfo.symbol === 'Unknown') && item.standardizedTokenId) {
+          const mappedSymbol = STANDARDIZED_TOKEN_SYMBOLS[item.standardizedTokenId];
+          if (mappedSymbol) {
+            tokenInfo.symbol = mappedSymbol;
+            // Set reasonable defaults for name if not found
+            if (!tokenInfo.name || tokenInfo.name === 'Unknown') {
+              tokenInfo.name = mappedSymbol;
+            }
+          }
+        }
+        
         if (item.totalTokenAmount) {
           // Extract amount value
           if (item.totalTokenAmount.amount !== undefined) {
             totalRawAmount = item.totalTokenAmount.amount.toString();
           }
           
-          // Extract token metadata
-          if (item.totalTokenAmount.currency || item.totalTokenAmount.token?.metadata?.currency) {
-            const currency = item.totalTokenAmount.currency || item.totalTokenAmount.token?.metadata?.currency;
-            tokenInfo = {
-              symbol: currency.asset?.symbol || currency.symbol || 'Unknown',
-              name: currency.asset?.name || currency.name || 'Unknown',
-              decimals: currency.decimals || 18
-            };
-            decimals = currency.decimals || 18;
+          // Try to get token metadata from totalTokenAmount if not already found
+          if (!tokenInfo.symbol || tokenInfo.symbol === 'Unknown') {
+            if (item.totalTokenAmount.currency || item.totalTokenAmount.token?.metadata?.currency) {
+              const currency = item.totalTokenAmount.currency || item.totalTokenAmount.token?.metadata?.currency;
+              tokenInfo = {
+                symbol: currency.asset?.symbol || currency.symbol || tokenInfo.symbol || 'Unknown',
+                name: currency.asset?.name || currency.name || tokenInfo.name || 'Unknown',
+                decimals: currency.decimals || tokenInfo.decimals || 18
+              };
+              decimals = currency.decimals || decimals;
+            }
           }
         }
       } catch (err) {
@@ -369,24 +399,45 @@ export class OrbyService {
             const chainIdStr = chainBalance.token?.chainId || 'EIP155-1';
             const chainId = chainIdStr.toString().replace('EIP155-', '');
             
-            // Extract amount
-            const rawAmount = chainBalance.amount?.toString() || '0';
+            // Extract amount (Orby uses 'value' field)
+            const rawAmount = chainBalance.value?.toString() || chainBalance.amount?.toString() || '0';
             
-            // Get token info from this chain balance if not already set
-            if (!tokenInfo.symbol && chainBalance.token?.metadata?.currency) {
-              const currency = chainBalance.token.metadata.currency;
-              tokenInfo = {
-                symbol: currency.asset?.symbol || currency.symbol || 'Unknown',
-                name: currency.asset?.name || currency.name || 'Unknown',
-                decimals: currency.decimals || 18
+            // Get token metadata directly from the chain balance
+            let chainTokenInfo = tokenInfo;
+            
+            // Try currency.asset structure first (actual Orby response format)
+            if (chainBalance.token?.currency?.asset) {
+              const asset = chainBalance.token.currency.asset;
+              chainTokenInfo = {
+                symbol: asset.symbol || tokenInfo.symbol || 'Unknown',
+                name: asset.name || tokenInfo.name || 'Unknown',
+                decimals: chainBalance.token.currency.decimals || tokenInfo.decimals || 18
               };
+            }
+            // Fallback to metadata structure
+            else if (chainBalance.token?.metadata) {
+              const metadata = chainBalance.token.metadata;
+              chainTokenInfo = {
+                symbol: metadata.symbol || tokenInfo.symbol || 'Unknown',
+                name: metadata.name || tokenInfo.name || 'Unknown',
+                decimals: metadata.decimals || tokenInfo.decimals || 18
+              };
+            }
+            
+            // If still no metadata, try token mappings
+            if (chainTokenInfo.symbol === 'Unknown' && chainBalance.token) {
+              const tokenAddress = chainBalance.token.address || '0x0000000000000000000000000000000000000000';
+              const mappedMetadata = getTokenMetadata(tokenAddress, Number(chainId));
+              if (mappedMetadata) {
+                chainTokenInfo = mappedMetadata;
+              }
             }
             
             tokenBalances.push({
               token: {
-                symbol: tokenInfo.symbol || 'Unknown',
-                name: tokenInfo.name || 'Unknown',
-                decimals: tokenInfo.decimals || decimals,
+                symbol: chainTokenInfo.symbol || 'Unknown',
+                name: chainTokenInfo.name || 'Unknown',
+                decimals: chainTokenInfo.decimals || decimals,
                 chainId: chainId,
                 address: chainBalance.token?.address || ''
               },
@@ -407,16 +458,16 @@ export class OrbyService {
       // Extract fiat value
       let totalValueInFiat = '0';
       try {
-        if (item.totalValueInFiat?.amount !== undefined) {
-          // The amount is in the smallest unit (like cents for USD)
-          // Currency object should tell us the decimals
-          const fiatAmount = item.totalValueInFiat.amount;
-          const fiatDecimals = item.totalValueInFiat.currency?.decimals || 2;
-          
-          // Store the raw amount with proper decimal conversion info
-          totalValueInFiat = fiatAmount.toString();
-          
-          console.log(`Fiat value for ${tokenInfo.symbol}: raw=${fiatAmount}, decimals=${fiatDecimals}`);
+        // Note: Orby uses 'value' field, not 'amount' field
+        if (item.totalValueInFiat?.value !== undefined) {
+          totalValueInFiat = item.totalValueInFiat.value.toString();
+        } else if (item.totalValueInFiat?.amount !== undefined) {
+          totalValueInFiat = item.totalValueInFiat.amount.toString();
+        }
+        
+        if (totalValueInFiat !== '0') {
+          const fiatDecimals = item.totalValueInFiat?.currency?.decimals || 6;
+          console.log(`Fiat value for ${tokenInfo.symbol}: raw=${totalValueInFiat}, decimals=${fiatDecimals}`);
         }
       } catch (err) {
         console.error('Error extracting fiat value:', err);
@@ -512,12 +563,13 @@ export class OrbyService {
    * Build transfer operations
    */
   async buildTransferOperation(
-    profile: SmartProfile,
+    profile: SmartProfile & { linkedAccounts?: LinkedAccount[] },
     params: TransferIntentParams,
     gasToken?: GasToken
   ): Promise<CreateOperationsResponse> {
-    const virtualNode = await this.getVirtualNode(profile, params.from.chainId);
-    const profileWithOrby = profile as SmartProfileWithOrby;
+    // Create fresh cluster with all linked accounts
+    const clusterId = await this.createFreshAccountCluster(profile);
+    const virtualNode = await this.getVirtualNode(clusterId, params.from.chainId, profile.sessionWalletAddress);
 
     // Encode transfer data
     const transferData = this.iface.encodeFunctionData('transfer', [
@@ -527,7 +579,7 @@ export class OrbyService {
 
     // Get operations
     const response = await virtualNode.getOperationsToExecuteTransaction(
-      profileWithOrby.orbyAccountClusterId!,
+      clusterId,
       transferData,
       params.from.token,
       undefined,
@@ -545,12 +597,13 @@ export class OrbyService {
    * Build swap operations
    */
   async buildSwapOperation(
-    profile: SmartProfile,
+    profile: SmartProfile & { linkedAccounts?: LinkedAccount[] },
     params: SwapIntentParams,
     gasToken?: GasToken
   ): Promise<CreateOperationsResponse> {
-    const virtualNode = await this.getVirtualNode(profile, params.from.chainId);
-    const profileWithOrby = profile as SmartProfileWithOrby;
+    // Create fresh cluster with all linked accounts
+    const clusterId = await this.createFreshAccountCluster(profile);
+    const virtualNode = await this.getVirtualNode(clusterId, params.from.chainId, profile.sessionWalletAddress);
 
     // Get standardized token IDs
     const [inputTokenId, outputTokenId] = await this.getStandardizedTokenIds([
@@ -573,7 +626,7 @@ export class OrbyService {
 
     // Get swap operations
     const response = await virtualNode.getOperationsToSwap(
-      profileWithOrby.orbyAccountClusterId!,
+      clusterId,
       QuoteType.EXACT_INPUT,
       {
         standardizedTokenId: inputTokenId || '',
@@ -636,14 +689,18 @@ export class OrbyService {
       return signedOp?.signedData || signedOp?.signature;
     };
 
+    // Create fresh cluster with all linked accounts
+    const clusterId = await this.createFreshAccountCluster(operation.profile);
+    
     // Submit to Orby
     const virtualNode = await this.getVirtualNode(
-      operation.profile,
-      Number(operation.profile.linkedAccounts[0]?.chainId || config.DEFAULT_CHAIN_ID)
+      clusterId,
+      Number(operation.profile.linkedAccounts[0]?.chainId || config.DEFAULT_CHAIN_ID),
+      operation.profile.sessionWalletAddress
     );
 
     const accountCluster = {
-      accountClusterId: operation.profile.orbyAccountClusterId!,
+      accountClusterId: clusterId,
       accounts: [] // This will be populated by Orby
     } as AccountCluster;
 

@@ -1,12 +1,11 @@
 import { prisma, withTransaction } from '@/utils/database';
 const { generateTokens } = require('@/utils/tokenUtils');
-import { OAuth2Client } from 'google-auth-library';
-import { verifyIdToken } from 'apple-signin-auth';
 import { passkeyService } from './passkeyService';
 import { auditService } from './auditService';
-import { config } from '@/utils/config';
+import { oauthProviderService } from './oauthProviderService';
 import { 
   AuthTokens,
+  AuthResult,
   AuthenticationError,
   ConflictError,
   NotFoundError 
@@ -27,6 +26,8 @@ export interface SocialAuthRequest {
     username?: string;
     displayName?: string;
     avatarUrl?: string;
+    emailVerified?: boolean;
+    metadata?: Record<string, any>;
   };
   ipAddress?: string;
   userAgent?: string;
@@ -37,7 +38,7 @@ export class SocialAuthService {
   /**
    * Verify social auth token and create/login user
    */
-  async authenticate(data: SocialAuthRequest): Promise<AuthTokens> {
+  async authenticate(data: SocialAuthRequest): Promise<AuthResult> {
     try {
       // Verify the provided social token or passkey
       const verificationResult = await this.verifySocialAuth(data.authToken, data.authStrategy);
@@ -54,7 +55,7 @@ export class SocialAuthService {
       }
 
       // For social auth strategies that return user data, merge it with the request
-      if (verificationResult.userData && (data.authStrategy === 'google' || data.authStrategy === 'apple')) {
+      if (verificationResult.userData) {
         data.socialData = verificationResult.userData;
         if (verificationResult.userData.email) {
           data.email = verificationResult.userData.email;
@@ -126,7 +127,11 @@ export class SocialAuthService {
           userAgent: data.userAgent
         });
 
-        return tokens;
+        return {
+          ...tokens,
+          account,
+          isNewAccount: false // We can determine this based on account creation
+        };
       });
     } catch (error) {
       console.error('Social authentication error:', error);
@@ -275,7 +280,9 @@ export class SocialAuthService {
             username: data.socialData.username,
             displayName: data.socialData.displayName,
             avatarUrl: data.socialData.avatarUrl,
-            email: data.email
+            email: data.email,
+            emailVerified: data.socialData.emailVerified,
+            ...(data.socialData.metadata || {})
           }
         }
       });
@@ -292,8 +299,18 @@ export class SocialAuthService {
       if (data.socialData.avatarUrl) {
         updatedMetadata.avatarUrl = data.socialData.avatarUrl;
       }
+      if (data.socialData.username) {
+        updatedMetadata.username = data.socialData.username;
+      }
       if (data.email) {
         updatedMetadata.email = data.email;
+      }
+      if (data.socialData.emailVerified !== undefined) {
+        updatedMetadata.emailVerified = data.socialData.emailVerified;
+      }
+      // Merge any provider-specific metadata
+      if (data.socialData.metadata) {
+        updatedMetadata.providerMetadata = data.socialData.metadata;
       }
 
       await tx.account.update({
@@ -339,91 +356,74 @@ export class SocialAuthService {
    */
   private async verifySocialAuth(authToken: string, strategy: string): Promise<any> {
     try {
+      // Handle non-OAuth strategies
       switch (strategy) {
-        case 'google': {
-          const client = new OAuth2Client(config.GOOGLE_CLIENT_ID);
-          const ticket = await client.verifyIdToken({ idToken: authToken, audience: config.GOOGLE_CLIENT_ID });
-          const payload = ticket.getPayload();
-          return {
-            isValid: true,
-            userData: {
-              provider: 'google',
-              providerId: payload?.sub,
-              email: payload?.email,
-              displayName: payload?.name,
-              avatarUrl: payload?.picture
-            }
-          };
-        }
-        case 'apple': {
-          const decodedToken = await verifyIdToken(authToken, { audience: config.APPLE_CLIENT_ID! });
-          return {
-            isValid: true,
-            userData: {
-              provider: 'apple',
-              providerId: decodedToken.sub,
-              email: decodedToken.email,
-              displayName: decodedToken.email?.split('@')[0] || 'Apple User'
-            }
-          };
-        }
-        case 'passkey': {
+        case 'passkey':
           // For passkey, authToken should contain both response and challenge
           // This would need proper implementation based on how passkey auth is handled
           return { isValid: true };
-        }
-        case 'guest': {
+        
+        case 'guest':
           return { isValid: true };
-        }
-        case 'email': {
+        
+        case 'email':
           // For email auth, no token verification needed
           // Email verification is handled separately
           return { isValid: true };
-        }
-        case 'wallet': {
+        
+        case 'wallet':
+        case 'telegram':
           // For wallet auth (SIWE), verification is done in the SIWE controller
           // The authToken here is the signature which has already been verified
           return { isValid: true };
-        }
-        case 'discord': {
-          // Discord auth token is already verified by the OAuth flow
-          return { isValid: true };
-        }
-        case 'spotify': {
-          // Spotify auth token is already verified by the OAuth flow
-          return { isValid: true };
-        }
-        case 'github': {
-          // GitHub auth token is already verified by the OAuth flow
-          return { isValid: true };
-        }
-        case 'twitter': {
-          // Twitter auth token is already verified by the OAuth flow
-          return { isValid: true };
-        }
-        case 'facebook': {
-          // Facebook auth token is already verified by the OAuth flow
-          return { isValid: true };
-        }
-        case 'tiktok': {
-          // TikTok auth token is already verified by the OAuth flow
-          return { isValid: true };
-        }
-        case 'epicgames': {
-          // Epic Games auth token is already verified by the OAuth flow
-          return { isValid: true };
-        }
-        case 'shopify': {
-          // Shopify auth token is already verified by the OAuth flow
-          return { isValid: true };
-        }
-        default:
-          return { isValid: false };
       }
+
+      // For OAuth providers, use the standardized service
+      const provider = oauthProviderService.getProvider(strategy);
+      if (!provider) {
+        return { isValid: false };
+      }
+
+      // Get user info from OAuth provider
+      const userInfo = await oauthProviderService.verifyTokenAndFetchUserInfo(
+        strategy,
+        authToken,
+        this.getIdTokenFromAuthToken(authToken, strategy)
+      );
+
+      return {
+        isValid: true,
+        userData: {
+          provider: provider.name,
+          providerId: userInfo.id,
+          email: userInfo.email,
+          displayName: userInfo.name || userInfo.username,
+          username: userInfo.username,
+          avatarUrl: userInfo.avatarUrl,
+          emailVerified: userInfo.emailVerified,
+          metadata: userInfo.metadata
+        }
+      };
     } catch (error) {
       console.error('Token verification error:', error);
       return { isValid: false };
     }
+  }
+
+  /**
+   * Extract ID token from auth token if it's a combined token
+   * Some providers send both access and ID tokens
+   */
+  private getIdTokenFromAuthToken(authToken: string, strategy: string): string | undefined {
+    // For Google and Apple, the authToken might be the ID token itself
+    if (strategy === 'google' || strategy === 'apple') {
+      // If authToken looks like a JWT (has 3 parts), it's likely an ID token
+      const parts = authToken.split('.');
+      if (parts.length === 3) {
+        return authToken;
+      }
+    }
+    return undefined;
   }
 
   /**

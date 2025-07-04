@@ -54,6 +54,40 @@ export class SmartProfileService {
         }
       });
 
+      // Check if this is the user's first profile
+      const existingProfiles = await tx.profileAccount.count({
+        where: { accountId }
+      });
+      
+      const isFirstProfile = existingProfiles === 1; // We just created one
+      
+      // Auto-link wallet account for first-time users only
+      if (isFirstProfile) {
+        // Get the account details
+        const account = await tx.account.findUnique({
+          where: { id: accountId }
+        });
+        
+        if (account && account.type === 'wallet') {
+          // Auto-link the wallet used for authentication
+          await tx.linkedAccount.create({
+            data: {
+              profileId: profile.id,
+              address: account.identifier.toLowerCase(),
+              authStrategy: 'wallet',
+              walletType: (account.metadata as any)?.walletType || 'external',
+              customName: (account.metadata as any)?.customName || null,
+              isPrimary: true, // First wallet is primary
+              isActive: true,
+              chainId: (account.metadata as any)?.chainId ? parseInt((account.metadata as any).chainId) : 1,
+              metadata: JSON.stringify(account.metadata || {})
+            }
+          });
+          
+          console.log(`Auto-linked wallet ${account.identifier} to first profile ${profile.id}`);
+        }
+      }
+
       try {
         let sessionWalletAddress: string;
 
@@ -165,7 +199,7 @@ export class SmartProfileService {
           for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
               // Add timeout to prevent hanging
-              const orbyPromise = orbyService.createOrGetAccountCluster(updatedProfile);
+              const orbyPromise = orbyService.createFreshAccountCluster(updatedProfile);
               const timeoutPromise = new Promise<string>((_, reject) => 
                 setTimeout(() => reject(new Error('Orby cluster creation timeout')), 10000) // 10 second timeout
               );
@@ -196,14 +230,6 @@ export class SmartProfileService {
         };
         
         const clusterId = await createClusterWithRetry();
-        
-        // Update profile with cluster ID
-        await prisma.smartProfile.update({
-          where: { id: updatedProfile.id },
-          data: { orbyAccountClusterId: clusterId }
-        });
-        
-        updatedProfile.orbyAccountClusterId = clusterId;
         
         console.log(`Orby cluster created successfully: ${clusterId}`);
         
@@ -451,6 +477,12 @@ export class SmartProfileService {
             sessionWalletAddress: profile.sessionWalletAddress
           })
         }
+      });
+
+      // Temporary workaround: Manually delete ProfileAccount records first
+      // This is necessary until the cascade delete migration is applied
+      await tx.profileAccount.deleteMany({
+        where: { profileId: profileId }
       });
 
       // Delete the profile (cascading deletes will handle apps, folders, etc.)

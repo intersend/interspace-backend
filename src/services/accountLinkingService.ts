@@ -46,16 +46,7 @@ class AccountLinkingService {
           logger.warn(`Unknown account type for auto-linking: ${account.type}`);
       }
       
-      // Update Orby cluster to include any newly linked accounts
-      if (profile.id) {
-        try {
-          await orbyService.updateAccountCluster(profile.id, dbContext);
-          logger.info(`Updated Orby cluster for profile ${profile.id}`);
-        } catch (error) {
-          // Don't fail the whole operation if Orby update fails
-          logger.error(`Failed to update Orby cluster for profile ${profile.id}:`, error);
-        }
-      }
+      // Orby clusters are created fresh on each operation, no need to update here
       
     } catch (error) {
       logger.error(`Error auto-linking account ${account.id} to profile ${profile.id}:`, error);
