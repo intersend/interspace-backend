@@ -1,11 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
 import { RateLimiterRedis, RateLimiterMemory, RateLimiterAbstract } from 'rate-limiter-flexible';
-import { getRedisClient } from '@/utils/redis';
-import { config } from '@/utils/config';
-import { logger } from '@/utils/logger';
-import { auditService } from '@/services/auditService';
-import { securityMonitoringService } from '@/services/securityMonitoringService';
-import { RateLimitError } from '@/types';
+import { getRedisClient } from '../utils/redis';
+import { config } from '../utils/config';
+import { logger } from '../utils/logger';
+import { auditService } from '../services/auditService';
+import { securityMonitoringService } from '../services/securityMonitoringService';
+import { RateLimitError } from '../types';
 
 export interface RateLimiterOptions {
   points: number; // Number of points

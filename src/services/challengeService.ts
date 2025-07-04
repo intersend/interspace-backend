@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { config } from '@/utils/config';
+import { config } from '../utils/config';
 
 interface Challenge {
   value: string;

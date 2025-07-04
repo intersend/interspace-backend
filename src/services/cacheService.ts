@@ -1,5 +1,5 @@
-import { getRedisClient, withRedis } from '@/utils/redis';
-import { CachedPortfolioItem, GasAnalysisResult } from '@/types/portfolio';
+import { getRedisClient, withRedis } from '../utils/redis';
+import { CachedPortfolioItem, GasAnalysisResult } from '../types/portfolio';
 
 interface TokenIdentifier {
   chainId: bigint;

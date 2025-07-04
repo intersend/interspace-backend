@@ -1,11 +1,11 @@
 import { Router, Request, Response } from 'express';
-import { authenticateAccount } from '@/middleware/authMiddlewareV2';
-import { ensureProfileAccess } from '@/middleware/authCompatibility';
-import { apiRateLimit, transactionRateLimit } from '@/middleware/rateLimiter';
-import { validateRequest } from '@/middleware/validateRequest';
+import { authenticateAccount } from '../middleware/authMiddlewareV2';
+import { ensureProfileAccess } from '../middleware/authCompatibility';
+import { apiRateLimit, transactionRateLimit } from '../middleware/rateLimiter';
+import { validateRequest } from '../middleware/validateRequest';
 import { body, param, query } from 'express-validator';
-import { asyncHandler } from '@/utils/asyncHandler';
-import { orbyService } from '@/services/orbyService';
+import { asyncHandler } from '../utils/asyncHandler';
+import { orbyService } from '../services/orbyService';
 
 const router = Router();
 

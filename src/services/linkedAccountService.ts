@@ -1,4 +1,4 @@
-import { prisma, withTransaction } from '@/utils/database';
+import { prisma, withTransaction } from '../utils/database';
 import { orbyService } from './orbyService';
 import { siweService } from './siweService';
 import { ethers } from 'ethers';
@@ -14,7 +14,7 @@ import {
   AuthorizationError, 
   AppError
 } from '@/types';
-import { logger } from '@/utils/logger';
+import { logger } from '../utils/logger';
 
 export class LinkedAccountService {
   

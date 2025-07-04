@@ -1,13 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
-import { mpcKeyShareService } from '@/services/mpcKeyShareService';
-import { mpcDuoNodeService } from '@/services/mpcDuoNodeService';
-import { smartProfileService } from '@/services/smartProfileService';
-import { auditService } from '@/services/auditService';
-import { twoFactorService } from '@/services/twoFactorService';
-import { securityMonitoringService } from '@/services/securityMonitoringService';
-import { prisma } from '@/utils/database';
-import { ApiError } from '@/utils/errors';
-import { config } from '@/utils/config';
+import { mpcKeyShareService } from '../services/mpcKeyShareService';
+import { mpcDuoNodeService } from '../services/mpcDuoNodeService';
+import { smartProfileService } from '../services/smartProfileService';
+import { auditService } from '../services/auditService';
+import { twoFactorService } from '../services/twoFactorService';
+import { securityMonitoringService } from '../services/securityMonitoringService';
+import { prisma } from '../utils/database';
+import { ApiError } from '../utils/errors';
+import { config } from '../utils/config';
 
 // Extend Request to include v2 auth properties
 interface AuthenticatedRequest extends Request {

@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import Joi from 'joi';
-import { ApiResponse } from '@/types';
+import { ApiResponse } from '../types';
 
 export function validateRequest(schema: Joi.Schema) {
   return (req: Request, res: Response, next: NextFunction) => {

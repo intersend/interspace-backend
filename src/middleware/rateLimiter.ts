@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { RateLimiterMemory } from 'rate-limiter-flexible';
-import { config } from '@/utils/config';
-import { RateLimitError } from '@/types';
+import { config } from '../utils/config';
+import { RateLimitError } from '../types';
 
 // Helper to create an Express middleware from a rate limiter
 function createRateLimitMiddleware(

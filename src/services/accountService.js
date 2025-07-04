@@ -1,6 +1,6 @@
 const { v4: uuidv4 } = require('uuid');
 const { logger } = require('../utils/logger');
-const { prisma, withTransaction } = require('@/utils/database.ts');
+const { prisma, withTransaction } = require('../utils/database.ts');
 
 // Debug log
 console.log('[AccountService] Using shared prisma instance from database.ts');

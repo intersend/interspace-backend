@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-const { verifyProfileAccess } = require('@/utils/profileAccessV2');
+const { verifyProfileAccess } = require('../utils/profileAccessV2');
 
 // Type for the account object that's already defined elsewhere
 interface AccountInfo {

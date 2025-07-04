@@ -1,7 +1,7 @@
-import { prisma } from '@/utils/database';
+import { prisma } from '../utils/database';
 import { auditService } from './auditService';
-import { logger } from '@/utils/logger';
-import { config } from '@/utils/config';
+import { logger } from '../utils/logger';
+import { config } from '../utils/config';
 
 export interface SecurityMetrics {
   failedLogins: number;

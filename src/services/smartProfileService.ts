@@ -1,4 +1,4 @@
-import { prisma, withTransaction, withRetryableTransaction } from '@/utils/database';
+import { prisma, withTransaction, withRetryableTransaction } from '../utils/database';
 import { 
   CreateSmartProfileRequest,
   UpdateSmartProfileRequest,
@@ -7,10 +7,10 @@ import {
   ConflictError,
   AuthorizationError 
 } from '@/types';
-import { sessionWalletService } from '@/blockchain/sessionWalletService';
-import { orbyService } from '@/services/orbyService';
-import { websocketService } from '@/services/websocketService';
-import { config as defaultConfig, type Config } from '@/utils/config';
+import { sessionWalletService } from '../blockchain/sessionWalletService';
+import { orbyService } from '../services/orbyService';
+import { websocketService } from '../services/websocketService';
+import { config as defaultConfig, type Config } from '../utils/config';
 
 export class SmartProfileService {
   private config = defaultConfig;

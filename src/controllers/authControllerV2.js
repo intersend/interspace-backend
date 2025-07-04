@@ -1160,7 +1160,8 @@ const linkAccounts = async (req, res, next) => {
       }
     });
     
-    const { targetType, targetIdentifier, targetProvider, linkType = 'direct', privacyMode = 'linked' } = req.body;
+    const { targetType, targetIdentifier: originalTargetIdentifier, targetProvider, linkType = 'direct', privacyMode = 'linked' } = req.body;
+    let targetIdentifier = originalTargetIdentifier; // Make it mutable for wallet address normalization
     const currentAccountId = req.account?.id;
     
     if (!currentAccountId) {

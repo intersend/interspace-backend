@@ -1,7 +1,7 @@
-import { config } from '@/utils/config';
-import { logger } from '@/utils/logger';
-import { AuthenticationError } from '@/types';
-import { OAUTH_PROVIDERS, OAuthProviderConfig, OAuthUserInfo } from '@/types/oauth';
+import { config } from '../utils/config';
+import { logger } from '../utils/logger';
+import { AuthenticationError } from '../types';
+import { OAUTH_PROVIDERS, OAuthProviderConfig, OAuthUserInfo } from '../types/oauth';
 import { OAuth2Client } from 'google-auth-library';
 import { verifyIdToken } from 'apple-signin-auth';
 

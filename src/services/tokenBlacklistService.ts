@@ -1,6 +1,6 @@
-import { prisma, withTransaction } from '@/utils/database';
-import { getRedisClient } from '@/utils/redis';
-import { logger } from '@/utils/logger';
+import { prisma, withTransaction } from '../utils/database';
+import { getRedisClient } from '../utils/redis';
+import { logger } from '../utils/logger';
 
 export type BlacklistReason = 
   | 'logout' 

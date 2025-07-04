@@ -12,11 +12,11 @@ import {
   AuthenticationResponseJSON,
   RegistrationResponseJSON
 } from '@simplewebauthn/types';
-import { prisma, withTransaction } from '@/utils/database';
+import { prisma, withTransaction } from '../utils/database';
 import { challengeService } from './challengeService';
-import { config } from '@/utils/config';
-import { AuthenticationError, NotFoundError } from '@/types';
-import { logger } from '@/utils/logger';
+import { config } from '../utils/config';
+import { AuthenticationError, NotFoundError } from '../types';
+import { logger } from '../utils/logger';
 
 interface PasskeyRegistrationOptions {
   accountId: string; // Changed from userId to accountId for V2

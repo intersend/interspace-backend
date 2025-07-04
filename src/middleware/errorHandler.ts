@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
-import { AppError, ValidationError } from '@/types';
-import { isDevelopment } from '@/utils/config';
+import { AppError, ValidationError } from '../types';
+import { isDevelopment } from '../utils/config';
 
 export function errorHandler(
   error: Error,

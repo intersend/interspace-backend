@@ -1,8 +1,8 @@
-import { prisma } from "@/utils/database";
+import { prisma } from '../utils/database';
 import { orbyService } from "./orbyService";
 import { SmartProfile } from "@prisma/client";
 import { cacheService } from "./cacheService";
-import { CachedPortfolioItem, GasAnalysisResult } from "@/types/portfolio";
+import { CachedPortfolioItem, GasAnalysisResult } from '../types/portfolio';
 
 interface GasTokenScore {
   tokenId: string;

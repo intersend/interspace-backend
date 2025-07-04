@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { mpcControllerV2 } from '@/controllers/mpcControllerV2';
-const { authenticateAccount: requireAuth, requireActiveProfile } = require('@/middleware/authMiddlewareV2');
-import { validateRequest } from '@/middleware/validation';
-import { passwordResetRateLimit as authRateLimiter, transactionRateLimit as transactionRateLimiter } from '@/middleware/rateLimiter';
+import { mpcControllerV2 } from '../controllers/mpcControllerV2';
+const { authenticateAccount: requireAuth, requireActiveProfile } = require('../middleware/authMiddlewareV2');
+import { validateRequest } from '../middleware/validation';
+import { passwordResetRateLimit as authRateLimiter, transactionRateLimit as transactionRateLimiter } from '../middleware/rateLimiter';
 import Joi from 'joi';
 
 const router = Router();

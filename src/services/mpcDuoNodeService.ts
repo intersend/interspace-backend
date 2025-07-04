@@ -1,8 +1,8 @@
 import { io, Socket } from 'socket.io-client';
 import { v4 as uuidv4 } from 'uuid';
-import { logger } from '@/utils/logger';
-import { config } from '@/utils/config';
-import { ApiError } from '@/utils/errors';
+import { logger } from '../utils/logger';
+import { config } from '../utils/config';
+import { ApiError } from '../utils/errors';
 import { EventEmitter } from 'events';
 
 interface MPCSession {

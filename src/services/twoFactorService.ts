@@ -1,7 +1,7 @@
 import { authenticator } from 'otplib';
-import { prisma } from '@/utils/database';
-import { encrypt, decrypt } from '@/utils/crypto';
-import { AuthenticationError } from '@/types';
+import { prisma } from '../utils/database';
+import { encrypt, decrypt } from '../utils/crypto';
+import { AuthenticationError } from '../types';
 import { auditService } from './auditService';
 import * as QRCode from 'qrcode';
 

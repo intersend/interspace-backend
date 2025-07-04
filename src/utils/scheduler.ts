@@ -1,5 +1,5 @@
-import { siweService } from '@/services/siweService';
-import { tokenBlacklistService } from '@/services/tokenBlacklistService';
+import { siweService } from '../services/siweService';
+import { tokenBlacklistService } from '../services/tokenBlacklistService';
 import { logger } from './logger';
 
 export class Scheduler {

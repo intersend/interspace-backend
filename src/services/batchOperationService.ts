@@ -1,7 +1,7 @@
-import { prisma } from '@/utils/database';
+import { prisma } from '../utils/database';
 import { orbyService } from './orbyService';
 import { cacheService } from './cacheService';
-import { NotFoundError, ValidationError, AppError } from '@/types';
+import { NotFoundError, ValidationError, AppError } from '../types';
 import { SmartProfile, BatchOperation, Prisma } from '@prisma/client';
 import { CreateOperationsStatus } from '@orb-labs/orby-core';
 // import { auditLogService } from './auditLogService'; // TODO: Implement audit log service

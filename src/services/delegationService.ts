@@ -1,8 +1,8 @@
-import { prisma } from '@/utils/database';
-import { NotFoundError, ValidationError, ConflictError } from '@/types';
+import { prisma } from '../utils/database';
+import { NotFoundError, ValidationError, ConflictError } from '../types';
 import { ethers } from 'ethers';
 import { LinkedAccount, AccountDelegation, SmartProfile } from '@prisma/client';
-import { sessionWalletService } from '@/blockchain/sessionWalletService';
+import { sessionWalletService } from '../blockchain/sessionWalletService';
 // import { auditLogService } from './auditLogService'; // TODO: Implement audit logging
 
 interface DelegationPermissions {

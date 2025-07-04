@@ -64,14 +64,14 @@ function processFile(filePath) {
 // Main execution
 console.log('Fixing TypeScript path aliases...\n');
 
-// Find all TypeScript files
-const tsFiles = glob.sync('src/**/*.ts', {
+// Find all TypeScript and JavaScript files
+const files = glob.sync('src/**/*.{ts,js}', {
   cwd: path.join(__dirname, '..'),
   absolute: true
 });
 
 let count = 0;
-for (const file of tsFiles) {
+for (const file of files) {
   const content = fs.readFileSync(file, 'utf8');
   if (content.includes('@/')) {
     processFile(file);

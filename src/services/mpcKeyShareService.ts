@@ -1,8 +1,8 @@
 import axios from 'axios';
-import { config } from '@/utils/config';
+import { config } from '../utils/config';
 import { GoogleAuth } from 'google-auth-library';
-import { encrypt, decrypt } from '@/utils/crypto';
-import { logger } from '@/utils/logger';
+import { encrypt, decrypt } from '../utils/crypto';
+import { logger } from '../utils/logger';
 
 class MpcKeyShareService {
   private duoNodeUrl: string;

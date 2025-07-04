@@ -1,5 +1,5 @@
-import { prisma } from '@/utils/database';
-import { logger } from '@/utils/logger';
+import { prisma } from '../utils/database';
+import { logger } from '../utils/logger';
 import { orbyService } from './orbyService';
 import type { Account, SmartProfile, Prisma } from '@prisma/client';
 

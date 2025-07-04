@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
-import { prisma, withTransaction } from '@/utils/database';
-import { generateTokens, verifyRefreshToken } from '@/utils/tokenUtils';
+import { prisma, withTransaction } from '../utils/database';
+import { generateTokens, verifyRefreshToken } from '../utils/tokenUtils';
 import { auditService } from './auditService';
 import { tokenBlacklistService } from './tokenBlacklistService';
 import { securityMonitoringService } from './securityMonitoringService';

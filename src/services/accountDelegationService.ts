@@ -1,4 +1,4 @@
-import { prisma } from '@/utils/database';
+import { prisma } from '../utils/database';
 import { ethers } from 'ethers';
 import { AccountDelegation } from '@prisma/client';
 

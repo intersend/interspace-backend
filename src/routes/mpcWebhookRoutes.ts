@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { mpcWebhookController } from '@/controllers/mpcWebhookController';
-import { validateRequest } from '@/middleware/validation';
-import { asyncHandler } from '@/utils/asyncHandler';
+import { mpcWebhookController } from '../controllers/mpcWebhookController';
+import { validateRequest } from '../middleware/validation';
+import { asyncHandler } from '../utils/asyncHandler';
 import Joi from 'joi';
-import { config } from '@/utils/config';
+import { config } from '../utils/config';
 
 const router = Router();
 

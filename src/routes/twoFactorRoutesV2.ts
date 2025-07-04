@@ -1,10 +1,10 @@
 import { Router, Request, Response } from 'express';
-import { authenticateAccount } from '@/middleware/authMiddlewareV2';
-import { authRateLimit } from '@/middleware/rateLimiter';
-import { validateRequest } from '@/middleware/validateRequest';
+import { authenticateAccount } from '../middleware/authMiddlewareV2';
+import { authRateLimit } from '../middleware/rateLimiter';
+import { validateRequest } from '../middleware/validateRequest';
 import { body } from 'express-validator';
-import { asyncHandler } from '@/utils/asyncHandler';
-import { twoFactorService } from '@/services/twoFactorService';
+import { asyncHandler } from '../utils/asyncHandler';
+import { twoFactorService } from '../services/twoFactorService';
 
 const router = Router();
 

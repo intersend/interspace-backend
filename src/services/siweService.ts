@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
-import { prisma } from '@/utils/database';
+import { prisma } from '../utils/database';
 import { auditService } from './auditService';
-import { AuthenticationError } from '@/types';
+import { AuthenticationError } from '../types';
 import crypto from 'crypto';
 
 interface SiweMessage {

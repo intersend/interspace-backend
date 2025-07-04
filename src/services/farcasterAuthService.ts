@@ -1,6 +1,6 @@
 import { ethers } from 'ethers';
-import { prisma } from '@/utils/database';
-import { logger } from '@/utils/logger';
+import { prisma } from '../utils/database';
+import { logger } from '../utils/logger';
 import { siweService } from './siweService';
 import crypto from 'crypto';
 import axios from 'axios';

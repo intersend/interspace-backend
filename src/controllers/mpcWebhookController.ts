@@ -1,11 +1,11 @@
 import { Request, Response, NextFunction } from 'express';
-import { smartProfileService } from '@/services/smartProfileService';
-import { orbyService } from '@/services/orbyService';
-import { mpcKeyShareService } from '@/services/mpcKeyShareService';
-import { auditService } from '@/services/auditService';
-import { prisma } from '@/utils/database';
-import { ApiError } from '@/utils/errors';
-import { logger } from '@/utils/logger';
+import { smartProfileService } from '../services/smartProfileService';
+import { orbyService } from '../services/orbyService';
+import { mpcKeyShareService } from '../services/mpcKeyShareService';
+import { auditService } from '../services/auditService';
+import { prisma } from '../utils/database';
+import { ApiError } from '../utils/errors';
+import { logger } from '../utils/logger';
 
 export class MpcWebhookController {
   /**

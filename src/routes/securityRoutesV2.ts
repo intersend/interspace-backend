@@ -1,10 +1,10 @@
 import { Router, Request, Response } from 'express';
-import { authenticateAccount } from '@/middleware/authMiddlewareV2';
-import { apiRateLimit } from '@/middleware/rateLimiter';
-import { validateRequest } from '@/middleware/validateRequest';
+import { authenticateAccount } from '../middleware/authMiddlewareV2';
+import { apiRateLimit } from '../middleware/rateLimiter';
+import { validateRequest } from '../middleware/validateRequest';
 import { param, query, body } from 'express-validator';
-import { asyncHandler } from '@/utils/asyncHandler';
-import { securityMonitoringService } from '@/services/securityMonitoringService';
+import { asyncHandler } from '../utils/asyncHandler';
+import { securityMonitoringService } from '../services/securityMonitoringService';
 
 const router = Router();
 

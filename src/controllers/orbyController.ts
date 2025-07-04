@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
-import { prisma } from '@/utils/database';
-import { orbyService } from '@/services/orbyService';
-import { gasTokenService } from '@/services/gasTokenService';
-import { smartProfileService } from '@/services/smartProfileService';
-import { ApiResponse, AppError, NotFoundError, AuthenticationError } from '@/types';
+import { prisma } from '../utils/database';
+import { orbyService } from '../services/orbyService';
+import { gasTokenService } from '../services/gasTokenService';
+import { smartProfileService } from '../services/smartProfileService';
+import { ApiResponse, AppError, NotFoundError, AuthenticationError } from '../types';
 import { CreateOperationsStatus } from '@orb-labs/orby-core';
 
 /**
@@ -36,7 +36,7 @@ async function checkProfileAccess(profileId: string, accountId: string) {
   );
 
   // 3. Identity link access (account is linked to another account that has access)
-  const accountService = require('@/services/accountService');
+  const accountService = require('../services/accountService');
   const linkedAccountIds = await accountService.getLinkedAccounts(accountId);
   
   const hasIndirectAccess = await prisma.profileAccount.findFirst({

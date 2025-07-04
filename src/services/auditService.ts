@@ -1,8 +1,8 @@
-import { prisma } from '@/utils/database';
+import { prisma } from '../utils/database';
 import { createHmac } from 'crypto';
-import { config } from '@/utils/config';
-import { logger } from '@/utils/logger';
-import { sanitizeObject } from '@/utils/security';
+import { config } from '../utils/config';
+import { logger } from '../utils/logger';
+import { sanitizeObject } from '../utils/security';
 
 interface AuditLogEntry {
   accountId?: string;

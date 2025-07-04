@@ -7,10 +7,10 @@ import {
 } from '@silencelaboratories/ecdsa-tss';
 import { ethers, Signature, Transaction } from 'ethers';
 import { OrbyProvider } from '@orb-labs/orby-ethers6';
-import { prisma } from '@/utils/database';
-import { mpcKeyShareService } from '@/services/mpcKeyShareService';
-import { orbyService } from '@/services/orbyService';
-import { config } from '@/utils/config';
+import { prisma } from '../utils/database';
+import { mpcKeyShareService } from '../services/mpcKeyShareService';
+import { orbyService } from '../services/orbyService';
+import { config } from '../utils/config';
 
 interface KeyShareRecord {
   keyId: string;

@@ -1,5 +1,5 @@
-import { prisma, withTransaction } from '@/utils/database';
-const { generateTokens } = require('@/utils/tokenUtils');
+import { prisma, withTransaction } from '../utils/database';
+const { generateTokens } = require('../utils/tokenUtils');
 import { passkeyService } from './passkeyService';
 import { auditService } from './auditService';
 import { oauthProviderService } from './oauthProviderService';
