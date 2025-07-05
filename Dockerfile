@@ -32,7 +32,7 @@ RUN npm run prisma:generate
 RUN npm run build || npm run build:js || true
 
 # Production stage
-FROM node:18-alpine AS production
+FROM node:20-alpine AS production
 
 # Install system dependencies for runtime
 RUN apk add --no-cache \
