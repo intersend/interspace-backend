@@ -23,7 +23,9 @@ const authenticateAccount = async (req, res, next) => {
       originalUrl: req.originalUrl,
       baseUrl: req.baseUrl,
       method: req.method,
-      hasAuthHeader: !!req.headers.authorization
+      hasAuthHeader: !!req.headers.authorization,
+      fullPath: req.originalUrl || req.path,
+      pathWithoutQuery: (req.originalUrl || req.path).split('?')[0]
     });
     
     // Skip authentication for public endpoints

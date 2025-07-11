@@ -18,6 +18,14 @@ const PUBLIC_ENDPOINTS: PublicEndpoint[] = [
   { method: 'POST', path: '/api/v2/auth/verify-email-code' },
   { method: 'POST', path: '/api/v2/auth/authenticate' },
   { method: 'POST', path: '/api/v2/auth/refresh' },
+  { method: 'POST', path: '/api/v2/auth/logout' },
+  
+  // App Store public endpoints
+  { method: 'GET', path: '/api/v2/app-store/categories' },
+  { method: 'GET', path: '/api/v2/app-store/apps' },
+  { method: 'GET', path: '/api/v2/app-store/featured' },
+  { method: 'GET', path: '/api/v2/app-store/search' },
+  // Dynamic app store endpoints (handled separately)
   
   // V1 public endpoints (for backward compatibility)
   { method: 'GET', path: '/api/v1/siwe/nonce' },
@@ -39,11 +47,27 @@ const PUBLIC_ENDPOINTS: PublicEndpoint[] = [
 export function isPublicEndpoint(req: Request): boolean {
   const method = req.method;
   // Use originalUrl to get the full path, not the relative path
-  const path = req.originalUrl || req.path;
+  const fullPath = req.originalUrl || req.path;
+  // Remove query string for comparison
+  const path = fullPath.split('?')[0];
   
-  return PUBLIC_ENDPOINTS.some(endpoint => 
+  // Check static endpoints
+  const isStaticPublic = PUBLIC_ENDPOINTS.some(endpoint => 
     endpoint.method === method && path === endpoint.path
   );
+  
+  if (isStaticPublic) return true;
+  
+  // Check dynamic app store endpoints
+  if (method === 'GET' && path && path.match(/^\/api\/v2\/app-store\/apps\/[^/]+$/)) {
+    return true; // GET /api/v2/app-store/apps/:id
+  }
+  
+  if (method === 'GET' && path && path.match(/^\/api\/v2\/app-store\/apps\/share\/[^/]+$/)) {
+    return true; // GET /api/v2/app-store/apps/share/:shareableId
+  }
+  
+  return false;
 }
 
 /**

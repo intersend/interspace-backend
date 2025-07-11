@@ -17,11 +17,24 @@ interface SiweMessage {
   notBefore?: string;
   requestId?: string;
   resources?: string[];
+  callbackUrl?: string; // For mobile deeplink flows
+}
+
+interface WalletConnectAuthParams {
+  domain: string;
+  chains: string[];
+  nonce: string;
+  uri: string;
+  statement?: string;
+  resources?: string[];
+  methods?: string[];
+  callbackUrl?: string;
 }
 
 export class SiweService {
   private readonly NONCE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
   private readonly MESSAGE_EXPIRY_MS = 10 * 60 * 1000; // 10 minutes
+  private readonly MOBILE_MESSAGE_EXPIRY_MS = 30 * 60 * 1000; // 30 minutes for mobile flows
 
   /**
    * Generate a unique nonce for SIWE
@@ -343,6 +356,158 @@ export class SiweService {
         }
       }
     });
+  }
+
+  /**
+   * Create a SIWE message for WalletConnect One-Click Auth
+   * Following WalletConnect AppKit standards
+   */
+  createWalletConnectMessage(params: WalletConnectAuthParams & { address: string }): string {
+    const chainId = parseInt(params.chains[0]?.split(':')[1] || '1'); // Extract chainId from eip155:1 format
+    
+    // Build resources array for ReCaps
+    const resources: string[] = params.resources || [];
+    
+    // Add callback URL as a resource if provided
+    if (params.callbackUrl) {
+      resources.push(params.callbackUrl);
+    }
+    
+    // Create expiration time - longer for mobile flows
+    const expirationTime = new Date(Date.now() + this.MOBILE_MESSAGE_EXPIRY_MS);
+    
+    return this.createMessage({
+      domain: params.domain,
+      address: params.address,
+      statement: params.statement || `Sign in to Interspace with your wallet`,
+      uri: params.uri,
+      chainId,
+      nonce: params.nonce,
+      expirationTime,
+      resources
+    });
+  }
+
+  /**
+   * Generate authentication request params for WalletConnect AppKit
+   */
+  generateAuthRequestParams(params: {
+    domain?: string;
+    chains?: string[];
+    statement?: string;
+    callbackUrl?: string;
+  }): WalletConnectAuthParams {
+    const domain = params.domain || process.env.SIWE_DOMAIN || 'interspace.fi';
+    const chains = params.chains || ['eip155:1', 'eip155:137', 'eip155:10', 'eip155:42161']; // Ethereum, Polygon, Optimism, Arbitrum
+    const uri = params.callbackUrl || `https://${domain}/auth/callback`;
+    
+    return {
+      domain,
+      chains,
+      nonce: crypto.randomBytes(16).toString('hex'), // Generate nonce inline for auth params
+      uri,
+      statement: params.statement || 'Sign in to Interspace',
+      resources: params.callbackUrl ? [`interspace://auth/callback?nonce=${crypto.randomBytes(8).toString('hex')}`] : [],
+      methods: ['personal_sign', 'eth_sendTransaction'],
+      callbackUrl: params.callbackUrl
+    };
+  }
+
+  /**
+   * Verify a WalletConnect SIWE message with enhanced mobile support
+   */
+  async verifyWalletConnectMessage(params: {
+    message: string;
+    signature: string;
+    expectedAddress?: string;
+    callbackUrl?: string;
+    ipAddress?: string;
+    userAgent?: string;
+  }): Promise<{ valid: boolean; address?: string; error?: string; parsedMessage?: SiweMessage }> {
+    // First verify the message normally
+    const result = await this.verifyMessage({
+      message: params.message,
+      signature: params.signature,
+      expectedAddress: params.expectedAddress,
+      expectedDomain: process.env.SIWE_DOMAIN || 'interspace.fi',
+      ipAddress: params.ipAddress,
+      userAgent: params.userAgent
+    });
+    
+    if (!result.valid) {
+      return result;
+    }
+    
+    // Parse message for additional WalletConnect-specific validation
+    const parsedMessage = this.parseMessage(params.message);
+    
+    // If callback URL is expected, verify it's in resources
+    if (params.callbackUrl && parsedMessage.resources) {
+      const hasCallbackUrl = parsedMessage.resources.some(resource => 
+        resource.includes('interspace://') || resource === params.callbackUrl
+      );
+      
+      if (!hasCallbackUrl) {
+        return { 
+          valid: false, 
+          error: 'Callback URL not found in message resources' 
+        };
+      }
+    }
+    
+    return { 
+      ...result,
+      parsedMessage 
+    };
+  }
+
+  /**
+   * Store pending authentication for deeplink flows
+   * This allows the mobile app to complete auth after returning from wallet app
+   */
+  async storePendingAuth(params: {
+    nonce: string;
+    address: string;
+    callbackUrl?: string;
+    deviceId?: string;
+  }): Promise<void> {
+    await prisma.pendingAuth.create({
+      data: {
+        nonce: params.nonce,
+        address: params.address.toLowerCase(),
+        callbackUrl: params.callbackUrl,
+        deviceId: params.deviceId,
+        expiresAt: new Date(Date.now() + this.MOBILE_MESSAGE_EXPIRY_MS)
+      }
+    });
+  }
+
+  /**
+   * Retrieve and validate pending authentication
+   */
+  async getPendingAuth(nonce: string): Promise<{
+    address?: string;
+    callbackUrl?: string;
+    deviceId?: string;
+  } | null> {
+    const pendingAuth = await prisma.pendingAuth.findUnique({
+      where: { nonce }
+    });
+    
+    if (!pendingAuth || pendingAuth.expiresAt < new Date()) {
+      return null;
+    }
+    
+    // Delete after retrieval (one-time use)
+    await prisma.pendingAuth.delete({
+      where: { nonce }
+    });
+    
+    return {
+      address: pendingAuth.address,
+      callbackUrl: pendingAuth.callbackUrl ?? undefined,
+      deviceId: pendingAuth.deviceId ?? undefined
+    };
   }
 }
 
