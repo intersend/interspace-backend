@@ -444,6 +444,89 @@ export class RateLimitError extends AppError {
   }
 }
 
+// App Store Types
+export interface AppStoreCategoryResponse {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  icon?: string;
+  position: number;
+  appsCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AppStoreAppResponse {
+  id: string;
+  name: string;
+  url: string;
+  iconUrl?: string;
+  category: AppStoreCategoryResponse;
+  description: string;
+  detailedDescription?: string;
+  tags: string[];
+  popularity: number;
+  isNew: boolean;
+  isFeatured: boolean;
+  chainSupport: string[];
+  screenshots: string[];
+  developer?: string;
+  version?: string;
+  lastUpdated: string;
+  shareableId?: string;
+  metadata?: {
+    rating?: number;
+    reviewsCount?: number;
+    installsCount?: number;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AppStoreSearchParams {
+  q?: string;
+  category?: string;
+  tags?: string[];
+  chains?: string[];
+  sortBy?: 'popularity' | 'newest' | 'name';
+  page?: number;
+  limit?: number;
+}
+
+export interface CreateAppStoreAppRequest {
+  name: string;
+  url: string;
+  iconUrl?: string;
+  categoryId: string;
+  description: string;
+  detailedDescription?: string;
+  tags?: string[];
+  chainSupport?: string[];
+  screenshots?: string[];
+  developer?: string;
+  version?: string;
+  isFeatured?: boolean;
+  isNew?: boolean;
+}
+
+export interface UpdateAppStoreAppRequest extends Partial<CreateAppStoreAppRequest> {
+  popularity?: number;
+  isActive?: boolean;
+}
+
+export interface CreateAppStoreCategoryRequest {
+  name: string;
+  slug: string;
+  description?: string;
+  icon?: string;
+  position?: number;
+}
+
+export interface UpdateAppStoreCategoryRequest extends Partial<CreateAppStoreCategoryRequest> {
+  isActive?: boolean;
+}
+
 // Utility Types
 export type Omit<T, K extends keyof T> = Pick<T, Exclude<keyof T, K>>;
 export type DeepPartial<T> = {

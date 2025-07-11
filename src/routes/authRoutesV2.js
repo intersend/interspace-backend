@@ -1,5 +1,6 @@
 const express = require('express');
 const { body } = require('express-validator');
+const jwt = require('jsonwebtoken');
 const authControllerV2 = require('../controllers/authControllerV2');
 const { authenticateAccount } = require('../middleware/authMiddlewareV2');
 const { authRateLimit, userRateLimit } = require('../middleware/rateLimiter');
@@ -162,19 +163,44 @@ router.post('/refresh',
 /**
  * @route   POST /api/v2/auth/logout
  * @desc    Logout and invalidate session
- * @access  Private
+ * @access  Public (but processes auth token if present)
  */
 router.post('/logout',
-  authenticateAccount,
   async (req, res, next) => {
     try {
       const { prisma } = require('../utils/database');
       
+      // Try to extract session info from token if present
+      let sessionToken = null;
+      let accountId = null;
+      
+      if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+        const token = req.headers.authorization.replace('Bearer ', '');
+        try {
+          const decoded = jwt.verify(token, process.env.JWT_SECRET);
+          sessionToken = decoded.sessionToken;
+          accountId = decoded.accountId;
+        } catch (error) {
+          // Token might be expired or invalid, but we still want to allow logout
+          console.log('Token verification failed during logout (ignored):', error.message);
+          try {
+            // Try to decode without verification to get session info
+            const decoded = jwt.decode(token);
+            if (decoded) {
+              sessionToken = decoded.sessionToken;
+              accountId = decoded.accountId;
+            }
+          } catch (decodeError) {
+            console.log('Token decode failed during logout (ignored):', decodeError.message);
+          }
+        }
+      }
+      
       // Delete session if it exists
-      if (req.sessionToken) {
+      if (sessionToken) {
         try {
           await prisma.accountSession.delete({
-            where: { sessionId: req.sessionToken }
+            where: { sessionId: sessionToken }
           });
         } catch (error) {
           // Session might already be deleted or not exist
@@ -187,12 +213,11 @@ router.post('/logout',
         const token = req.headers.authorization.replace('Bearer ', '');
         const { tokenBlacklistService } = require('../services/tokenBlacklistService');
         
-        // Get user/account ID
-        const userId = req.account?.id || req.user?.id || req.user?.userId;
+        // Use the accountId we extracted from the token
+        const userId = accountId;
         
         if (userId) {
           // Extract expiration from JWT token
-          const jwt = require('jsonwebtoken');
           let ttlSeconds = 86400; // Default 24 hours
           
           try {

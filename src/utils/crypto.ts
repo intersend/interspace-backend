@@ -26,3 +26,8 @@ export function decrypt(payload: string): string {
   const decrypted = Buffer.concat([decipher.update(data), decipher.final()]);
   return decrypted.toString('utf8');
 }
+
+export function generateShareableId(): string {
+  // Generate a URL-safe random ID for shareable links
+  return crypto.randomBytes(16).toString('base64url');
+}
