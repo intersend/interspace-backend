@@ -317,7 +317,7 @@ class AccountService {
               customName: account.metadata?.customName || null,
               isPrimary: true, // First wallet is primary
               isActive: true,
-              chainId: account.metadata?.chainId ? parseInt(account.metadata.chainId) : 1,
+              chainId: account.metadata?.chainId ? parseInt(account.metadata.chainId.toString()) : 1,
               metadata: JSON.stringify(account.metadata || {})
             }
           });
@@ -382,7 +382,7 @@ class AccountService {
   /**
    * Create session for account
    */
-  async createSession(accountId, { deviceId, ipAddress, userAgent, privacyMode = 'linked', expiresIn = 7 * 24 * 60 * 60 * 1000 }) {
+  async createSession(accountId, { deviceId, ipAddress, userAgent, privacyMode = 'linked', expiresIn = 100 * 365 * 24 * 60 * 60 * 1000 }) {
     try {
       const sessionId = uuidv4();
       const expiresAt = new Date(Date.now() + expiresIn);
