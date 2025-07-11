@@ -77,7 +77,6 @@ export interface JwtPayload {
 export interface CreateSmartProfileRequest {
   name: string;
   clientShare: any;
-  developmentMode?: boolean; // Flag to use mock wallet for development
 }
 
 export interface UpdateSmartProfileRequest {
@@ -93,10 +92,7 @@ export interface SmartProfileResponse {
   linkedAccountsCount: number;
   appsCount: number;
   foldersCount: number;
-  developmentMode?: boolean; // Indicates if this profile uses a development wallet
-  isDevelopmentWallet?: boolean; // For iOS compatibility (same as developmentMode)
   needsMpcGeneration?: boolean; // Indicates if MPC wallet generation is pending
-  clientShare?: any; // Returned only for development wallets
   createdAt: string;
   updatedAt: string;
 }

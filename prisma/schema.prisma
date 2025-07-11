@@ -50,7 +50,6 @@ model SmartProfile {
   name                 String
   sessionWalletAddress String   @unique // ERC-7702 proxy address
   isActive             Boolean  @default(false)
-  developmentMode      Boolean  @default(false) // True if using mock wallet for development
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
