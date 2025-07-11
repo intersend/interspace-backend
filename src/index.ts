@@ -29,6 +29,7 @@ import twoFactorRoutesV2 from './routes/twoFactorRoutesV2';
 import passkeyRoutesV2 from './routes/passkeyRoutesV2';
 import appsRoutes from './routes/appsRoutes';
 import foldersRoutes from './routes/foldersRoutes';
+import appStoreRoutes from './routes/appStoreRoutes';
 
 class Application {
   public app: express.Application;
@@ -399,17 +400,25 @@ class Application {
     
     // V2 Routes Only - Frontend uses v2 exclusively
     const apiV2Path = '/api/v2';
+    
+    // IMPORTANT: Mount public routes FIRST to prevent authentication middleware inheritance
+    // App Store routes (public endpoints) - MUST be mounted before any authenticated routes
+    this.app.use(`${apiV2Path}`, appStoreRoutes); // App store routes (PUBLIC)
+    
+    // Auth routes (mix of public and private endpoints)
     this.app.use(`${apiV2Path}/auth`, authRoutesV2);
     this.app.use(`${apiV2Path}/auth/passkey`, passkeyRoutesV2); // Passkey authentication routes
     this.app.use(`${apiV2Path}/auth/farcaster`, farcasterAuthRoutes); // Farcaster authentication routes
     this.app.use(`${apiV2Path}/siwe`, siweRoutesV2); // SIWE (Sign-In With Ethereum) routes
+    
+    // Authenticated routes (these use global authentication middleware)
     this.app.use(`${apiV2Path}/profiles`, profileRoutesV2); // Use V2 profile routes with V2 auth
     this.app.use(`${apiV2Path}/users`, userRoutesV2); // Use V2 user routes with V2 middleware
     this.app.use(`${apiV2Path}/mpc`, mpcRoutesV2); // MPC key management routes v2
     
-    // Apps and Folders routes
-    this.app.use(`${apiV2Path}`, appsRoutes); // Apps management routes
-    this.app.use(`${apiV2Path}`, foldersRoutes); // Folders management routes
+    // Apps and Folders routes (authenticated with global middleware)
+    this.app.use(`${apiV2Path}`, appsRoutes); // Apps management routes (AUTHENTICATED)
+    this.app.use(`${apiV2Path}`, foldersRoutes); // Folders management routes (AUTHENTICATED)
     
     // Restored V2 Routes
     this.app.use(`${apiV2Path}`, delegationRoutesV2); // EIP-7702 delegation routes
@@ -465,6 +474,14 @@ Canonical: https://interspace.wallet/.well-known/security.txt
           delegation: `/api/v2/profiles/:profileId/accounts/:accountId/delegate`,
           linkedAccounts: `/api/v2/profiles/:profileId/accounts`,
           orby: `/api/v2/profiles/:profileId/balance`,
+          
+          // App Store
+          appStore: {
+            apps: `/api/v2/app-store/apps`,
+            categories: `/api/v2/app-store/categories`,
+            featured: `/api/v2/app-store/featured`,
+            search: `/api/v2/app-store/search`
+          },
           
           // Security
           security: `/api/v2/security`,

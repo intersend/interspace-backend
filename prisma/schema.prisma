@@ -240,6 +240,20 @@ model SiweNonce {
   @@map("siwe_nonces")
 }
 
+model PendingAuth {
+  id          String    @id @default(cuid())
+  nonce       String    @unique
+  address     String
+  callbackUrl String?
+  deviceId    String?
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime
+
+  @@index([expiresAt])
+  @@index([address])
+  @@map("pending_auths")
+}
+
 model FarcasterAuthChannel {
   id           String    @id @default(cuid())
   channelToken String    @unique
@@ -515,4 +529,56 @@ model BatchOperation {
   @@index([profileId, status])
   @@index([batchId])
   @@map("batch_operations")
+}
+
+// App Store Models
+model AppStoreCategory {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  icon        String?
+  position    Int       @default(0)
+  isActive    Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relationships
+  apps        AppStoreApp[]
+  
+  @@map("app_store_categories")
+}
+
+model AppStoreApp {
+  id                  String    @id @default(cuid())
+  name                String
+  url                 String
+  iconUrl             String?
+  categoryId          String
+  description         String
+  detailedDescription String?
+  tags                String[]
+  popularity          Int       @default(0)
+  isNew               Boolean   @default(false)
+  isFeatured          Boolean   @default(false)
+  chainSupport        String[]
+  screenshots         String[]
+  developer           String?
+  version             String?
+  lastUpdated         DateTime  @default(now())
+  isActive            Boolean   @default(true)
+  shareableId         String?   @unique
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  metadata            Json?
+  
+  // Relationships
+  category            AppStoreCategory @relation(fields: [categoryId], references: [id])
+  
+  @@index([categoryId, isActive])
+  @@index([isFeatured, isActive])
+  @@index([popularity])
+  @@index([isNew])
+  @@index([name])
+  @@map("app_store_apps")
 }
