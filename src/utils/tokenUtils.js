@@ -55,7 +55,27 @@ function generateTokens(payload) {
   });
 
   // Convert expiresIn to seconds
-  const expiresInSeconds = 15 * 60; // Default 15 minutes
+  // Parse the expiresIn string (e.g., '100y', '15m', '7d') to seconds
+  function parseExpiresIn(expiresIn) {
+    const match = expiresIn.match(/^(\d+)([ymwdhs])$/);
+    if (!match) return 900; // Default 15 minutes if parsing fails
+    
+    const value = parseInt(match[1]);
+    const unit = match[2];
+    
+    const multipliers = {
+      y: 365 * 24 * 60 * 60, // years
+      m: 30 * 24 * 60 * 60,  // months (approximate)
+      w: 7 * 24 * 60 * 60,   // weeks
+      d: 24 * 60 * 60,       // days
+      h: 60 * 60,            // hours
+      s: 1                   // seconds
+    };
+    
+    return value * (multipliers[unit] || 900);
+  }
+  
+  const expiresInSeconds = parseExpiresIn(config.JWT_EXPIRES_IN || '15m');
   
   return {
     accessToken,

@@ -228,6 +228,52 @@ class CacheService {
     
     return stats;
   }
+
+  /**
+   * Generic get method for caching
+   */
+  async get<T>(key: string): Promise<T | null> {
+    return withRedis(async (redis) => {
+      const value = await redis.get(key);
+      return value ? JSON.parse(value) : null;
+    });
+  }
+
+  /**
+   * Generic set method for caching
+   */
+  async set<T>(key: string, value: T, ttl?: number): Promise<void> {
+    await withRedis(async (redis) => {
+      const serialized = JSON.stringify(value);
+      if (ttl && ttl > 0) {
+        await redis.setex(key, ttl, serialized);
+      } else {
+        await redis.set(key, serialized);
+      }
+    });
+  }
+
+  /**
+   * Delete a specific cache key
+   */
+  async delete(key: string): Promise<void> {
+    await withRedis(async (redis) => {
+      await redis.del(key);
+    });
+  }
+
+  /**
+   * Delete all keys matching a pattern
+   */
+  async deletePattern(pattern: string): Promise<void> {
+    await withRedis(async (redis) => {
+      const keys = await redis.keys(pattern);
+      if (keys.length > 0) {
+        await redis.del(...keys);
+        console.log(`Deleted ${keys.length} keys matching pattern: ${pattern}`);
+      }
+    });
+  }
 }
 
 export const cacheService = new CacheService();
