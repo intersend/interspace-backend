@@ -28,10 +28,6 @@ router.post('/',
       .trim()
       .isLength({ min: 1, max: 50 })
       .withMessage('Profile name must be between 1 and 50 characters'),
-    body('developmentMode')
-      .optional()
-      .isBoolean()
-      .withMessage('developmentMode must be a boolean'),
     body('clientShare')
       .optional()
       .isString()

@@ -28,8 +28,6 @@ export class SmartProfileService {
     primaryWalletAddress?: string
   ): Promise<SmartProfileResponse> {
     let profileData: any;
-    let isDevMode = false;
-    let developmentClientShare: any = null;
     
     // Use retryable transaction with extended timeout
     profileData = await withRetryableTransaction(async (tx) => {
@@ -89,30 +87,13 @@ export class SmartProfileService {
       }
 
       try {
-        let sessionWalletAddress: string;
-
-        // Use mock wallet only if developmentMode is explicitly requested
-        if (data.developmentMode) {
-          console.log('Using mock wallet service for development profile');
-          isDevMode = true;
-          
-          // Import mock service dynamically
-          const { mockSessionWalletService } = await import('@/blockchain/mockSessionWalletService');
-          const result = await mockSessionWalletService.createSessionWallet(
-            profile.id,
-            data.clientShare
-          );
-          sessionWalletAddress = result.address;
-          developmentClientShare = result.clientShare; // Store for return
-        } else {
-          // For MPC profiles, always use placeholder initially
-          // MPC wallet generation should be triggered separately by the iOS client
-          console.log(`Creating placeholder wallet for MPC profile ${profile.id}...`);
-          const { ethers } = require('ethers');
-          sessionWalletAddress = ethers.Wallet.createRandom().address;
-          console.log(`Generated placeholder session wallet address: ${sessionWalletAddress}`);
-          console.log(`MPC wallet generation should be triggered by iOS client via /api/v2/mpc/generate`);
-        }
+        // Always use placeholder wallet initially
+        // MPC wallet generation should be triggered separately by the iOS client
+        console.log(`Creating placeholder wallet for MPC profile ${profile.id}...`);
+        const { ethers } = require('ethers');
+        const sessionWalletAddress = ethers.Wallet.createRandom().address;
+        console.log(`Generated placeholder session wallet address: ${sessionWalletAddress}`);
+        console.log(`MPC wallet generation should be triggered by iOS client via /api/v2/mpc/generate`);
 
         // Update profile with actual or placeholder session wallet address
         const updatedProfile = await tx.smartProfile.update({
@@ -151,9 +132,7 @@ export class SmartProfileService {
 
         // Return the profile data from transaction
         return {
-          profile: updatedProfile,
-          isDevMode,
-          developmentClientShare
+          profile: updatedProfile
         };
 
       } catch (error) {
@@ -185,13 +164,9 @@ export class SmartProfileService {
 
     // Extract values from transaction result
     const updatedProfile = profileData.profile;
-    isDevMode = profileData.isDevMode;
-    developmentClientShare = profileData.developmentClientShare;
 
     // Create Orby account cluster OUTSIDE the transaction
-    // Skip Orby integration for development wallets
-    if (!isDevMode) {
-      try {
+    try {
         console.log(`Creating Orby cluster for profile ${updatedProfile.id}...`);
         
         // Implement retry logic with exponential backoff
@@ -271,17 +246,9 @@ export class SmartProfileService {
         // Don't fail profile creation if Orby fails
         // Profile can still function without Orby integration
         // TODO: Consider adding a background job to retry cluster creation later
-      }
-    } else {
-      console.log('Skipping Orby integration for development wallet');
     }
 
     const response = await this.formatProfileResponse(updatedProfile);
-    
-    // Include clientShare only for development wallets
-    if (isDevMode && developmentClientShare) {
-      response.clientShare = developmentClientShare;
-    }
     
     // Emit WebSocket event for profile creation
     // This helps iOS know when to trigger MPC generation
@@ -706,13 +673,10 @@ export class SmartProfileService {
    */
   private async formatProfileResponse(profile: any): Promise<SmartProfileResponse> {
     // Check if profile has an MPC key mapping (indicates real MPC wallet)
-    let needsMpcGeneration = false;
-    if (!profile.developmentMode) {
-      const mpcKeyMapping = await prisma.mpcKeyMapping.findUnique({
-        where: { profileId: profile.id }
-      });
-      needsMpcGeneration = !mpcKeyMapping;
-    }
+    const mpcKeyMapping = await prisma.mpcKeyMapping.findUnique({
+      where: { profileId: profile.id }
+    });
+    const needsMpcGeneration = !mpcKeyMapping;
 
     return {
       id: profile.id,
@@ -722,8 +686,6 @@ export class SmartProfileService {
       linkedAccountsCount: profile._count?.linkedAccounts || 0,
       appsCount: profile._count?.apps || 0,
       foldersCount: profile._count?.folders || 0,
-      developmentMode: profile.developmentMode || false,
-      isDevelopmentWallet: profile.developmentMode || false, // For iOS compatibility
       needsMpcGeneration,
       createdAt: profile.createdAt.toISOString(),
       updatedAt: profile.updatedAt.toISOString(),

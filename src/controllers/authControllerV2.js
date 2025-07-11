@@ -1582,7 +1582,6 @@ const switchProfile = async (req, res, next) => {
         linkedAccountsCount: targetProfile.linkedAccounts?.length || 0,
         appsCount: targetProfile.folders?.reduce((total, folder) => total + (folder.apps?.length || 0), 0) || 0,
         foldersCount: targetProfile.folders?.length || 0,
-        developmentMode: targetProfile.developmentMode || false,
         createdAt: targetProfile.createdAt,
         updatedAt: targetProfile.updatedAt
       },

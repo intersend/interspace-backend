@@ -292,8 +292,7 @@ class AccountService {
             id: profileId || undefined, // Use provided ID or let Prisma generate one
             name: profileName,
             sessionWalletAddress: sessionWallet?.address || '0x' + '0'.repeat(40), // Fallback address for edge cases
-            isActive: true,
-            developmentMode: sessionWallet?.isDevelopment || false
+            isActive: true
           }
         });
 
@@ -338,7 +337,6 @@ class AccountService {
               isActive: true,
               chainId: 1, // Default to mainnet, can be updated later
               metadata: JSON.stringify({
-                developmentMode: sessionWallet.isDevelopment || false,
                 createdAt: new Date().toISOString()
               })
             }

@@ -43,7 +43,6 @@ class ProfileControllerV2 {
           linkedAccountsCount: p.linkedAccounts?.length || 0,
           appsCount: p._count?.apps || 0,
           foldersCount: p._count?.folders || 0,
-          developmentMode: p.developmentMode,
           createdAt: p.createdAt,
           updatedAt: p.updatedAt
         }))
@@ -67,7 +66,7 @@ class ProfileControllerV2 {
         });
       }
 
-      const { name, developmentMode = false, clientShare } = req.body;
+      const { name, clientShare } = req.body;
       const accountId = req.account?.id;
       
       if (!accountId) {
@@ -77,11 +76,10 @@ class ProfileControllerV2 {
         });
       }
 
-      // Create profile with development mode using accountId (flat identity model)
+      // Create profile using accountId (flat identity model)
       const profile = await smartProfileService.createProfile(accountId, {
         name,
-        developmentMode,
-        clientShare: developmentMode ? clientShare : undefined
+        clientShare
       });
 
       res.status(201).json({
@@ -130,7 +128,6 @@ class ProfileControllerV2 {
           linkedAccountsCount: profile.linkedAccounts?.length || 0,
           appsCount: profile._count?.apps || 0,
           foldersCount: profile._count?.folders || 0,
-          developmentMode: profile.developmentMode,
           createdAt: profile.createdAt,
           updatedAt: profile.updatedAt
         }
@@ -179,7 +176,6 @@ class ProfileControllerV2 {
           name: updatedProfile.name,
           sessionWalletAddress: updatedProfile.sessionWalletAddress,
           isActive: updatedProfile.isActive,
-          developmentMode: updatedProfile.developmentMode,
           updatedAt: updatedProfile.updatedAt
         }
       });

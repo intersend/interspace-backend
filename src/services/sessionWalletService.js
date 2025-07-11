@@ -4,65 +4,31 @@
  */
 
 const { SessionWalletService } = require('../blockchain/sessionWalletService');
-const { MockSessionWalletService } = require('../blockchain/mockSessionWalletService');
 const { config } = require('../utils/config');
 const { logger } = require('../utils/logger');
 
-// Create singleton instance based on MPC configuration
-let sessionWalletInstance;
-
-if (config.DISABLE_MPC || process.env.DISABLE_MPC === 'true') {
-  logger.info('MPC disabled, using mock session wallet service');
-  sessionWalletInstance = new MockSessionWalletService();
-} else {
-  logger.info('Using real session wallet service');
-  sessionWalletInstance = new SessionWalletService();
-}
+// Create singleton instance
+logger.info('Using real session wallet service');
+const sessionWalletInstance = new SessionWalletService();
 
 /**
  * Create a session wallet for a profile
  * @param {string} profileId - The profile ID
- * @param {Object} clientShare - Client share data (optional for dev mode)
- * @param {boolean} developmentMode - Whether to use development wallet
- * @returns {Promise<{address: string, isDevelopment: boolean, clientShare?: any}>}
+ * @param {Object} clientShare - Client share data
+ * @returns {Promise<{address: string, placeholder?: boolean}>}
  */
-async function createSessionWallet(profileId, clientShare, developmentMode = false) {
+async function createSessionWallet(profileId, clientShare) {
   try {
-    // In development mode or when MPC is disabled, just generate a simple address
-    if (developmentMode || config.DISABLE_MPC || process.env.DISABLE_MPC === 'true') {
-      const crypto = require('crypto');
-      const hash = crypto.createHash('sha256').update(profileId || crypto.randomBytes(32)).digest('hex');
-      const address = '0x' + hash.slice(0, 40);
-      
-      logger.info(`Generated development wallet address for profile ${profileId}: ${address}`);
-      
-      return {
-        address: address,
-        isDevelopment: true,
-        clientShare: {
-          p1_key_share: {
-            secret_share: crypto.createHash('sha256').update(`secret-${profileId}`).digest('hex'),
-            public_key: crypto.createHash('sha256').update(`pubkey-${profileId}`).digest('hex').slice(0, 64)
-          },
-          public_key: crypto.createHash('sha256').update(`pubkey-${profileId}`).digest('hex').slice(0, 64),
-          address: address
-        }
-      };
-    }
-
-    // For real MPC wallets, we need proper key generation first
-    // This should only be called after MPC key generation is complete
-    // For automatic profile creation, we should use development mode
-    logger.warn(`Attempting to create real MPC wallet without proper key generation. Profile: ${profileId}`);
-    
-    // Generate a placeholder address for now
+    // Always generate a placeholder address for now
     // The real MPC wallet will be created when iOS client initiates key generation
     const { ethers } = require('ethers');
     const placeholderWallet = ethers.Wallet.createRandom();
     
+    logger.info(`Generated placeholder wallet address for profile ${profileId}: ${placeholderWallet.address}`);
+    logger.info(`MPC wallet generation should be triggered by iOS client via /api/v2/mpc/generate`);
+    
     return {
       address: placeholderWallet.address,
-      isDevelopment: false,
       placeholder: true
     };
   } catch (error) {
