@@ -166,8 +166,7 @@ class ProfileControllerV2 {
       }
 
       // Update profile
-      const userId = profile.userId || req.user?.userId;
-      const updatedProfile = await smartProfileService.updateProfile(profileId, userId, { name });
+      const updatedProfile = await smartProfileService.updateProfile(profileId, accountId, { name });
 
       res.json({
         success: true,
@@ -215,8 +214,7 @@ class ProfileControllerV2 {
       // Even if it's the last one
 
       // Delete profile
-      const userId = profile.userId || req.user?.userId;
-      await smartProfileService.deleteProfile(profileId, userId);
+      await smartProfileService.deleteProfile(profileId, accountId);
 
       res.json({
         success: true,
@@ -255,8 +253,7 @@ class ProfileControllerV2 {
       }
 
       // Rotate wallet
-      const userId = profile.userId || req.user?.userId;
-      const updatedProfile = await smartProfileService.rotateSessionWallet(profileId, userId);
+      const updatedProfile = await smartProfileService.rotateSessionWallet(profileId, accountId);
 
       res.json({
         success: true,
@@ -314,7 +311,6 @@ class ProfileControllerV2 {
       // Return the actual LinkedAccount records with their correct IDs
       const formattedAccounts = linkedAccounts.map(account => ({
         id: account.id, // This is the LinkedAccount ID
-        userId: account.userId,
         profileId: account.profileId,
         address: account.address,
         authStrategy: account.authStrategy,
@@ -426,7 +422,6 @@ class ProfileControllerV2 {
       // Create the linked account
       const linkedAccount = await prisma.linkedAccount.create({
         data: {
-          userId: profile.userId,
           profileId: profileId,
           address: address.toLowerCase(),
           authStrategy: 'wallet',
@@ -469,7 +464,6 @@ class ProfileControllerV2 {
         success: true,
         data: {
           id: linkedAccount.id,
-          userId: linkedAccount.userId,
           profileId: linkedAccount.profileId,
           address: linkedAccount.address,
           authStrategy: linkedAccount.authStrategy,

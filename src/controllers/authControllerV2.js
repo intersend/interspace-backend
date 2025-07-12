@@ -1570,7 +1570,7 @@ const switchProfile = async (req, res, next) => {
     logger.info(`Profile switch requested for session ${req.sessionToken} to profile ${profileId}`);
 
     // Update profile active status
-    await smartProfileService.switchActiveProfile(profileId, targetProfile.userId);
+    await smartProfileService.switchActiveProfile(profileId, accountId);
 
     res.json({
       success: true,
