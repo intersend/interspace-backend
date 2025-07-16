@@ -18,6 +18,7 @@ const profileRoutesV2 = require('./routes/profileRoutesV2');
 const userRoutesV2 = require('./routes/userRoutesV2');
 const siweRoutesV2 = require('./routes/siweRoutesV2');
 const farcasterAuthRoutes = require('./routes/farcasterAuthRoutes');
+const healthRoutes = require('./routes/healthRoutes');
 import mpcRoutesV2 from './routes/mpcRoutesV2';
 import mpcWebhookRoutes from './routes/mpcWebhookRoutes';
 import wellKnownRoutes from './routes/wellKnownRoutes';
@@ -402,6 +403,9 @@ class Application {
     const apiV2Path = '/api/v2';
     
     // IMPORTANT: Mount public routes FIRST to prevent authentication middleware inheritance
+    // Health routes (public endpoints)
+    this.app.use(`${apiV2Path}/health`, healthRoutes); // Health check routes (PUBLIC)
+    
     // App Store routes (public endpoints) - MUST be mounted before any authenticated routes
     this.app.use(`${apiV2Path}`, appStoreRoutes); // App store routes (PUBLIC)
     

@@ -17,11 +17,17 @@ router.post(
   '/profiles/:profileId/accounts',
   apiRateLimit,
   param('profileId').isString().notEmpty(),
-  body('address').isEthereumAddress(),
+  body('address').custom((value, { req }) => {
+    // For email accounts, validate as email; otherwise validate as Ethereum address
+    if (req.body.walletType === 'email') {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    }
+    return /^0x[a-fA-F0-9]{40}$/.test(value);
+  }).withMessage('Invalid address format'),
   body('walletType').isString().notEmpty(),
-  body('chainId').isNumeric(),
-  body('signature').isString().notEmpty(),
-  body('message').isString().notEmpty(),
+  body('chainId').optional().isNumeric(),
+  body('signature').optional().isString(),
+  body('message').optional().isString(),
   body('name').optional().isString(),
   body('isPrimary').optional().isBoolean(),
   validateRequest,

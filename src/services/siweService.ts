@@ -197,9 +197,20 @@ export class SiweService {
       // Parse the message
       const parsedMessage = this.parseMessage(params.message);
       
+      // Log signature details for debugging
+      console.log('🔏 SIWE Verification Debug:', {
+        signatureFormat: params.signature.startsWith('0x') ? 'has 0x prefix' : 'no 0x prefix',
+        signatureLength: params.signature.length,
+        messageLength: params.message.length,
+        expectedAddress: params.expectedAddress?.toLowerCase(),
+        parsedAddress: parsedMessage.address?.toLowerCase()
+      });
+      
       // Verify signature
       // @ts-ignore
       const recoveredAddress = ethers.verifyMessage(params.message, params.signature);
+      
+      console.log('🔏 SIWE Recovered address:', recoveredAddress.toLowerCase());
       
       // Check address matches
       if (recoveredAddress.toLowerCase() !== parsedMessage.address.toLowerCase()) {

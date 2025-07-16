@@ -17,6 +17,8 @@ import {
 import { logger } from '../utils/logger';
 
 export class LinkedAccountService {
+  // Account types that don't require signature verification
+  private readonly socialAccountTypes = ['email', 'google', 'apple', 'farcaster'];
   
   /**
    * Link an external account to a profile
@@ -45,9 +47,10 @@ export class LinkedAccountService {
       const profile = profileAccess.profile;
 
       // Check if account is already linked to THIS SPECIFIC PROFILE
+      const normalizedAddress = this.socialAccountTypes.includes(data.walletType) ? data.address : data.address.toLowerCase();
       const existingAccount = await tx.linkedAccount.findFirst({
         where: { 
-          address: data.address.toLowerCase(),
+          address: normalizedAddress,
           profileId: profileId,
           isActive: true
         }
@@ -58,17 +61,65 @@ export class LinkedAccountService {
       }
 
       // Verify account ownership
-      const verificationResult = await this.verifyAccountOwnership(
-        data.address, 
-        data.signature, 
-        data.message, 
-        data.walletType,
-        data.ipAddress,
-        data.userAgent
-      );
-      
-      if (!verificationResult.valid) {
-        throw new AuthorizationError(verificationResult.error || 'Invalid signature - account ownership not verified');
+      if (data.walletType === 'email') {
+        // Email accounts require verification code
+        if (!data.verificationCode) {
+          throw new AuthorizationError('Verification code is required for email accounts');
+        }
+        
+        // Verify the email code
+        const bcrypt = require('bcryptjs');
+        
+        // Find all valid verification codes for this email
+        const validVerifications = await tx.emailVerification.findMany({
+          where: {
+            email: data.address,
+            expiresAt: { gte: new Date() }
+          },
+          orderBy: { createdAt: 'desc' }
+        });
+        
+        if (validVerifications.length === 0) {
+          throw new AuthorizationError('No valid verification code found for this email');
+        }
+        
+        // Check if any of the codes match
+        let matchedVerification = null;
+        for (const verification of validVerifications) {
+          const isValidCode = await bcrypt.compare(data.verificationCode, verification.code);
+          if (isValidCode) {
+            matchedVerification = verification;
+            break;
+          }
+        }
+        
+        if (!matchedVerification) {
+          throw new AuthorizationError('Invalid verification code');
+        }
+        
+        // Delete the used verification code
+        await tx.emailVerification.delete({
+          where: { id: matchedVerification.id }
+        });
+        
+      } else if (!this.socialAccountTypes.includes(data.walletType)) {
+        // This is a wallet account that requires signature verification
+        if (!data.signature || !data.message) {
+          throw new AuthorizationError('Signature and message are required for wallet accounts');
+        }
+        
+        const verificationResult = await this.verifyAccountOwnership(
+          data.address, 
+          data.signature, 
+          data.message, 
+          data.walletType,
+          data.ipAddress,
+          data.userAgent
+        );
+        
+        if (!verificationResult.valid) {
+          throw new AuthorizationError(verificationResult.error || 'Invalid signature - account ownership not verified');
+        }
       }
 
       // If this is the first account, make it primary
@@ -85,13 +136,14 @@ export class LinkedAccountService {
       const linkedAccount = await tx.linkedAccount.create({
         data: {
           profileId,
-          address: data.address.toLowerCase(),
-          authStrategy: 'wallet',
+          address: normalizedAddress,
+          authStrategy: this.socialAccountTypes.includes(data.walletType) ? data.walletType : 'wallet',
           walletType: data.walletType,
           customName: data.customName,
           isPrimary,
           chainId: data.chainId,
-          isActive: true
+          isActive: true,
+          metadata: data.metadata
         },
         include: {
           allowances: true,
@@ -102,6 +154,34 @@ export class LinkedAccountService {
           }
         }
       });
+
+      // CRITICAL: Create Account record for email/social accounts
+      // This ensures the account can authenticate in the future
+      if (this.socialAccountTypes.includes(data.walletType)) {
+        await tx.account.upsert({
+          where: {
+            type_identifier: {
+              type: data.walletType === 'email' ? 'email' : 'social',
+              identifier: normalizedAddress
+            }
+          },
+          create: {
+            type: data.walletType === 'email' ? 'email' : 'social',
+            identifier: normalizedAddress,
+            provider: data.walletType === 'email' ? null : data.walletType,
+            verified: true,
+            metadata: {
+              linkedAt: new Date().toISOString(),
+              linkedToProfile: profileId
+            }
+          },
+          update: {
+            verified: true
+          }
+        });
+        
+        logger.info(`Created/updated Account record for ${data.walletType}: ${normalizedAddress}`);
+      }
 
       // Log the account linking
       await tx.auditLog.create({
@@ -612,6 +692,7 @@ export class LinkedAccountService {
     return {
       id: account.id,
       address: account.address,
+      authStrategy: account.authStrategy,
       walletType: account.walletType,
       customName: account.customName,
       isPrimary: !!account.isPrimary,
@@ -619,7 +700,8 @@ export class LinkedAccountService {
       chainId: account.chainId,
       allowancesCount: account._count?.allowances || 0,
       createdAt: account.createdAt.toISOString(),
-      updatedAt: account.updatedAt.toISOString()
+      updatedAt: account.updatedAt.toISOString(),
+      metadata: account.metadata
     };
   }
 

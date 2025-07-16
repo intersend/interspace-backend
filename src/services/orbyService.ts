@@ -163,19 +163,23 @@ export class OrbyService {
 
     // Add all linked EOAs (check if linkedAccounts exists)
     if (profile.linkedAccounts && profile.linkedAccounts.length > 0) {
-      logger.info(`Adding ${profile.linkedAccounts.length} linked accounts to cluster`);
-      for (const linkedAccount of profile.linkedAccounts) {
-        if (linkedAccount.isActive) {
-          accounts.push(
-            Account.toAccount({
-              vmType: 'EVM',
-              address: linkedAccount.address,
-              accountType: 'EOA',
-              chainId: `EIP155-${linkedAccount.chainId || 1}` // Use linked account's chainId or default to mainnet (Orby format)
-            })
-          );
-          logger.info(`Added linked account: ${linkedAccount.address}`);
-        }
+      // Filter to only include wallet accounts (not email, social, etc.)
+      const walletAccounts = profile.linkedAccounts.filter(
+        la => la.isActive && la.authStrategy === 'wallet'
+      );
+      
+      logger.info(`Adding ${walletAccounts.length} wallet accounts (out of ${profile.linkedAccounts.length} total linked accounts) to cluster`);
+      
+      for (const linkedAccount of walletAccounts) {
+        accounts.push(
+          Account.toAccount({
+            vmType: 'EVM',
+            address: linkedAccount.address,
+            accountType: 'EOA',
+            chainId: `EIP155-${linkedAccount.chainId || 1}` // Use linked account's chainId or default to mainnet (Orby format)
+          })
+        );
+        logger.info(`Added wallet account: ${linkedAccount.address}`);
       }
     }
 
@@ -242,9 +246,18 @@ export class OrbyService {
     console.log(`Fresh Orby Cluster ID: ${clusterId}`);
     console.log(`Session Wallet: ${profile.sessionWalletAddress}`);
     if (profile.linkedAccounts) {
-      console.log(`Linked Accounts: ${profile.linkedAccounts.length}`);
-      profile.linkedAccounts.forEach(la => {
-        console.log(`  - ${la.address} (Chain: ${la.chainId}, Active: ${la.isActive})`);
+      console.log(`Total Linked Accounts: ${profile.linkedAccounts.length}`);
+      const walletAccounts = profile.linkedAccounts.filter(la => la.authStrategy === 'wallet');
+      const nonWalletAccounts = profile.linkedAccounts.filter(la => la.authStrategy !== 'wallet');
+      
+      console.log(`  - Wallet Accounts (included in Orby): ${walletAccounts.length}`);
+      walletAccounts.forEach(la => {
+        console.log(`    * ${la.address} (Chain: ${la.chainId}, Active: ${la.isActive})`);
+      });
+      
+      console.log(`  - Non-Wallet Accounts (excluded from Orby): ${nonWalletAccounts.length}`);
+      nonWalletAccounts.forEach(la => {
+        console.log(`    * ${la.address} (Type: ${la.authStrategy}, Active: ${la.isActive})`);
       });
     }
     console.log('===================================\n');
