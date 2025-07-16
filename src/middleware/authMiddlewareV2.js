@@ -132,17 +132,19 @@ const authenticateAccount = async (req, res, next) => {
     req.account = account;
     req.session = session;
     req.sessionToken = decoded.sessionToken;
+    req.decoded = decoded; // Store decoded token for other middleware
+    
+    // Get activeProfileId from JWT token (not from session)
+    if (decoded.activeProfileId) {
+      req.activeProfileId = decoded.activeProfileId;
+    }
 
     logger.info('AuthMiddlewareV2.authenticateAccount - Setting req.account:', {
       accountId: account.id,
       accountType: account.type,
-      hasSession: !!session
+      hasSession: !!session,
+      activeProfileId: decoded.activeProfileId || null
     });
-
-    // Get active profile if available
-    if (session.activeProfile) {
-      req.activeProfile = session.activeProfile;
-    }
 
     next();
   } catch (error) {
@@ -183,28 +185,67 @@ const optionalAuthenticate = async (req, res, next) => {
  * Require active profile
  */
 const requireActiveProfile = async (req, res, next) => {
-  if (!req.activeProfile && !req.session?.activeProfileId) {
-    return res.status(403).json({
-      error: 'Active profile required',
-      code: 'NO_ACTIVE_PROFILE'
+  try {
+    // Check if we have activeProfileId from JWT token
+    if (!req.activeProfileId) {
+      logger.warn('RequireActiveProfile - No active profile ID in request', {
+        accountId: req.account?.id,
+        hasActiveProfile: !!req.activeProfile,
+        hasDecoded: !!req.decoded
+      });
+      
+      return res.status(403).json({
+        error: 'Active profile required',
+        code: 'NO_ACTIVE_PROFILE'
+      });
+    }
+
+    // Load active profile if not already loaded
+    if (!req.activeProfile) {
+      req.activeProfile = await prisma.smartProfile.findUnique({
+        where: { id: req.activeProfileId }
+      });
+      
+      if (!req.activeProfile) {
+        logger.error('RequireActiveProfile - Profile not found', {
+          profileId: req.activeProfileId,
+          accountId: req.account?.id
+        });
+        
+        return res.status(403).json({
+          error: 'Profile not found',
+          code: 'PROFILE_NOT_FOUND'
+        });
+      }
+      
+      // Verify the account has access to this profile
+      const profileAccessV2 = require('../utils/profileAccessV2');
+      const { hasAccess } = await profileAccessV2.verifyProfileAccess(
+        req.activeProfileId,
+        req.account.id
+      );
+      
+      if (!hasAccess) {
+        logger.error('RequireActiveProfile - Access denied to profile', {
+          profileId: req.activeProfileId,
+          accountId: req.account?.id
+        });
+        
+        return res.status(403).json({
+          error: 'Access denied to this profile',
+          code: 'PROFILE_ACCESS_DENIED'
+        });
+      }
+    }
+
+    next();
+  } catch (error) {
+    logger.error('RequireActiveProfile error:', error);
+    return res.status(500).json({
+      error: 'Failed to verify profile access',
+      code: 'PROFILE_VERIFICATION_ERROR'
     });
   }
-
-  // Load active profile if not already loaded
-  if (!req.activeProfile && req.session?.activeProfileId) {
-    req.activeProfile = await prisma.smartProfile.findUnique({
-      where: { id: req.session.activeProfileId }
-    });
-  }
-
-  if (!req.activeProfile) {
-    return res.status(403).json({
-      error: 'Profile not found',
-      code: 'PROFILE_NOT_FOUND'
-    });
-  }
-
-  next();
 };
 
 /**

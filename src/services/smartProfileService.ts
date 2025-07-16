@@ -1,4 +1,4 @@
-import { prisma, withTransaction, withRetryableTransaction } from '../utils/database';
+import { prisma, withTransaction, withRetryableTransaction, Prisma } from '../utils/database';
 import { 
   CreateSmartProfileRequest,
   UpdateSmartProfileRequest,
@@ -57,33 +57,49 @@ export class SmartProfileService {
         where: { accountId }
       });
       
-      const isFirstProfile = existingProfiles === 1; // We just created one
+      // ALWAYS link the creating account to the profile - this is essential for profile-centric architecture
+      // Get the account details
+      const account = await tx.account.findUnique({
+        where: { id: accountId }
+      });
       
-      // Auto-link wallet account for first-time users only
-      if (isFirstProfile) {
-        // Get the account details
-        const account = await tx.account.findUnique({
-          where: { id: accountId }
+      if (account) {
+        // Determine the authStrategy based on account type
+        let authStrategy: string;
+        if (account.type === 'social') {
+          //@ts-ignore
+          authStrategy = account.provider; // 'apple', 'google', etc.
+        } else {
+          authStrategy = account.type; // 'wallet', 'email', 'passkey'
+        }
+        
+        // Create LinkedAccount entry for ANY account type
+        await tx.linkedAccount.create({
+          data: {
+            profileId: profile.id,
+            address: account.identifier.toLowerCase(),
+            authStrategy,
+            walletType: account.type === 'wallet' ? ((account.metadata as any)?.walletType || 'external') : null,
+            customName: (account.metadata as any)?.customName || null,
+            isPrimary: existingProfiles === 0, // Only first profile gets primary status
+            isActive: true,
+            chainId: (account.metadata as any)?.chainId ? parseInt((account.metadata as any).chainId) : 1,
+            metadata: JSON.stringify(account.metadata || {})
+          }
         });
         
-        if (account && account.type === 'wallet') {
-          // Auto-link the wallet used for authentication
-          await tx.linkedAccount.create({
-            data: {
-              profileId: profile.id,
-              address: account.identifier.toLowerCase(),
-              authStrategy: 'wallet',
-              walletType: (account.metadata as any)?.walletType || 'external',
-              customName: (account.metadata as any)?.customName || null,
-              isPrimary: true, // First wallet is primary
-              isActive: true,
-              chainId: (account.metadata as any)?.chainId ? parseInt((account.metadata as any).chainId) : 1,
-              metadata: JSON.stringify(account.metadata || {})
-            }
-          });
-          
-          console.log(`Auto-linked wallet ${account.identifier} to first profile ${profile.id}`);
-        }
+        console.log(`Linked ${authStrategy} account ${account.identifier} to profile ${profile.id}`);
+        console.log(`LinkedAccount details:`, {
+          profileId: profile.id,
+          address: account.identifier.toLowerCase(),
+          authStrategy,
+          walletType: account.type === 'wallet' ? ((account.metadata as any)?.walletType || 'external') : null,
+          isPrimary: existingProfiles === 0,
+          accountType: account.type,
+          provider: account.provider
+        });
+      } else {
+        console.error(`WARNING: Could not find account ${accountId} to link to profile ${profile.id}`);
       }
 
       try {
@@ -428,6 +444,7 @@ export class SmartProfileService {
       }
 
       const profile = profileAccount.profile;
+      const wasActive = profile.isActive;
 
       // In flat identity model, we allow deleting profiles even with linked accounts
       // The cascade delete will handle removing all related data
@@ -441,7 +458,8 @@ export class SmartProfileService {
           resource: 'SmartProfile',
           details: JSON.stringify({
             profileName: profile.name,
-            sessionWalletAddress: profile.sessionWalletAddress
+            sessionWalletAddress: profile.sessionWalletAddress,
+            wasActive
           })
         }
       });
@@ -456,6 +474,45 @@ export class SmartProfileService {
       await tx.smartProfile.delete({
         where: { id: profileId }
       });
+
+      // If deleted profile was active, activate another profile
+      if (wasActive) {
+        // Find all other profiles for this account
+        const remainingProfiles = await tx.profileAccount.findMany({
+          where: { accountId },
+          include: { profile: true },
+          orderBy: { profile: { updatedAt: 'desc' } }
+        });
+
+        if (remainingProfiles.length > 0 && remainingProfiles[0]) {
+          // Activate the most recently updated profile
+          const nextProfile = remainingProfiles[0];
+          const nextProfileId = nextProfile.profileId;
+          await tx.smartProfile.update({
+            where: { id: nextProfileId },
+            data: { isActive: true }
+          });
+
+          console.log(`Profile ${profileId} was active, activated profile ${nextProfileId} (${nextProfile.profile.name})`);
+          
+          // Log the automatic activation
+          await tx.auditLog.create({
+            data: {
+              accountId,
+              profileId: nextProfileId,
+              action: 'SMART_PROFILE_ACTIVATED',
+              resource: 'SmartProfile',
+              details: JSON.stringify({
+                reason: 'Automatic activation after active profile deletion',
+                deletedProfileId: profileId,
+                profileName: nextProfile.profile.name
+              })
+            }
+          });
+        } else {
+          console.log(`Profile ${profileId} was the last profile for account ${accountId}`);
+        }
+      }
     });
   }
 
@@ -492,7 +549,7 @@ export class SmartProfileService {
    * Switch active profile
    */
   async switchActiveProfile(profileId: string, accountId: string): Promise<SmartProfileResponse> {
-    return withTransaction(async (tx) => {
+    return withRetryableTransaction(async (tx) => {
       // Verify ownership and that profile exists
       const profileAccount = await tx.profileAccount.findFirst({
         where: { 
@@ -551,6 +608,10 @@ export class SmartProfileService {
       });
 
       return await this.formatProfileResponse(updatedProfile);
+    }, {
+      isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted,
+      maxRetries: 3,
+      retryDelay: 1000
     });
   }
 
