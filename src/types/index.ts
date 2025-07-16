@@ -103,10 +103,12 @@ export interface LinkAccountRequest {
   walletType: WalletType;
   customName?: string;
   chainId?: number;
-  signature: string; // Signature proving ownership
-  message: string; // Message that was signed
+  signature?: string; // Signature proving ownership (optional for email accounts)
+  message?: string; // Message that was signed (optional for email accounts)
+  verificationCode?: string; // Verification code for email accounts
   ipAddress?: string;
   userAgent?: string;
+  metadata?: string; // JSON metadata for additional info (e.g., wallet icon)
 }
 
 export interface UpdateLinkedAccountRequest {
@@ -122,11 +124,16 @@ export type WalletType =
   | 'safe' 
   | 'magic' 
   | 'web3auth'
-  | 'mpc';
+  | 'mpc'
+  | 'email'
+  | 'google'
+  | 'apple'
+  | 'farcaster';
 
 export interface LinkedAccountResponse {
   id: string;
   address: string;
+  authStrategy: string;
   walletType: WalletType;
   customName?: string;
   isPrimary: boolean;
@@ -135,6 +142,7 @@ export interface LinkedAccountResponse {
   allowancesCount: number;
   createdAt: string;
   updatedAt: string;
+  metadata?: string;
 }
 
 export interface AccountSearchResponse {

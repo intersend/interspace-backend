@@ -1,7 +1,7 @@
 const express = require('express');
 const { body, param } = require('express-validator');
 const profileControllerV2 = require('../controllers/profileControllerV2');
-const { authenticateAccount, requireActiveProfile } = require('../middleware/authMiddlewareV2');
+const { authenticateAccount, authenticateUser, requireActiveProfile } = require('../middleware/authMiddlewareV2');
 const { userRateLimit } = require('../middleware/rateLimiter');
 
 const router = express.Router();
@@ -126,12 +126,55 @@ router.get('/:profileId/accounts',
 router.post('/:profileId/accounts',
   [
     param('profileId').isString().notEmpty(),
-    body('address').isEthereumAddress().withMessage('Valid Ethereum address required'),
+    body('address').custom((value, { req }) => {
+      // For email accounts, validate as email; otherwise validate as Ethereum address
+      if (req.body.walletType === 'email') {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+      }
+      return /^0x[a-fA-F0-9]{40}$/.test(value);
+    }).withMessage('Invalid address format'),
     body('walletType').optional().isString(),
-    body('signature').notEmpty().withMessage('Signature required'),
-    body('message').notEmpty().withMessage('Message required')
+    body('signature').optional().isString(),
+    body('message').optional().isString(),
+    body('verificationCode').optional().isString()
   ],
   profileControllerV2.linkAccountToProfile
+);
+
+/**
+ * @route   DELETE /api/v2/profiles/:profileId/accounts/:accountId
+ * @desc    Unlink an account from a profile
+ * @access  Private
+ */
+router.delete('/:profileId/accounts/:accountId',
+  [
+    param('profileId').isString().notEmpty(),
+    param('accountId').isString().notEmpty()
+  ],
+  profileControllerV2.unlinkAccountFromProfile
+);
+
+/**
+ * @route   PATCH /api/v2/profiles/:profileId/accounts/:accountId
+ * @desc    Update account metadata (customName, isPrimary)
+ * @access  Private
+ */
+router.patch('/:profileId/accounts/:accountId',
+  [
+    param('profileId').isString().notEmpty(),
+    param('accountId').isString().notEmpty(),
+    body('customName')
+      .optional()
+      .isString()
+      .trim()
+      .isLength({ max: 100 })
+      .withMessage('Custom name must not exceed 100 characters'),
+    body('isPrimary')
+      .optional()
+      .isBoolean()
+      .withMessage('isPrimary must be a boolean value')
+  ],
+  profileControllerV2.updateLinkedAccount
 );
 
 /**
