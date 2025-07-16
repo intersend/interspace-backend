@@ -55,12 +55,14 @@ class AccountService {
   }
 
   /**
-   * Get all linked accounts through identity graph
-   * WARNING: This method traverses the entire identity graph!
-   * DO NOT use this for authentication - use getDirectlyLinkedProfiles instead
-   * Use cases: identity graph visualization, account unlinking, debugging
+   * DEPRECATED: Identity graph is being removed
+   * DO NOT USE - This method will be removed soon
+   * Use getProfilesForLinkedAccount instead for authentication
+   * @deprecated
    */
   async getLinkedAccounts(accountId) {
+    logger.warn('DEPRECATED: getLinkedAccounts called - identity graph is being removed');
+    // Return only the single account for now
     try {
       // Use BFS to traverse the entire identity graph
       const visited = new Set([accountId]);
@@ -144,12 +146,13 @@ class AccountService {
   }
 
   /**
-   * Get all accessible profiles for an account through identity graph traversal
-   * WARNING: This method traverses the entire identity graph!
-   * DO NOT use this for authentication - use getDirectlyLinkedProfiles instead
-   * Use cases: profile switching, showing all accessible profiles in account settings
+   * DEPRECATED: Identity graph is being removed
+   * DO NOT USE - This method will be removed soon
+   * Use getProfilesForLinkedAccount instead
+   * @deprecated
    */
   async getAccessibleProfiles(accountId) {
+    logger.warn('DEPRECATED: getAccessibleProfiles called - identity graph is being removed');
     try {
       // Get all linked accounts
       const linkedAccountIds = await this.getLinkedAccounts(accountId);
@@ -212,22 +215,25 @@ class AccountService {
   }
 
   /**
-   * Get profiles directly linked to a specific account (not through identity graph)
-   * SECURITY: This is the ONLY method that should be used during authentication
-   * This ensures users only see profiles where their authenticating account is directly linked
+   * Get profiles linked to a specific account identifier via LinkedAccount
+   * This is the PRIMARY method for authentication - LinkedAccount is the single source of truth
    * 
-   * Example: If a user signs in with MetaMask, they should only see profiles where
-   * that specific MetaMask wallet has a ProfileAccount entry, NOT all profiles
-   * accessible through their linked email or other accounts in the identity graph.
+   * @param {string} identifier - The email, wallet address, or social ID
+   * @param {string} authStrategy - The type of account (email, wallet, social provider)
    */
-  async getDirectlyLinkedProfiles(accountId) {
+  async getProfilesForLinkedAccount(identifier, authStrategy) {
     try {
-      logger.debug(`Getting directly linked profiles for account ${accountId}`);
+      logger.info(`Getting profiles for linked account`, {
+        identifier,
+        authStrategy,
+        normalizedIdentifier: identifier.toLowerCase()
+      });
 
-      // Get only profiles where this specific account has a ProfileAccount entry
-      const profileAccounts = await prisma.profileAccount.findMany({
+      const linkedAccounts = await prisma.linkedAccount.findMany({
         where: {
-          accountId: accountId // Only this specific account, not linked accounts
+          address: identifier.toLowerCase(),
+          authStrategy: authStrategy,
+          isActive: true
         },
         include: {
           profile: {
@@ -243,26 +249,66 @@ class AccountService {
         }
       });
       
-      logger.debug(`Found direct ProfileAccount entries`, {
-        accountId,
-        profileAccountCount: profileAccounts.length,
-        profileAccountDetails: profileAccounts.map(pa => ({
-          accountId: pa.accountId,
-          profileId: pa.profileId,
-          profileName: pa.profile?.name
+      logger.debug(`Found LinkedAccount entries`, {
+        identifier,
+        authStrategy,
+        linkedAccountCount: linkedAccounts.length,
+        linkedAccountDetails: linkedAccounts.map(la => ({
+          id: la.id,
+          profileId: la.profileId,
+          profileName: la.profile?.name
         }))
       });
 
-      // Extract profiles
-      const profiles = profileAccounts.map(pa => pa.profile);
+      // Extract unique profiles
+      const profilesBeforeFilter = [...new Map(linkedAccounts.map(la => [la.profile.id, la.profile])).values()];
+      const profiles = profilesBeforeFilter; // Return all profiles, not just active ones
       
-      logger.debug(`Returning directly linked profiles`, {
-        accountId,
+      // Critical debugging with console.log to ensure it shows
+      logger.info(`Profile results - returning all profiles`, {
+        identifier,
+        linkedAccountsCount: linkedAccounts.length,
+        profileCount: profiles.length,
+        profiles: profiles.map(p => ({
+          id: p.id,
+          name: p.name,
+          isActive: p.isActive
+        }))
+      });
+      
+      logger.debug(`Returning profiles via LinkedAccount`, {
+        identifier,
         profileCount: profiles.length,
         profiles: profiles.map(p => ({ id: p.id, name: p.name }))
       });
 
       return profiles;
+    } catch (error) {
+      logger.error('Error in getProfilesForLinkedAccount:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * DEPRECATED: Use getProfilesForLinkedAccount instead
+   * Kept for backward compatibility during migration
+   */
+  async getDirectlyLinkedProfiles(accountId) {
+    try {
+      // Get account details first
+      const account = await prisma.account.findUnique({
+        where: { id: accountId }
+      });
+      
+      if (!account) {
+        return [];
+      }
+
+      // Map account type to authStrategy for LinkedAccount
+      const authStrategy = account.type === 'social' ? account.provider : account.type;
+      
+      // Use the new method
+      return this.getProfilesForLinkedAccount(account.identifier, authStrategy);
     } catch (error) {
       logger.error('Error in getDirectlyLinkedProfiles:', error);
       throw error;
@@ -296,7 +342,7 @@ class AccountService {
           }
         });
 
-        // Link account to profile
+        // Link account to profile (keep for backward compatibility)
         await tx.profileAccount.create({
           data: {
             profileId: profile.id,
@@ -305,24 +351,31 @@ class AccountService {
           }
         });
 
-        // Auto-link wallet accounts as LinkedAccounts for transaction capabilities
-        if (account.type === 'wallet') {
-          await tx.linkedAccount.create({
-            data: {
-              profileId: profile.id,
-              address: account.identifier.toLowerCase(),
-              authStrategy: 'wallet',
-              walletType: account.metadata?.walletType || 'external',
-              customName: account.metadata?.customName || null,
-              isPrimary: true, // First wallet is primary
-              isActive: true,
-              chainId: account.metadata?.chainId ? parseInt(account.metadata.chainId.toString()) : 1,
-              metadata: JSON.stringify(account.metadata || {})
-            }
-          });
-          
-          logger.info(`Auto-linked wallet ${account.identifier} to profile ${profile.id}`);
-        }
+        // CRITICAL: Create LinkedAccount for ALL account types (not just wallets)
+        // This ensures any account can authenticate and find its profiles
+        const authStrategy = account.type === 'social' ? account.provider : account.type;
+        
+        await tx.linkedAccount.create({
+          data: {
+            profileId: profile.id,
+            address: account.identifier, // Email, wallet address, or social ID
+            authStrategy: authStrategy,
+            walletType: account.type === 'wallet' 
+              ? (account.metadata?.walletType || 'external')
+              : account.type === 'email' 
+                ? 'email' 
+                : authStrategy, // For social, use the provider name
+            customName: account.metadata?.customName || null,
+            isPrimary: true, // First account is primary
+            isActive: true,
+            chainId: account.type === 'wallet' 
+              ? (account.metadata?.chainId ? parseInt(account.metadata.chainId.toString()) : 1)
+              : null,
+            metadata: JSON.stringify(account.metadata || {})
+          }
+        });
+        
+        logger.info(`Auto-linked ${account.type} account ${account.identifier} to profile ${profile.id}`);
 
         // Auto-link MPC/session wallet as LinkedAccount
         if (sessionWallet?.address && sessionWallet.address !== '0x' + '0'.repeat(40)) {

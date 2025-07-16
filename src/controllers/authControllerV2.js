@@ -178,7 +178,13 @@ const authenticateV2 = async (req, res, next) => {
           return res.status(401).json({ 
             success: false, 
             error: verifyResult.error || 'Invalid wallet signature. Please try signing the message again.',
-            errorCode: 'INVALID_WALLET_SIGNATURE'
+            errorCode: 'INVALID_WALLET_SIGNATURE',
+            details: {
+              signatureFormat: authData.signature?.startsWith('0x') ? 'has 0x prefix' : 'no 0x prefix',
+              signatureLength: authData.signature?.length,
+              messageLength: authData.message?.length,
+              walletType: authData.walletType
+            }
           });
         }
 
@@ -814,24 +820,63 @@ const authenticateV2 = async (req, res, next) => {
         });
     }
 
-    // Step 2: Get linked profiles
-    // CRITICAL SECURITY: Only get profiles directly linked to the authenticating account
-    // This ensures users only see profiles where their specific auth method (e.g., MetaMask wallet)
-    // is actually linked to the profile, not all profiles accessible through the identity graph
-    // DO NOT use getAccessibleProfiles() here as it traverses the identity graph!
-    const linkedAccountIds = await accountService.getLinkedAccounts(account.id);
-    logger.info(`Authentication - found linked accounts (for logging only)`, {
+    // Step 2: Get profiles linked to this account
+    // CRITICAL: LinkedAccount is the single source of truth
+    // Determine the authStrategy based on account type
+    const authStrategy = account.type === 'social' ? account.provider : account.type;
+    
+    logger.info('Authentication - Looking for profiles via LinkedAccount', {
+      accountId: account.id,
+      accountType: account.type,
+      provider: account.provider,
+      identifier: account.identifier,
+      normalizedIdentifier: account.identifier.toLowerCase(),
+      authStrategy: authStrategy
+    });
+    
+    const linkedProfiles = await prisma.linkedAccount.findMany({
+      where: {
+        address: account.identifier.toLowerCase(), // Normalize to lowercase for consistent lookup
+        authStrategy: authStrategy, // Match the specific auth strategy
+        isActive: true
+      },
+      include: {
+        profile: {
+          include: {
+            linkedAccounts: true,
+            folders: {
+              include: {
+                apps: true
+              }
+            }
+          }
+        }
+      }
+    });
+    
+    logger.info('Authentication - LinkedAccount query results', {
+      linkedAccountsFound: linkedProfiles.length,
+      linkedAccounts: linkedProfiles.map(la => ({
+        id: la.id,
+        profileId: la.profileId,
+        profileName: la.profile?.name,
+        address: la.address,
+        authStrategy: la.authStrategy,
+        isActive: la.isActive
+      }))
+    });
+    
+    // Extract unique profiles from the linked accounts
+    const profilesMap = new Map(linkedProfiles.map(la => [la.profile.id, la.profile]));
+    const profilesBeforeFilter = [...profilesMap.values()];
+    const profiles = profilesBeforeFilter; // Return all profiles, not just active ones
+    
+    
+    logger.info(`Authentication - found profiles via LinkedAccount`, {
       accountId: account.id,
       accountType: account.type,
       identifier: account.identifier,
-      linkedAccountCount: linkedAccountIds.length,
-      linkedAccountIds
-    });
-    
-    // SECURITY: Use getDirectlyLinkedProfiles, NOT getAccessibleProfiles
-    const profiles = await accountService.getDirectlyLinkedProfiles(account.id);
-    logger.info(`Authentication - found directly linked profiles`, {
-      accountId: account.id,
+      linkedAccountCount: linkedProfiles.length,
       profileCount: profiles.length,
       profileIds: profiles.map(p => p.id),
       profileNames: profiles.map(p => p.name)
@@ -1058,10 +1103,40 @@ const refreshTokenV2 = async (req, res, next) => {
       });
     }
 
-    // Get directly linked profiles for the account
-    // CRITICAL SECURITY: Only return profiles where the account is directly linked
-    // DO NOT use getAccessibleProfiles() here as it would traverse the identity graph
-    const profiles = await accountService.getDirectlyLinkedProfiles(account.id);
+    // Get profiles linked to this account via LinkedAccount
+    // CRITICAL: LinkedAccount is the single source of truth
+    
+    // Determine authStrategy
+    let authStrategy;
+    if (account.type === 'social') {
+      authStrategy = account.provider; // 'apple', 'google', etc.
+    } else {
+      authStrategy = account.type; // 'wallet', 'email', 'passkey'
+    }
+    
+    const linkedProfiles = await prisma.linkedAccount.findMany({
+      where: {
+        address: account.identifier.toLowerCase(),
+        authStrategy: authStrategy,
+        isActive: true
+      },
+      include: {
+        profile: {
+          include: {
+            linkedAccounts: true,
+            folders: {
+              include: {
+                apps: true
+              }
+            }
+          }
+        }
+      }
+    });
+    
+    // Extract unique profiles
+    const profiles = [...new Map(linkedProfiles.map(la => [la.profile.id, la.profile])).values()]
+      .filter(p => p.isActive);
     
     // Find active profile
     const activeProfile = decoded.activeProfileId 
@@ -1417,30 +1492,10 @@ const linkAccounts = async (req, res, next) => {
       userAgent: req.headers['user-agent']
     });
 
-    // SECURITY FIX: Only link to profiles where the current account is directly linked
-    // Do NOT traverse the identity graph to find all accessible profiles
-    const profiles = await accountService.getDirectlyLinkedProfiles(currentAccountId);
+    // IMPORTANT: This endpoint is being deprecated
+    // Use profile-specific linking endpoints instead: POST /profiles/:profileId/accounts
+    logger.warn('DEPRECATED: linkAccounts endpoint used - use profile-specific endpoints instead');
     
-    logger.info(`Linking ${targetType} account to directly linked profiles only`, {
-      currentAccountId,
-      targetAccountId: targetAccount.id,
-      targetType,
-      profileCount: profiles.length,
-      profileIds: profiles.map(p => p.id)
-    });
-    
-    // Link the new account ONLY to profiles where the current account is directly linked
-    // This prevents the security issue where linking an email would give access to all
-    // profiles accessible through the identity graph
-    for (const profile of profiles) {
-      try {
-        await accountService.linkProfileToAccount(targetAccount.id, profile.id);
-        logger.info(`Successfully linked ${targetType} account ${targetAccount.id} to profile ${profile.id}`);
-      } catch (linkError) {
-        logger.warn(`Failed to link account to profile ${profile.id}:`, linkError);
-      }
-    }
-
     res.json({
       success: true,
       link,
@@ -1450,11 +1505,8 @@ const linkAccounts = async (req, res, next) => {
         identifier: targetAccount.identifier,
         verified: targetAccount.verified
       },
-      accessibleProfiles: profiles.map(p => ({
-        id: p.id,
-        name: p.name,
-        linkedAccountsCount: p.linkedAccounts?.length || 0
-      }))
+      message: 'This endpoint is deprecated. Use POST /profiles/:profileId/accounts to link accounts to specific profiles.',
+      deprecated: true
     });
 
   } catch (error) {
@@ -1490,53 +1542,20 @@ const updateLinkPrivacyMode = async (req, res, next) => {
 
 /**
  * Get identity graph for current account
+ * @deprecated Identity graph is being removed
  */
 const getIdentityGraph = async (req, res, next) => {
   try {
-    const accountId = req.account.id;
+    logger.warn('DEPRECATED: getIdentityGraph endpoint used - identity graph is being removed');
     
-    // Get all linked accounts
-    const linkedAccountIds = await accountService.getLinkedAccounts(accountId);
-    
-    // Get account details
-    const accounts = await prisma.account.findMany({
-      where: { id: { in: linkedAccountIds } }
-    });
-
-    // Transform accounts to ensure chainId is a string in metadata
-    const transformedAccounts = accounts.map(account => {
-      if (account.metadata && typeof account.metadata === 'object') {
-        // Create a copy to avoid mutating the original
-        const transformedMetadata = { ...account.metadata };
-        
-        // Convert chainId to string if it exists and is a number
-        if (typeof transformedMetadata.chainId === 'number') {
-          transformedMetadata.chainId = transformedMetadata.chainId.toString();
-        }
-        
-        return {
-          ...account,
-          metadata: transformedMetadata
-        };
-      }
-      return account;
-    });
-
-    // Get all links
-    const links = await prisma.identityLink.findMany({
-      where: {
-        OR: [
-          { accountAId: { in: linkedAccountIds } },
-          { accountBId: { in: linkedAccountIds } }
-        ]
-      }
-    });
-
+    // Return minimal response for backward compatibility
     res.json({
       success: true,
-      accounts: transformedAccounts,
-      links,
-      currentAccountId: accountId
+      accounts: [],
+      links: [],
+      currentAccountId: req.account.id,
+      message: 'Identity graph is deprecated. Use profile-specific endpoints instead.',
+      deprecated: true
     });
 
   } catch (error) {
@@ -1553,16 +1572,105 @@ const switchProfile = async (req, res, next) => {
     const { profileId } = req.params;
     const accountId = req.account.id;
 
-    // Verify account has access to this profile
-    const profiles = await accountService.getAccessibleProfiles(accountId);
-    const targetProfile = profiles.find(p => p.id === profileId);
+    // Determine authStrategy for LinkedAccount lookup
+    let authStrategy;
+    if (req.account.type === 'social') {
+      authStrategy = req.account.provider; // 'apple', 'google', etc.
+    } else {
+      authStrategy = req.account.type; // 'wallet', 'email', 'passkey'
+    }
+    
+    // Verify account has access to this profile via LinkedAccount
+    let linkedAccounts = await prisma.linkedAccount.findMany({
+      where: {
+        address: req.account.identifier.toLowerCase(),
+        authStrategy: authStrategy,
+        profileId: profileId,
+        isActive: true
+      },
+      include: {
+        profile: {
+          include: {
+            linkedAccounts: true,
+            folders: {
+              include: {
+                apps: true
+              }
+            }
+          }
+        }
+      }
+    });
+    
+    // Fallback: Check ProfileAccount for backward compatibility
+    if (linkedAccounts.length === 0) {
+      logger.info(`No LinkedAccount found, checking ProfileAccount for backward compatibility`, {
+        profileId,
+        accountId,
+        identifier: req.account.identifier,
+        authStrategy
+      });
+      
+      const profileAccount = await prisma.profileAccount.findFirst({
+        where: {
+          profileId: profileId,
+          accountId: accountId
+        },
+        include: {
+          profile: {
+            include: {
+              linkedAccounts: true,
+              folders: {
+                include: {
+                  apps: true
+                }
+              }
+            }
+          }
+        }
+      });
+      
+      if (profileAccount) {
+        // Auto-create LinkedAccount for backward compatibility
+        logger.info(`Found ProfileAccount, creating LinkedAccount for backward compatibility`);
+        
+        const newLinkedAccount = await prisma.linkedAccount.create({
+          data: {
+            profileId: profileId,
+            address: req.account.identifier.toLowerCase(),
+            authStrategy: authStrategy,
+            walletType: req.account.type === 'wallet' ? (req.account.metadata?.walletType || 'external') : null,
+            isPrimary: profileAccount.isPrimary,
+            isActive: true,
+            chainId: req.account.metadata?.chainId ? parseInt(req.account.metadata.chainId) : 1,
+            metadata: JSON.stringify(req.account.metadata || {})
+          },
+          include: {
+            profile: {
+              include: {
+                linkedAccounts: true,
+                folders: {
+                  include: {
+                    apps: true
+                  }
+                }
+              }
+            }
+          }
+        });
+        
+        linkedAccounts = [newLinkedAccount];
+      }
+    }
 
-    if (!targetProfile) {
+    if (linkedAccounts.length === 0) {
       return res.status(404).json({
         success: false,
         error: 'Profile not found or not accessible'
       });
     }
+
+    const targetProfile = linkedAccounts[0].profile;
 
     // Note: AccountSession doesn't store activeProfileId, it's managed in the JWT token
     // We'll need to regenerate tokens with the new activeProfileId
@@ -1571,6 +1679,15 @@ const switchProfile = async (req, res, next) => {
 
     // Update profile active status
     await smartProfileService.switchActiveProfile(profileId, accountId);
+
+    // Generate new JWT tokens with the updated activeProfileId
+    const { accessToken, refreshToken, expiresIn } = await generateTokens({
+      userId: req.account.userId || undefined,
+      accountId: accountId,
+      sessionToken: req.sessionToken,
+      activeProfileId: profileId,
+      deviceId: req.deviceId
+    });
 
     res.json({
       success: true,
@@ -1584,6 +1701,11 @@ const switchProfile = async (req, res, next) => {
         foldersCount: targetProfile.folders?.length || 0,
         createdAt: targetProfile.createdAt,
         updatedAt: targetProfile.updatedAt
+      },
+      tokens: {
+        accessToken,
+        refreshToken,
+        expiresIn
       },
       message: 'Profile switched successfully'
     });
@@ -1614,87 +1736,13 @@ const unlinkAccounts = async (req, res, next) => {
       });
     }
 
-    // In flat identity model, get all accounts in the identity graph
-    const allLinkedAccounts = await accountService.getLinkedAccounts(currentAccountId);
+    // DEPRECATED: This endpoint is part of the identity graph system being removed
+    logger.warn('DEPRECATED: unlinkAccounts endpoint used - use profile-specific unlinking instead');
     
-    logger.info(`Unlink request - Identity graph for account ${currentAccountId}:`, {
-      currentAccountId,
-      targetAccountId,
-      linkedAccounts: allLinkedAccounts,
-      linkedCount: allLinkedAccounts.length
-    });
-
-    // Check if target account is part of the identity graph
-    if (!allLinkedAccounts.includes(targetAccountId)) {
-      return res.status(404).json({
-        success: false,
-        error: 'Target account is not part of your identity graph'
-      });
-    }
-
-    // In flat identity model, we allow unlinking any account
-    // Even if it's the last one in the identity graph
-
-    // Find all identity links involving the target account within this graph
-    const linksToDelete = await prisma.identityLink.findMany({
-      where: {
-        AND: [
-          {
-            OR: [
-              { accountAId: targetAccountId },
-              { accountBId: targetAccountId }
-            ]
-          },
-          {
-            OR: [
-              { accountAId: { in: allLinkedAccounts } },
-              { accountBId: { in: allLinkedAccounts } }
-            ]
-          }
-        ]
-      }
-    });
-
-    logger.info(`Found ${linksToDelete.length} links to delete for account ${targetAccountId}`);
-
-    // Delete all links for the target account within this identity graph
-    for (const link of linksToDelete) {
-      await prisma.identityLink.delete({
-        where: { id: link.id }
-      });
-    }
-
-    // Remove ProfileAccount links for the unlinked account
-    // After unlinking, the target account should no longer have access to profiles
-    // that were only accessible through this identity graph
-    const profilesBeforeUnlink = await accountService.getAccessibleProfiles(targetAccountId);
-    
-    // Remove all ProfileAccount entries for the target account
-    // The account will need to be re-linked to access these profiles again
-    await prisma.profileAccount.deleteMany({
-      where: {
-        accountId: targetAccountId
-      }
-    });
-
-    logger.info(`Unlinked account ${targetAccountId} from identity graph. Removed access to ${profilesBeforeUnlink.length} profiles.`);
-
-    // Log the unlinking action
-    await auditService.log({
-      accountId: currentAccountId,
-      action: 'unlink_account',
-      resource: 'account',
-      details: JSON.stringify({
-        targetAccountId,
-        unlinkedAt: new Date()
-      }),
-      ipAddress: req.ip,
-      userAgent: req.headers['user-agent']
-    });
-
-    res.json({
-      success: true,
-      message: 'Accounts unlinked successfully'
+    return res.status(410).json({
+      success: false,
+      error: 'This endpoint is deprecated. Use DELETE /profiles/:profileId/accounts/:accountId to unlink accounts from specific profiles.',
+      deprecated: true
     });
 
   } catch (error) {
