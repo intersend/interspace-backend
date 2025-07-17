@@ -85,7 +85,7 @@ services:
       - CORS_ORIGINS=http://localhost:3000,http://localhost:19006,http://localhost:3001
       # Required MPC/Orby settings
       - SILENCE_ADMIN_TOKEN=local-test-token
-      - SILENCE_NODE_URL=https://sigpair-dev-784862970473.us-central1.run.app
+      - SILENCE_NODE_URL=http://sigpair:8080
       - DUO_NODE_URL=http://duo-node:3001
       - DUO_NODE_AUDIENCE_URL=http://duo-node:3001
       - ORBY_INSTANCE_PRIVATE_API_KEY=c669420b-1cca-4a62-ab6c-a580fd06d575

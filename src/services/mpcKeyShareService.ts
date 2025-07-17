@@ -109,7 +109,9 @@ class MpcKeyShareService {
     // For local development, fetch the verifying key from sigpair directly
     try {
       // In local development, sigpair runs on port 8080
-      const sigpairUrl = process.env.NODE_ENV === 'development' ? 'http://sigpair:8080' : (this.duoNodeUrl || 'http://duo-node:3001');
+      const sigpairUrl = process.env.NODE_ENV === 'development' 
+        ? (process.env.SILENCE_NODE_URL || 'http://sigpair:8080')
+        : (this.duoNodeUrl || 'http://duo-node:3001');
       
       // For local development, use axios directly without Google auth
       const isLocalDevelopment = process.env.NODE_ENV === 'development' || sigpairUrl.includes('localhost') || sigpairUrl.includes('sigpair');
