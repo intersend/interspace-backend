@@ -1,0 +1,28 @@
+# Database reset Dockerfile
+FROM node:20-alpine
+
+# Install PostgreSQL client
+RUN apk add --no-cache postgresql-client
+
+WORKDIR /usr/src/app
+
+# Copy package files
+COPY package*.json ./
+
+# Copy scripts (needed for postinstall)
+COPY scripts/ ./scripts/
+
+# Install dependencies (including Prisma)
+RUN npm ci --legacy-peer-deps
+
+# Copy Prisma schema
+COPY prisma/ ./prisma/
+
+# Make script executable
+RUN chmod +x ./scripts/reset-and-migrate.sh
+
+# Generate Prisma client
+RUN npm run prisma:generate
+
+# Run the reset script
+CMD ["./scripts/reset-and-migrate.sh"]
