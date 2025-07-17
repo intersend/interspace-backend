@@ -1,0 +1,106 @@
+name: LinkedAccount Migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to run migration'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  migrate:
+    name: Run LinkedAccount Migration
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Create database indexes
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo "📊 Creating database indexes..."
+          npx prisma db execute --file scripts/add-linkedaccount-indexes.sql --schema prisma/schema.prisma
+
+      - name: Sync LinkedAccount data
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NODE_ENV: ${{ github.event.inputs.environment }}
+        run: |
+          echo "🔄 Syncing LinkedAccount data..."
+          node scripts/sync-linkedaccount-data.js
+
+      - name: Run verification tests
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          NODE_ENV: ${{ github.event.inputs.environment }}
+        run: |
+          echo "🧪 Running verification tests..."
+          node scripts/test-linkedaccount-auth.js
+
+      - name: Health check
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo "💊 Running health check..."
+          node -e "
+          const { PrismaClient } = require('@prisma/client');
+          const prisma = new PrismaClient();
+          
+          async function check() {
+            const stats = await prisma.linkedAccount.aggregate({
+              _count: { _all: true },
+              where: { isActive: true }
+            });
+            console.log('Active LinkedAccounts:', stats._count._all);
+            await prisma.\$disconnect();
+          }
+          
+          check().catch(console.error);
+          "
+
+      - name: Create migration report
+        if: success()
+        run: |
+          echo "# LinkedAccount Migration Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ github.event.inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Timestamp:** $(date)" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ✅ Success" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Deploy the updated backend code" >> $GITHUB_STEP_SUMMARY
+          echo "2. Monitor authentication logs" >> $GITHUB_STEP_SUMMARY
+          echo "3. Watch for DEPRECATED warnings" >> $GITHUB_STEP_SUMMARY
+
+      - name: Send notification
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: |
+            LinkedAccount Migration ${{ job.status }}
+            Environment: ${{ github.event.inputs.environment }}
+            Actor: ${{ github.actor }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        continue-on-error: true
