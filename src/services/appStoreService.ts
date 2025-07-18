@@ -12,7 +12,39 @@ import {
 } from '../types';
 import { generateShareableId } from '../utils/crypto';
 import { cacheService } from './cacheService';
-import { appStorePrisma as prisma } from '../utils/appStoreDatabase';
+import * as fs from 'fs';
+import * as path from 'path';
+
+// Load app store data from JSON file
+const dataPath = path.join(__dirname, '../data/appStoreData.json');
+let appStoreData: any = null;
+
+function loadAppStoreData() {
+  if (!appStoreData) {
+    const jsonData = fs.readFileSync(dataPath, 'utf-8');
+    appStoreData = JSON.parse(jsonData);
+    
+    // Add IDs and timestamps to apps if not present
+    appStoreData.apps = appStoreData.apps.map((app: any, index: number) => ({
+      id: app.id || `app-${index + 1}`,
+      shareableId: app.shareableId || generateShareableId(),
+      createdAt: app.createdAt || new Date().toISOString(),
+      updatedAt: app.updatedAt || new Date().toISOString(),
+      lastUpdated: app.lastUpdated || new Date().toISOString(),
+      chainSupport: app.chainSupport || ['1'], // Default to Ethereum mainnet
+      screenshots: app.screenshots || [],
+      ...app
+    }));
+    
+    // Add timestamps to categories
+    appStoreData.categories = appStoreData.categories.map((cat: any) => ({
+      createdAt: cat.createdAt || new Date().toISOString(),
+      updatedAt: cat.updatedAt || new Date().toISOString(),
+      ...cat
+    }));
+  }
+  return appStoreData;
+}
 
 export class AppStoreService {
   private readonly CACHE_TTL = 3600; // 1 hour cache for app store data
@@ -37,29 +69,33 @@ export class AppStoreService {
       console.log('🔍 AppStoreService: Cache read failed, continuing without cache:', error);
     }
 
-    console.log('🔍 AppStoreService: Querying database for categories');
-    const categories = await prisma.appStoreCategory.findMany({
-      where: { isActive: true },
-      orderBy: { position: 'asc' },
-      include: {
-        _count: {
-          select: { apps: { where: { isActive: true } } }
-        }
-      }
-    });
-    console.log(`🔍 AppStoreService: Found ${categories.length} categories in database`);
+    console.log('🔍 AppStoreService: Loading categories from JSON');
+    const data = loadAppStoreData();
+    const categories = data.categories.filter((cat: any) => cat.isActive);
+    
+    console.log(`🔍 AppStoreService: Found ${categories.length} categories in JSON`);
 
-    const response = categories.map(category => ({
-      id: category.id,
-      name: category.name,
-      slug: category.slug,
-      description: category.description || undefined,
-      icon: category.icon || undefined,
-      position: category.position,
-      appsCount: category._count.apps,
-      createdAt: category.createdAt.toISOString(),
-      updatedAt: category.updatedAt.toISOString()
-    }));
+    // Calculate apps count for each category
+    const response = categories.map((category: any) => {
+      const appsCount = data.apps.filter((app: any) => 
+        app.categoryId === category.id && app.isActive
+      ).length;
+      
+      return {
+        id: category.id,
+        name: category.name,
+        slug: category.slug,
+        description: category.description || undefined,
+        icon: category.icon || undefined,
+        position: category.position,
+        appsCount,
+        createdAt: category.createdAt,
+        updatedAt: category.updatedAt
+      };
+    });
+
+    // Sort by position
+    response.sort((a: AppStoreCategoryResponse, b: AppStoreCategoryResponse) => a.position - b.position);
 
     // Cache the response with error handling
     try {
@@ -80,61 +116,59 @@ export class AppStoreService {
     const limit = Math.min(this.MAX_PAGE_SIZE, Math.max(1, params.limit || this.DEFAULT_PAGE_SIZE));
     const skip = (page - 1) * limit;
 
-    // Build where clause
-    const where: any = { isActive: true };
+    const data = loadAppStoreData();
+    let apps = data.apps.filter((app: any) => app.isActive);
 
+    // Apply filters
     if (params.category) {
-      where.category = { slug: params.category };
+      const category = data.categories.find((cat: any) => cat.slug === params.category);
+      if (category) {
+        apps = apps.filter((app: any) => app.categoryId === category.id);
+      }
     }
 
     if (params.tags && params.tags.length > 0) {
-      where.tags = { hasSome: params.tags };
+      apps = apps.filter((app: any) => 
+        params.tags!.some(tag => app.tags.includes(tag))
+      );
     }
 
     if (params.chains && params.chains.length > 0) {
-      where.chainSupport = { hasSome: params.chains };
+      apps = apps.filter((app: any) => 
+        params.chains!.some(chain => app.chainSupport.includes(chain))
+      );
     }
 
     if (params.q) {
-      where.OR = [
-        { name: { contains: params.q, mode: 'insensitive' } },
-        { description: { contains: params.q, mode: 'insensitive' } },
-        { tags: { has: params.q } }
-      ];
+      const query = params.q.toLowerCase();
+      apps = apps.filter((app: any) => 
+        app.name.toLowerCase().includes(query) ||
+        app.description.toLowerCase().includes(query) ||
+        app.tags.some((tag: string) => tag.toLowerCase().includes(query))
+      );
     }
 
-    // Build orderBy clause
-    let orderBy: any = { popularity: 'desc' }; // Default sort
+    // Apply sorting
     if (params.sortBy === 'newest') {
-      orderBy = { createdAt: 'desc' };
+      apps.sort((a: any, b: any) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
     } else if (params.sortBy === 'name') {
-      orderBy = { name: 'asc' };
+      apps.sort((a: any, b: any) => a.name.localeCompare(b.name));
+    } else {
+      // Default sort by popularity
+      apps.sort((a: any, b: any) => b.popularity - a.popularity);
     }
 
-    // Execute queries
-    console.log('🔍 AppStoreService: Querying with where:', JSON.stringify(where));
-    console.log('🔍 AppStoreService: OrderBy:', orderBy);
-    console.log('🔍 AppStoreService: Skip:', skip, 'Limit:', limit);
-    
-    const [apps, total] = await Promise.all([
-      prisma.appStoreApp.findMany({
-        where,
-        orderBy,
-        skip,
-        take: limit,
-        include: {
-          category: true
-        }
-      }),
-      prisma.appStoreApp.count({ where })
-    ]);
-    
-    console.log(`🔍 AppStoreService: Found ${apps.length} apps, total count: ${total}`);
+    const total = apps.length;
+    console.log(`🔍 AppStoreService: Found ${total} apps after filtering`);
 
+    // Apply pagination
+    const paginatedApps = apps.slice(skip, skip + limit);
     const totalPages = Math.ceil(total / limit);
 
     return {
-      data: apps.map(app => this.formatAppResponse(app)),
+      data: paginatedApps.map((app: any) => this.formatAppResponse(app)),
       pagination: {
         page,
         limit,
@@ -160,20 +194,14 @@ export class AppStoreService {
       return cached;
     }
 
-    console.log('🔍 AppStoreService: Querying for featured apps');
-    const apps = await prisma.appStoreApp.findMany({
-      where: {
-        isActive: true,
-        isFeatured: true
-      },
-      orderBy: { popularity: 'desc' },
-      take: 12, // Limit featured apps
-      include: {
-        category: true
-      }
-    });
+    console.log('🔍 AppStoreService: Loading featured apps from JSON');
+    const data = loadAppStoreData();
+    const featuredApps = data.apps
+      .filter((app: any) => app.isActive && app.isFeatured)
+      .sort((a: any, b: any) => b.popularity - a.popularity)
+      .slice(0, 12); // Limit to 12 featured apps
 
-    const response = apps.map(app => this.formatAppResponse(app));
+    const response = featuredApps.map((app: any) => this.formatAppResponse(app));
 
     // Cache the response
     await cacheService.set(cacheKey, response, this.CACHE_TTL);
@@ -185,25 +213,15 @@ export class AppStoreService {
    * Get a specific app by ID
    */
   async getAppById(id: string): Promise<AppStoreAppResponse> {
-    const app = await prisma.appStoreApp.findFirst({
-      where: {
-        id,
-        isActive: true
-      },
-      include: {
-        category: true
-      }
-    });
+    const data = loadAppStoreData();
+    const app = data.apps.find((app: any) => app.id === id && app.isActive);
 
     if (!app) {
       throw new NotFoundError('App');
     }
 
-    // Increment popularity (view count)
-    await prisma.appStoreApp.update({
-      where: { id },
-      data: { popularity: { increment: 1 } }
-    });
+    // Increment popularity (view count) - in a real implementation, you'd persist this
+    app.popularity++;
 
     return this.formatAppResponse(app);
   }
@@ -212,15 +230,8 @@ export class AppStoreService {
    * Get app by shareable ID
    */
   async getAppByShareableId(shareableId: string): Promise<AppStoreAppResponse> {
-    const app = await prisma.appStoreApp.findFirst({
-      where: {
-        shareableId,
-        isActive: true
-      },
-      include: {
-        category: true
-      }
-    });
+    const data = loadAppStoreData();
+    const app = data.apps.find((app: any) => app.shareableId === shareableId && app.isActive);
 
     if (!app) {
       throw new NotFoundError('App');
@@ -237,261 +248,77 @@ export class AppStoreService {
       return [];
     }
 
-    const apps = await prisma.appStoreApp.findMany({
-      where: {
-        isActive: true,
-        OR: [
-          { name: { contains: query, mode: 'insensitive' } },
-          { description: { contains: query, mode: 'insensitive' } },
-          { tags: { has: query } },
-          { developer: { contains: query, mode: 'insensitive' } }
-        ]
-      },
-      orderBy: { popularity: 'desc' },
-      take: 20,
-      include: {
-        category: true
-      }
-    });
+    const data = loadAppStoreData();
+    const searchQuery = query.toLowerCase();
+    
+    const matchingApps = data.apps
+      .filter((app: any) => 
+        app.isActive && (
+          app.name.toLowerCase().includes(searchQuery) ||
+          app.description.toLowerCase().includes(searchQuery) ||
+          app.tags.some((tag: string) => tag.toLowerCase().includes(searchQuery)) ||
+          (app.developer && app.developer.toLowerCase().includes(searchQuery))
+        )
+      )
+      .sort((a: any, b: any) => b.popularity - a.popularity)
+      .slice(0, 20);
 
-    return apps.map(app => this.formatAppResponse(app));
+    return matchingApps.map((app: any) => this.formatAppResponse(app));
   }
 
   /**
-   * Create a new app (admin only)
+   * Create a new app (admin only) - Not implemented for JSON
    */
   async createApp(data: CreateAppStoreAppRequest): Promise<AppStoreAppResponse> {
-    // Verify category exists
-    const category = await prisma.appStoreCategory.findUnique({
-      where: { id: data.categoryId }
-    });
-
-    if (!category) {
-      throw new NotFoundError('Category');
-    }
-
-    // Check for duplicate URL
-    const existing = await prisma.appStoreApp.findFirst({
-      where: { url: data.url }
-    });
-
-    if (existing) {
-      throw new ConflictError('An app with this URL already exists');
-    }
-
-    const app = await prisma.appStoreApp.create({
-      data: {
-        name: data.name,
-        url: data.url,
-        iconUrl: data.iconUrl,
-        categoryId: data.categoryId,
-        description: data.description,
-        detailedDescription: data.detailedDescription,
-        tags: data.tags || [],
-        chainSupport: data.chainSupport || [],
-        screenshots: data.screenshots || [],
-        developer: data.developer,
-        version: data.version,
-        isFeatured: data.isFeatured || false,
-        isNew: data.isNew || true,
-        shareableId: generateShareableId()
-      },
-      include: {
-        category: true
-      }
-    });
-
-    // Clear relevant caches
-    await this.clearCaches();
-
-    return this.formatAppResponse(app);
+    throw new Error('Creating apps is not supported in JSON mode');
   }
 
   /**
-   * Update an app (admin only)
+   * Update an app (admin only) - Not implemented for JSON
    */
   async updateApp(id: string, data: UpdateAppStoreAppRequest): Promise<AppStoreAppResponse> {
-    // Verify app exists
-    const existing = await prisma.appStoreApp.findUnique({
-      where: { id }
-    });
-
-    if (!existing) {
-      throw new NotFoundError('App');
-    }
-
-    // If categoryId is being updated, verify it exists
-    if (data.categoryId) {
-      const category = await prisma.appStoreCategory.findUnique({
-        where: { id: data.categoryId }
-      });
-
-      if (!category) {
-        throw new NotFoundError('Category');
-      }
-    }
-
-    const app = await prisma.appStoreApp.update({
-      where: { id },
-      data: {
-        ...data,
-        lastUpdated: new Date()
-      },
-      include: {
-        category: true
-      }
-    });
-
-    // Clear relevant caches
-    await this.clearCaches();
-
-    return this.formatAppResponse(app);
+    throw new Error('Updating apps is not supported in JSON mode');
   }
 
   /**
-   * Delete an app (admin only)
+   * Delete an app (admin only) - Not implemented for JSON
    */
   async deleteApp(id: string): Promise<void> {
-    const app = await prisma.appStoreApp.findUnique({
-      where: { id }
-    });
-
-    if (!app) {
-      throw new NotFoundError('App');
-    }
-
-    // Soft delete by setting isActive to false
-    await prisma.appStoreApp.update({
-      where: { id },
-      data: { isActive: false }
-    });
-
-    // Clear relevant caches
-    await this.clearCaches();
+    throw new Error('Deleting apps is not supported in JSON mode');
   }
 
   /**
-   * Create a new category (admin only)
+   * Create a new category (admin only) - Not implemented for JSON
    */
   async createCategory(data: CreateAppStoreCategoryRequest): Promise<AppStoreCategoryResponse> {
-    // Check for duplicate slug
-    const existing = await prisma.appStoreCategory.findUnique({
-      where: { slug: data.slug }
-    });
-
-    if (existing) {
-      throw new ConflictError('A category with this slug already exists');
-    }
-
-    const category = await prisma.appStoreCategory.create({
-      data: {
-        name: data.name,
-        slug: data.slug,
-        description: data.description,
-        icon: data.icon,
-        position: data.position || 0
-      }
-    });
-
-    // Clear category cache
-    await cacheService.delete('app-store:categories');
-
-    return {
-      id: category.id,
-      name: category.name,
-      slug: category.slug,
-      description: category.description || undefined,
-      icon: category.icon || undefined,
-      position: category.position,
-      createdAt: category.createdAt.toISOString(),
-      updatedAt: category.updatedAt.toISOString()
-    };
+    throw new Error('Creating categories is not supported in JSON mode');
   }
 
   /**
-   * Update a category (admin only)
+   * Update a category (admin only) - Not implemented for JSON
    */
   async updateCategory(id: string, data: UpdateAppStoreCategoryRequest): Promise<AppStoreCategoryResponse> {
-    const existing = await prisma.appStoreCategory.findUnique({
-      where: { id }
-    });
-
-    if (!existing) {
-      throw new NotFoundError('Category');
-    }
-
-    // Check for duplicate slug if updating
-    if (data.slug && data.slug !== existing.slug) {
-      const duplicate = await prisma.appStoreCategory.findUnique({
-        where: { slug: data.slug }
-      });
-
-      if (duplicate) {
-        throw new ConflictError('A category with this slug already exists');
-      }
-    }
-
-    const category = await prisma.appStoreCategory.update({
-      where: { id },
-      data,
-      include: {
-        _count: {
-          select: { apps: { where: { isActive: true } } }
-        }
-      }
-    });
-
-    // Clear category cache
-    await cacheService.delete('app-store:categories');
-
-    return {
-      id: category.id,
-      name: category.name,
-      slug: category.slug,
-      description: category.description || undefined,
-      icon: category.icon || undefined,
-      position: category.position,
-      appsCount: category._count.apps,
-      createdAt: category.createdAt.toISOString(),
-      updatedAt: category.updatedAt.toISOString()
-    };
+    throw new Error('Updating categories is not supported in JSON mode');
   }
 
   /**
-   * Delete a category (admin only)
+   * Delete a category (admin only) - Not implemented for JSON
    */
   async deleteCategory(id: string): Promise<void> {
-    const category = await prisma.appStoreCategory.findUnique({
-      where: { id },
-      include: {
-        _count: {
-          select: { apps: true }
-        }
-      }
-    });
-
-    if (!category) {
-      throw new NotFoundError('Category');
-    }
-
-    if (category._count.apps > 0) {
-      throw new ConflictError('Cannot delete category with existing apps');
-    }
-
-    // Soft delete by setting isActive to false
-    await prisma.appStoreCategory.update({
-      where: { id },
-      data: { isActive: false }
-    });
-
-    // Clear category cache
-    await cacheService.delete('app-store:categories');
+    throw new Error('Deleting categories is not supported in JSON mode');
   }
 
   /**
    * Format app response
    */
   private formatAppResponse(app: any): AppStoreAppResponse {
+    const data = loadAppStoreData();
+    const category = data.categories.find((cat: any) => cat.id === app.categoryId);
+    
+    if (!category) {
+      throw new Error(`Category not found for app: ${app.name}`);
+    }
+
     const metadata: any = {};
     
     if (app.metadata) {
@@ -510,14 +337,14 @@ export class AppStoreService {
       url: app.url,
       iconUrl: app.iconUrl || undefined,
       category: {
-        id: app.category.id,
-        name: app.category.name,
-        slug: app.category.slug,
-        description: app.category.description || undefined,
-        icon: app.category.icon || undefined,
-        position: app.category.position,
-        createdAt: app.category.createdAt.toISOString(),
-        updatedAt: app.category.updatedAt.toISOString()
+        id: category.id,
+        name: category.name,
+        slug: category.slug,
+        description: category.description || undefined,
+        icon: category.icon || undefined,
+        position: category.position,
+        createdAt: category.createdAt,
+        updatedAt: category.updatedAt
       },
       description: app.description,
       detailedDescription: app.detailedDescription || undefined,
@@ -529,11 +356,11 @@ export class AppStoreService {
       screenshots: app.screenshots,
       developer: app.developer || undefined,
       version: app.version || undefined,
-      lastUpdated: app.lastUpdated.toISOString(),
+      lastUpdated: app.lastUpdated,
       shareableId: app.shareableId || undefined,
       metadata: Object.keys(metadata).length > 0 ? metadata : undefined,
-      createdAt: app.createdAt.toISOString(),
-      updatedAt: app.updatedAt.toISOString()
+      createdAt: app.createdAt,
+      updatedAt: app.updatedAt
     };
   }
 
