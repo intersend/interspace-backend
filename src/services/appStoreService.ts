@@ -12,17 +12,16 @@ import {
 } from '../types';
 import { generateShareableId } from '../utils/crypto';
 import { cacheService } from './cacheService';
-import * as fs from 'fs';
-import * as path from 'path';
+// Import JSON directly - TypeScript will handle this during build
+import appStoreDataImport from '../data/appStoreData.json';
 
-// Load app store data from JSON file
-const dataPath = path.join(__dirname, '../data/appStoreData.json');
+// Clone the imported data to avoid mutations
 let appStoreData: any = null;
 
 function loadAppStoreData() {
   if (!appStoreData) {
-    const jsonData = fs.readFileSync(dataPath, 'utf-8');
-    appStoreData = JSON.parse(jsonData);
+    // Deep clone the imported data to avoid mutations
+    appStoreData = JSON.parse(JSON.stringify(appStoreDataImport));
     
     // Add IDs and timestamps to apps if not present
     appStoreData.apps = appStoreData.apps.map((app: any, index: number) => ({
