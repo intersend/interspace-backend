@@ -108,13 +108,27 @@ class MpcKeyShareService {
     
     // For local development, fetch the verifying key from sigpair directly
     try {
-      // In local development, sigpair runs on port 8080
-      const sigpairUrl = process.env.NODE_ENV === 'development' 
-        ? (process.env.SILENCE_NODE_URL || 'http://sigpair:8080')
-        : (this.duoNodeUrl || 'http://duo-node:3001');
+      // Determine sigpair URL based on environment
+      let sigpairUrl: string;
       
-      // For local development, use axios directly without Google auth
-      const isLocalDevelopment = process.env.NODE_ENV === 'development' || sigpairUrl.includes('localhost') || sigpairUrl.includes('sigpair');
+      if (process.env.SILENCE_NODE_URL) {
+        // Use explicitly configured URL if available
+        sigpairUrl = process.env.SILENCE_NODE_URL;
+      } else if (process.env.NODE_ENV === 'development') {
+        // Local development default
+        sigpairUrl = 'http://sigpair:8080';
+      } else {
+        // Production/staging: Use the deployed sigpair service URL
+        // Format: https://sigpair-{env}-{hash}.{region}.run.app
+        const env = process.env.NODE_ENV === 'production' ? 'prod' : 'dev';
+        const hash = env === 'dev' ? 'e67lrclhcq' : '784862970473'; // Update prod hash when deployed
+        sigpairUrl = `https://sigpair-${env}-${hash}-uc.a.run.app`;
+      }
+      
+      // Check if we need to use authenticated requests
+      const isLocalDevelopment = process.env.NODE_ENV === 'development' || 
+                                 sigpairUrl.includes('localhost') || 
+                                 sigpairUrl.includes('sigpair:8080');
       
       if (isLocalDevelopment) {
         // Direct call without authentication for local development
