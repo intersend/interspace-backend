@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
-import { appStoreService } from '../services/appStoreService';
+// Using the public database service for app store
+import { appStoreServicePublic as appStoreService } from '../services/appStoreServicePublic';
 import { 
   ApiResponse,
   AppStoreSearchParams,

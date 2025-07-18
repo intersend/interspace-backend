@@ -1,0 +1,65 @@
+// This is the Prisma schema for the public App Store database
+// It only contains public data - no user information
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../node_modules/@prisma/client-appstore"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("APPSTORE_DATABASE_URL")
+}
+
+// App Store Category
+model AppStoreCategory {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  icon        String?
+  position    Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  apps        AppStoreApp[]
+
+  @@index([slug])
+  @@index([position])
+}
+
+// App Store Application
+model AppStoreApp {
+  id                  String   @id @default(cuid())
+  name                String
+  url                 String
+  iconUrl             String?
+  categoryId          String
+  description         String
+  detailedDescription String?
+  tags                String[]
+  popularity          Int      @default(0)
+  isNew               Boolean  @default(false)
+  isFeatured          Boolean  @default(false)
+  chainSupport        String[] @default([])
+  screenshots         String[] @default([])
+  developer           String?
+  version             String?
+  lastUpdated         DateTime @default(now())
+  shareableId         String   @unique @default(cuid())
+  isActive            Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // Relations
+  category            AppStoreCategory @relation(fields: [categoryId], references: [id])
+
+  @@index([categoryId])
+  @@index([popularity])
+  @@index([isFeatured])
+  @@index([shareableId])
+  @@index([name])
+  @@index([tags])
+}

@@ -12,7 +12,7 @@ import {
 } from '../types';
 import { generateShareableId } from '../utils/crypto';
 import { cacheService } from './cacheService';
-import { prisma } from '../utils/database';
+import { appStorePrisma as prisma } from '../utils/appStoreDatabase';
 
 export class AppStoreService {
   private readonly CACHE_TTL = 3600; // 1 hour cache for app store data

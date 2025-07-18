@@ -22,10 +22,14 @@
     "docker:e2e:up": "docker-compose -f docker-compose.e2e.yml up -d",
     "docker:e2e:down": "docker-compose -f docker-compose.e2e.yml down -v",
     "docker:e2e:logs": "docker-compose -f docker-compose.e2e.yml logs -f",
-    "prisma:generate": "prisma generate",
+    "prisma:generate": "prisma generate && prisma generate --schema=./prisma/schema.appstore.prisma",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
     "prisma:reset": "prisma migrate reset",
+    "prisma:appstore:generate": "prisma generate --schema=./prisma/schema.appstore.prisma",
+    "prisma:appstore:migrate": "prisma migrate dev --schema=./prisma/schema.appstore.prisma",
+    "prisma:appstore:deploy": "prisma migrate deploy --schema=./prisma/schema.appstore.prisma",
+    "prisma:appstore:reset": "prisma migrate reset --schema=./prisma/schema.appstore.prisma",
     "prisma:test:reset": "NODE_ENV=test prisma migrate reset --force",
     "prisma:test:migrate": "NODE_ENV=test prisma migrate deploy",
     "test:orby:connection": "ts-node -r tsconfig-paths/register scripts/test-orby-connection.ts",
@@ -40,7 +44,10 @@
     "check:clusters": "tsx scripts/check-account-clusters.ts",
     "fix:mpc-links": "tsx scripts/fix-missing-mpc-links.ts",
     "debug:profile": "tsx scripts/debug-profile-lookup.ts",
-    "test:flat-identity:coverage": "NODE_ENV=test jest --config jest.config.js --coverage --testPathPattern='(flatIdentityModel|accountService)'"
+    "test:flat-identity:coverage": "NODE_ENV=test jest --config jest.config.js --coverage --testPathPattern='(flatIdentityModel|accountService)'",
+    "appstore:setup": "./scripts/setup-appstore-db.sh",
+    "appstore:import": "tsx scripts/import-apps-public-db.ts",
+    "appstore:verify": "APPSTORE_DATABASE_URL=$APPSTORE_DATABASE_URL tsx scripts/verify-cloud-apps.ts"
   },
   "keywords": [
     "web3",
