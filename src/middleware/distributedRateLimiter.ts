@@ -49,6 +49,13 @@ export function createRateLimitMiddleware(
   limiter: RateLimiterAbstract,
   keyFn?: (req: Request) => string
 ) {
+  // DISABLED: Rate limiting disabled as requested - just pass through
+  return async (req: Request, res: Response, next: NextFunction) => {
+    next();
+  };
+  
+  // Original implementation commented out:
+  /*
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       // Generate key for rate limiting
@@ -105,6 +112,7 @@ export function createRateLimitMiddleware(
       next(new RateLimitError('Too many requests - please try again later'));
     }
   };
+  */
 }
 
 // Environment-aware configuration

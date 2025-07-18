@@ -176,8 +176,9 @@ class Application {
     });
 
     // Rate limiting - use distributed if Redis is available
-    const rateLimiter = config.REDIS_ENABLED ? distributedApiRateLimit : apiRateLimit;
-    this.app.use(rateLimiter);
+    // DISABLED: Commenting out rate limiting as requested
+    // const rateLimiter = config.REDIS_ENABLED ? distributedApiRateLimit : apiRateLimit;
+    // this.app.use(rateLimiter);
 
     // Request logging in development
     if (config.NODE_ENV === 'development') {

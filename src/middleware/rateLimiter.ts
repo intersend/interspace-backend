@@ -8,6 +8,13 @@ function createRateLimitMiddleware(
   limiter: RateLimiterMemory,
   keyFn?: (req: Request) => string
 ) {
+  // DISABLED: Rate limiting disabled as requested - just pass through
+  return async (req: Request, res: Response, next: NextFunction) => {
+    next();
+  };
+  
+  // Original implementation commented out:
+  /*
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       const key = keyFn ? keyFn(req) : req.ip || 'unknown';
@@ -19,6 +26,7 @@ function createRateLimitMiddleware(
       next(new RateLimitError('Too many requests - please try again later'));
     }
   };
+  */
 }
 
 const windowSeconds = Math.ceil(config.RATE_LIMIT_WINDOW_MS / 1000);
